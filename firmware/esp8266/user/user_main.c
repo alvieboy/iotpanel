@@ -5,13 +5,19 @@
 #include "user_config.h"
 #include "driver/gpio16.h"
 #include "driver/spi_master.h"
+#include "driver/uart.h"
 #include "user_interface.h"
 #include "espconn.h"
 #include <stdio.h>
 #include "gfx.h"
+#include "wifi-config.h"
 
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
+
+#ifndef UART0
+#define UART0 0
+#endif
 
 os_event_t    user_procTaskQueue[user_procTaskQueueLen];
 static void user_procTask(os_event_t *events);
@@ -117,6 +123,9 @@ void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
 {
     struct ip_info ip;
     char buf[64];
+
+    os_printf("New WiFI status: %d (%d)\n", status, oldstatus);
+
     switch (status) {
     case STATION_IDLE:
         break;
@@ -168,14 +177,16 @@ user_procTask(os_event_t *events)
     int status = wifi_station_get_connect_status();
     if (laststatus<0)
         laststatus=status;
+
     if (laststatus!=status) {
-        
         newWifiStatus(status, laststatus);
     }
+    laststatus=status;
 #endif
     drawScrollingText(&scr);
 
     os_delay_us(1000);
+
     system_os_post(user_procTaskPrio, 0, 0 );
 }
 
@@ -299,19 +310,26 @@ LOCAL struct station_config sta_conf;
 
 void setupWifi()
 {
-    /* CHange this */
-    const char *ssid = "SSID";
-    const char *pwd = "PASSWORD";
-
     memset(&sta_conf,0,sizeof(sta_conf));
-    memcpy(&sta_conf.ssid, ssid, strlen(ssid));
-    memcpy(&sta_conf.password, pwd, strlen(pwd));
+    memcpy(&sta_conf.ssid, WIFI_SSID, strlen(WIFI_SSID));
+    memcpy(&sta_conf.password, WIFI_PWD, strlen(WIFI_PWD));
 
     wifi_set_opmode(STATION_MODE);
     wifi_station_set_config(&sta_conf);
     wifi_station_disconnect();
     wifi_station_connect();
 }
+
+LOCAL void ICACHE_FLASH_ATTR
+uart_setup()
+{
+    uart_init_single(UART0, BIT_RATE_115200, 1);
+
+    WRITE_PERI_REG(UART_INT_ENA(0), 0);
+
+}
+
+extern user_server_init(uint32 port);
 
 //Init function 
 void ICACHE_FLASH_ATTR
@@ -328,12 +346,16 @@ user_init()
 
     spi_setup();
     timer_setup();
+    uart_setup();
+    user_server_init(8081);
+
 
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U,  FUNC_GPIO15); // GPIO15.
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U,  FUNC_GPIO12);  // DI
 
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3);
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_GPIO1);
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
+
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO4_U, FUNC_GPIO4);
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
 

@@ -1,0 +1,8 @@
+BEFORE YOU START
+
+ Look at "user/wifi-config.h.in". Edit the file to match your
+ network, and then save it as "user/wifi-config.h"
+ 
+ You can then type "make" to build application, or "make flash" to
+ build and upload to IoT panel.
+

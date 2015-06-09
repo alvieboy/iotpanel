@@ -52,7 +52,8 @@ begin
   -- GPIO0          Pull-up for normal or pull-down for bootloader mode.
 
   gpio2 <= 'Z'; -- External pullup
-  gpio0 <= not irx; -- RX from external programmer.
+  --gpio0 <= not irx; -- RX from external programmer.
+  gpio0 <= usr(3);
 
   gpio16 <= 'Z'; -- External pullup
   gpio12 <= 'Z';
@@ -63,7 +64,7 @@ begin
   -- CS is now gpio4
   internalcs <= gpio4 when gpio16='0' else '1'; -- Ignore commands when SW not running.
 
-  usr(3) <= gpio4;--'Z';
+  --usr(3) <= gpio4;--'Z';
 
   esprx <= usr(5);
   usr(6) <= esptx;
