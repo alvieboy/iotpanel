@@ -121,7 +121,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandPropset(clientInfo_t *cl)
         client_senderror(cl,"INVALIDPROP");
         return -1;
     }
-    client_sendOK(cl,"SETPROP");
+    client_sendOK(cl,"PROPSET");
     return 0;
 }
 
