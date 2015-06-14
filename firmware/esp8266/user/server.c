@@ -43,12 +43,14 @@ typedef struct {
 LOCAL ICACHE_FLASH_ATTR int handleCommandLogin(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandAuth(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandPropset(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandWipe(clientInfo_t *);
 
 
 commandEntry_t commandHandlers[] = {
     { "LOGIN", &handleCommandLogin },
     { "AUTH", &handleCommandAuth },
     { "PROPSET", &handleCommandPropset },
+    { "WIPE", &handleCommandWipe },
     { 0, 0 }
 };
 
@@ -123,7 +125,16 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandPropset(clientInfo_t *cl)
     return 0;
 }
 
-
+LOCAL ICACHE_FLASH_ATTR int handleCommandWipe(clientInfo_t *cl)
+{
+    if (!cl->authenticated) {
+        client_senderror(cl, "UNKNONW");
+        return -1;
+    }
+    screen_destroy_all();
+    client_sendOK(cl,"WIPE");
+    return 0;
+}
 
 LOCAL ICACHE_FLASH_ATTR void clientInfo_init(clientInfo_t*cl)
 {
