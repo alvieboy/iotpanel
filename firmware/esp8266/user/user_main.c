@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include "gfx.h"
 #include "wifi-config.h"
+#include "widget.h"
 
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
@@ -22,10 +23,12 @@
 os_event_t    user_procTaskQueue[user_procTaskQueueLen];
 static void user_procTask(os_event_t *events);
 
+extern void draw_current_screen();
+
 static volatile os_timer_t some_timer;
+
 /* Framebuffer */
 uint8_t framebuffer[32*32];
-scrollingtext_t scr;
 volatile int fbdone=0;
 
 const struct gfxinfo gfx =
@@ -35,9 +38,6 @@ const struct gfxinfo gfx =
     32, //height
     &framebuffer[0]//fb
 };
-
-
-
 
 static volatile int column=0;
 static int ptr=0;
@@ -93,7 +93,7 @@ static void clearFramebuffer()
     memset(framebuffer,0,sizeof(framebuffer));
 }
 
-static void simpleitoa(int val, char *dest)
+void simpleitoa(int val, char *dest)
 {
     char str[32];
     char *strptr=&str[30];
@@ -118,8 +118,12 @@ static volatile int count = 0;
 int xoffset=0;
 int laststatus = -1;
 
+LOCAL void ICACHE_FLASH_ATTR wifiUpdate(const char *status)
+{
+//    updateScrollingText( &scr, status);
+}
 
-void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
+LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
 {
     struct ip_info ip;
     char buf[64];
@@ -130,16 +134,16 @@ void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
     case STATION_IDLE:
         break;
     case STATION_CONNECTING:
-        updateScrollingText( &scr, "Connecting to WiFI Access Point");
+        wifiUpdate("Connecting to WiFI Access Point");
         break;
     case STATION_WRONG_PASSWORD:
-        updateScrollingText( &scr, "Error connecting: bad password");
+        wifiUpdate("Error connecting: bad password");
         break;
     case STATION_NO_AP_FOUND:
-        updateScrollingText( &scr, "Error connecting: no AP found");
+        wifiUpdate("Error connecting: no AP found");
         break;
     case STATION_CONNECT_FAIL:
-        updateScrollingText( &scr, "Connection failed, retrying");
+        wifiUpdate("Connection failed, retrying");
         break;
     case STATION_GOT_IP:
         wifi_get_ip_info(STATION_IF, &ip);
@@ -148,19 +152,24 @@ void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
                    (ip.ip.addr>>8) & 0xff,
                    (ip.ip.addr>>16) & 0xff,
                    (ip.ip.addr>>24) & 0xff
-              );
-        updateScrollingText( &scr, buf );
+                  );
+        wifiUpdate(buf );
         break;
     default:
         break;
     }
 }
 
+LOCAL void ICACHE_FLASH_ATTR redraw()
+{
+    draw_current_screen(&gfx);
+}
+
 static void ICACHE_FLASH_ATTR
 user_procTask(os_event_t *events)
 {
-    char text[10];
-    int len;
+    //char text[10];
+    //int len;
 
     while (!fbdone) {
         system_os_post(user_procTaskPrio, 0, 0 );
@@ -172,7 +181,6 @@ user_procTask(os_event_t *events)
     }
     fbdone=0;
 
-    clearFramebuffer();
 #if 1
     int status = wifi_station_get_connect_status();
     if (laststatus<0)
@@ -183,8 +191,7 @@ user_procTask(os_event_t *events)
     }
     laststatus=status;
 #endif
-    drawScrollingText(&scr);
-
+    redraw();
     os_delay_us(1000);
 
     system_os_post(user_procTaskPrio, 0, 0 );
@@ -329,7 +336,23 @@ uart_setup()
 
 }
 
-extern user_server_init(uint32 port);
+extern void user_server_init(uint32 port);
+
+LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
+{
+    int i;
+
+    screen_t *screen = screen_create("default");
+    widget_t *sc = widget_create("scrollingtext");
+    widget_set_property(sc, "font", "thumb" );
+    widget_set_property(sc, "text", "IoT Panel demo - (C) 2015 Alvie");
+    widget_set_property(sc, "color", "white");
+
+    screen_add_widget(screen, sc, 0, 0);
+
+    //setupScrollingText(&scr, &gfx, font_find("thumb"), 0, "IoT Panel demo - (C) 2015 Alvie");
+}
+
 
 //Init function 
 void ICACHE_FLASH_ATTR
@@ -343,6 +366,7 @@ user_init()
     gpio16_output_set(0); // GPIO16 low.
 
     setupFramebuffer();
+    setupDefaultScreen();
 
     spi_setup();
     timer_setup();
@@ -364,7 +388,8 @@ user_init()
     clearFramebuffer(&gfx);
 
     setupWifi();
-    setupScrollingText(&scr, &gfx, 0, "IoT Panel demo - (C) 2015 Alvie");
+
+    setupDefaultScreen();
 
     //Start os task
     system_os_task(user_procTask, user_procTaskPrio,user_procTaskQueue, user_procTaskQueueLen);

@@ -1,16 +1,8 @@
-#ifndef FONT5X7_H
-#define FONT5X7_H
+#include "font.h"
 
-#ifdef __AVR__
- #include <avr/io.h>
- #include <avr/pgmspace.h>
-#else
- #define PROGMEM
-#endif
- 
 // Standard ASCII 5x7 font
 
-const unsigned char font[] PROGMEM = {
+const unsigned char __glcdfont_bitmap__[]= {
         0x00, 0x00, 0x00, 0x00, 0x00,
 	0x3E, 0x5B, 0x4F, 0x5B, 0x3E,
 	0x3E, 0x6B, 0x4F, 0x6B, 0x3E,
@@ -267,4 +259,11 @@ const unsigned char font[] PROGMEM = {
 	0x00, 0x3C, 0x3C, 0x3C, 0x3C,
 	0x00, 0x00, 0x00, 0x00, 0x00
 };
-#endif // FONT5X7_H
+
+font_t glcd_font = {
+    .w = 5,
+    .h = 7,
+    .bitmap = __glcdfont_bitmap__,
+    .start = 0,
+    .end = 255
+};

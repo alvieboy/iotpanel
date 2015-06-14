@@ -4,83 +4,78 @@
 #include "os_type.h"
 #include "gfx.h"
 #include "mem.h"
+#include "alloc.h"
 
-void *pvPortMalloc( size_t xWantedSize );
-
-extern const unsigned char font[];
-
-void drawChar(const gfxinfo_t *gfx, int x, int y, unsigned char c,
-              uint8 color, uint8 bg, uint8 size)
+void drawChar(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
+              uint8 color, uint8 bg)
 {
-    uint8 i,j;
-    if((x >= gfx->width)            || // Clip right
-       (y >= gfx->height)           || // Clip bottom
-       ((x + 6 * size - 1) < 0) || // Clip left
-       ((y + 8 * size - 1) < 0))   // Clip top
-        return;
+    const uint8 *cptr;
+    uint8 hc = font->h;
 
-    for (i=0; i<6; i++ ) {
-        uint8 line;
-        if (i == 5)
-            line = 0x0;
-        else
-            line = font[(c*5)+i];
-        for (j = 0; j<8; j++) {
-            if (line & 0x1) {
-                if (size == 1) // default size
-                    drawPixel(gfx,x+i, y+j, color);
-                else {  // big size
-                    //fillRect(x+(i*size), y+(j*size), size, size, color);
-                }
-            } else if (bg != color) {
-                if (size == 1) // default size
-                    drawPixel(gfx,x+i, y+j, bg);
-                else {  // big size
-                    //fillRect(x+i*size, y+j*size, size, size, bg);
-                }
-            }
-            line >>= 1;
-        }
+    if ( (c<font->start) || (c>font->end)) {
+        c = font->start;
     }
+    cptr = &font->bitmap[(c - font->start)*(font->h)];
+
+    // Draw.
+    do {
+        uint8 line = *cptr++;
+        uint8 wc = font->w;
+        int sx=x;
+        do {
+            int pixel = line & 0x80;
+            line <<=1;
+            if (pixel) {
+                drawPixel(gfx, x, y, color);
+            } else if (bg != color) {
+                drawPixel(gfx, x, y, bg);
+            }
+            x++;
+        } while (--wc);
+        x=sx;
+        y++;
+    } while (--hc);
 }
 
-void drawText(const gfxinfo_t *gfx, int x, int y, const char *str, uint8 color, uint8 bg, uint8 size)
+void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const font_t *font, int x, int y, const char *str, uint8 color, uint8 bg)
 {
     while (*str) {
-        drawChar(gfx,x,y,*str,color,bg,size);
-        x+=6; str++;
+        drawChar(gfx, font,x,y,*str,color,bg);
+        x+=font->w;
+        str++;
     }
 }
 
-static void freeTextFramebuffer(gfxinfo_t *info)
+LOCAL void ICACHE_FLASH_ATTR freeTextFramebuffer(gfxinfo_t *info)
 {
     if (info->fb)
         os_free(info->fb);
     os_free(info);
 }
 
-gfxinfo_t *allocateTextFramebuffer(const char *str)
+gfxinfo_t * ICACHE_FLASH_ATTR allocateTextFramebuffer(const char *str, const font_t *font)
 {
     int size = strlen(str);
     gfxinfo_t *info = os_malloc(sizeof(gfxinfo_t));
     if (info==NULL)
         return NULL;
-    size *= 6;
+    size *= font->w;
     info->width  = size;
     info->stride = size;
-    info->height = 7;
-    size*=7;
+    info->height = font->h;
+    /**/
+    size *= font->h;
     info->fb = os_malloc(size);
     memset(info->fb,0,size);
     return info;
 }
 
-gfxinfo_t *updateTextFramebuffer(gfxinfo_t *gfx, const char *str)
+gfxinfo_t * ICACHE_FLASH_ATTR updateTextFramebuffer(gfxinfo_t *gfx, const font_t *font, const char *str)
 {
-    int size = strlen(str) * 6;
+    int size = strlen(str) * font->w;
     if (size > gfx->stride) {
         freeTextFramebuffer(gfx);
-        gfx = allocateTextFramebuffer(str);
+        gfx = allocateTextFramebuffer(str,font);
     } else {
         gfx->width = size;
         memset(gfx->fb,0,gfx->height * gfx->stride);
@@ -88,7 +83,7 @@ gfxinfo_t *updateTextFramebuffer(gfxinfo_t *gfx, const char *str)
     return gfx;
 }
 
-int overlayFramebuffer( const gfxinfo_t *source,  const gfxinfo_t *dest, int x, int y)
+int ICACHE_FLASH_ATTR overlayFramebuffer( const gfxinfo_t *source, const gfxinfo_t *dest, int x, int y)
 {
     int ptr;
     int src;
@@ -133,59 +128,11 @@ int overlayFramebuffer( const gfxinfo_t *source,  const gfxinfo_t *dest, int x, 
     return 0;
 }
 
-void clearFramebuffer(gfxinfo_t *gfx)
+void ICACHE_FLASH_ATTR gfx_clear(gfxinfo_t *gfx)
 {
     memset(gfx->fb, 0,gfx->height * gfx->stride);
 }
 
-void setupScrollingText(scrollingtext_t *t, const gfxinfo_t *dest, int y, const char *str)
-{
-    if (t==NULL)
-        return;
-
-    t->dest = dest;
-    t->x = dest->width-1;
-    t->y = y;
-    updateScrollingText(t, str);
-
-    t->gfx = allocateTextFramebuffer(str);
-    drawText( t->gfx, 0,0, str,  0x7, 0x7, 1);
-
-}
-
-void updateScrollingText(scrollingtext_t *t, const char *str)
-{
-    if (t==NULL)
-        return;
-
-    strcpy(t->str, str);
-    t->update = 1;
-}
-
-void drawScrollingText(scrollingtext_t *t)
-{
-    if (t==NULL)
-        return;
-    switch (overlayFramebuffer(t->gfx, t->dest, t->x, t->y)) {
-    case -1:
-        t->x = t->dest->width-1;
-        if (t->update) {
-            if (t->gfx) {
-                updateTextFramebuffer(t->gfx, t->str);
-            } else {
-                t->gfx = allocateTextFramebuffer(t->str);
-            }
-            /* Draw */
-            drawText( t->gfx, 0,0, t->str,  0x5, 0x5, 1);
-            t->update = 0;
-        }
-
-        break;
-    default:
-        t->x--;
-        break;
-    }
-}
 
 
 

@@ -5,6 +5,7 @@
 #include "osapi.h"
 #include "gpio.h"
 #include "os_type.h"
+#include "font.h"
 
 typedef struct gfxinfo
 {
@@ -14,16 +15,8 @@ typedef struct gfxinfo
     uint8_t *fb;
 } gfxinfo_t;
 
-typedef struct 
-{
-    gfxinfo_t *gfx;
-    const gfxinfo_t *dest;
-    char str[128];
-    int update;
-    int x,y;
-} scrollingtext_t;
 
-
+void gfx_clear(gfxinfo_t *gfx);
 
 static inline void drawPixel(const gfxinfo_t *gfx, int x, int y, uint8 color)
 {
@@ -31,13 +24,9 @@ static inline void drawPixel(const gfxinfo_t *gfx, int x, int y, uint8 color)
     gfx->fb[x] = color;
 }
 
-void drawText(const gfxinfo_t*,int x, int y, const char *str, uint8 color, uint8 bg, uint8 size);
-gfxinfo_t *allocateTextFramebuffer(const char *str);
-gfxinfo_t *updateTextFramebuffer(gfxinfo_t *gfx, const char *str);
-
-void setupScrollingText(scrollingtext_t *t, const gfxinfo_t *dest, int y, const char *str);
-void updateScrollingText(scrollingtext_t *t, const char *str);
-void drawScrollingText(scrollingtext_t *t);
-
+void drawText(const gfxinfo_t*,const font_t*,int x, int y, const char *str, uint8 color, uint8 bg);
+gfxinfo_t *allocateTextFramebuffer(const char *str, const font_t*);
+gfxinfo_t *updateTextFramebuffer(gfxinfo_t *gfx, const font_t*,const char *str);
+int overlayFramebuffer( const gfxinfo_t *source, const gfxinfo_t *dest, int x, int y);
 
 #endif // __GFX_H__

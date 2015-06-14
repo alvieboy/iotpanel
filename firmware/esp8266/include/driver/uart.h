@@ -6,6 +6,7 @@
 #define RX_BUFF_SIZE    0x100
 #define TX_BUFF_SIZE    100
 
+
 typedef enum {
     FIVE_BITS = 0x0,
     SIX_BITS = 0x1,
