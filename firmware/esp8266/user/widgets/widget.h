@@ -52,11 +52,13 @@ typedef struct {
     widget_t *widgets;
 } screen_t;
 
-int widget_set_property(widget_t*widget, const char *name, const char *value);
 
 void screen_draw(screen_t *screen, gfxinfo_t *gfx);
 void screen_add_widget(screen_t *screen, widget_t *widget, int x, int y);
+void screen_destroy_all();
 void draw_current_screen(gfxinfo_t *gfx);
+
+int widget_set_property(widget_t*widget, const char *name, const char *value);
 screen_t* screen_create(const char *name);
 widget_t *widget_create(const char *class, const char *name);
 void widget_destroy(widget_t *w);
