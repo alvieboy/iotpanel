@@ -343,7 +343,7 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     int i;
 
     screen_t *screen = screen_create("default");
-    widget_t *sc = widget_create("scrollingtext");
+    widget_t *sc = widget_create("scrollingtext","sc");
     widget_set_property(sc, "font", "thumb" );
     widget_set_property(sc, "text", "IoT Panel demo - (C) 2015 Alvie");
     widget_set_property(sc, "color", "white");

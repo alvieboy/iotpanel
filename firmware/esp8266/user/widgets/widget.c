@@ -133,3 +133,22 @@ widget_t* ICACHE_FLASH_ATTR widget_find(const char *name)
      }
      return r;
 }
+
+void ICACHE_FLASH_ATTR screen_destroy_all()
+{
+    int i;
+    /* Iterate through all screens */
+    for (i=0;i<MAX_SCREENS;i++) {
+        if (screens[i].name[0] != '\0') {
+            /* Destroy all widgets */
+            widget_t *w = screens[i].widgets;
+            while (w) {
+                widget_t *d = w;
+                w=w->next;
+                widget_destroy(d);
+            }
+            screens[i].name[0] = '\0';
+         }
+     }
+ 
+}
