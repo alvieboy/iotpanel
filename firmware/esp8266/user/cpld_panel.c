@@ -7,6 +7,7 @@
 #include "driver/spi_master.h"
 #include "driver/uart.h"
 #include "user_interface.h"
+#include "clock.h"
 
 static int holdoff=0;
 volatile int fbdone=0;
@@ -94,6 +95,10 @@ LOCAL void tim1_intr_handler()
     RTC_REG_WRITE(FRC1_LOAD_ADDRESS, 80);
 
     if (holdoff>0) {
+        // Disable OE
+        if (holdoff==((HOLDOFF-1)*32)-1)
+            GPIO_OUTPUT_SET(4, 1);
+
         holdoff--;
         return;
     }
@@ -141,6 +146,13 @@ LOCAL void tim1_intr_handler()
         row++;
     } 
 }
+
+/*
+ FRC1 clock is 5MHz
+ Prescaler is 80
+
+ Interrupt is called 62500 times per second.
+*/
 
 void ICACHE_FLASH_ATTR timer_setup()
 {
