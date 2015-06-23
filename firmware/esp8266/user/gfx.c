@@ -3,8 +3,9 @@
 #include "gpio.h"
 #include "os_type.h"
 #include "gfx.h"
-#include "mem.h"
+//#include "mem.h"
 #include "alloc.h"
+#include <string.h>
 
 void drawChar(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
               uint8 color, uint8 bg)
@@ -68,6 +69,59 @@ gfxinfo_t * ICACHE_FLASH_ATTR allocateTextFramebuffer(const char *str, const fon
     info->fb = os_malloc(size);
     memset(info->fb,0,size);
     return info;
+}
+
+LOCAL int ICACHE_FLASH_ATTR unpackHexNibbleOr(const char *str, uint8_t *dest)
+{
+    uint8_t v;
+    char l = *str;
+    if (l>='0' && l<='9') {
+        *dest |= (l-'0');
+        return 0;
+    }
+
+    if (l>='a' && l<='z') {
+        *dest |= (l-'a'+10);
+        return 0;
+    }
+    return -1;
+}
+
+LOCAL int unpackHexByte(const char *str, uint8_t *dest)
+{
+    *dest = 0;
+    if (unpackHexNibbleOr(str,dest)<0)
+        return -1;
+    *dest<<=4, str++;
+    if (unpackHexNibbleOr(str,dest)<0)
+        return -1;
+    return 0;
+}
+
+LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str)
+{
+    int size = 0;
+    uint8_t code;
+    /* We need to skip color stuff */
+    while (*str) {
+        if (*str==0x1b) {
+            str++;
+            if (*str=='\0')
+                return -1;
+            switch (*str) {
+            case 'f':
+                if (unpackHexByte(str, &code)<0)
+                    return -1;
+                str+=2;
+                break;
+            default:
+                return -1;
+            }
+            continue;
+        }
+        str++, size++;
+    }
+    return size;
 }
 
 gfxinfo_t * ICACHE_FLASH_ATTR updateTextFramebuffer(gfxinfo_t *gfx, const font_t *font, const char *str)

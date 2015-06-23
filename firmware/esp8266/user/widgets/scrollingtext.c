@@ -1,6 +1,7 @@
 #include "scrollingtext.h"
 #include "widget.h"
 #include "alloc.h"
+#include "debug.h"
 
 void ICACHE_FLASH_ATTR setupScrollingText(scrollingtext_t *t, const gfxinfo_t *dest,
                                            const font_t *font,
@@ -22,6 +23,12 @@ void ICACHE_FLASH_ATTR setupScrollingText(scrollingtext_t *t, const gfxinfo_t *d
 
 }
 
+LOCAL void ICACHE_FLASH_ATTR scrollingtext_set_text(widget_t *w, const char *str)
+{
+     scrollingtext_t *t= SCROLLINGTEXT(w);
+    updateScrollingText(t, str);
+}
+
 void ICACHE_FLASH_ATTR updateScrollingText(scrollingtext_t *t, const char *str)
 {
     if (t==NULL)
@@ -35,6 +42,7 @@ void ICACHE_FLASH_ATTR drawScrollingText(scrollingtext_t *t)
 {
     if (t==NULL)
         return;
+    DEBUG("Drawing x %d, y %d\n", t->x, t->y);
     switch (overlayFramebuffer(t->gfx, t->dest, t->x, t->y)) {
     case -1:
         t->x = t->dest->width-1;
@@ -56,7 +64,7 @@ void ICACHE_FLASH_ATTR drawScrollingText(scrollingtext_t *t)
     }
 }
 
-int ICACHE_FLASH_ATTR scrollingtext_set_font(widget_t *w, char *name)
+int ICACHE_FLASH_ATTR scrollingtext_set_font(widget_t *w, const char *name)
 {
     scrollingtext_t *t= SCROLLINGTEXT(w);
     t->font = font_find(name);
@@ -65,7 +73,7 @@ int ICACHE_FLASH_ATTR scrollingtext_set_font(widget_t *w, char *name)
     return 0;
 }
 
-int ICACHE_FLASH_ATTR scrollingtext_set_color(widget_t *w, char *name)
+int ICACHE_FLASH_ATTR scrollingtext_set_color(widget_t *w, const char *name)
 {
     scrollingtext_t *t= SCROLLINGTEXT(w);
     if (color_parse(name, &t->fg)<0)
@@ -75,15 +83,17 @@ int ICACHE_FLASH_ATTR scrollingtext_set_color(widget_t *w, char *name)
 }
 
 static property_t properties[] = {
-    { "text",  T_STRING, SETTER(updateScrollingText),  NULL },
+    { "text",  T_STRING, SETTER(scrollingtext_set_text),  NULL },
     { "font",  T_STRING, SETTER(scrollingtext_set_font),  NULL },
     { "color",  T_STRING, SETTER(scrollingtext_set_color),  NULL },
     END_OF_PROPERTIES
 };
 
-static widget_t *ICACHE_FLASH_ATTR scrollingtext_new(void*what)
+static void *ICACHE_FLASH_ATTR scrollingtext_new(void*what)
 {
-    return os_malloc(sizeof(scrollingtext_t));
+    scrollingtext_t *s = os_malloc(sizeof(scrollingtext_t));
+    s->gfx = NULL;
+    return s;
 }
 
 static void ICACHE_FLASH_ATTR scrollingtext_destroy(void*what)
@@ -96,6 +106,9 @@ void ICACHE_FLASH_ATTR scrollingtext_redraw(widget_t *w, int x, int y, gfxinfo_t
     scrollingtext_t *t= SCROLLINGTEXT(w);
     t->y = y;
 
+    if (!t->gfx) {
+        setupScrollingText(t, gfx, t->font, t->y, t->str);
+    }
     drawScrollingText(t);
 }
 

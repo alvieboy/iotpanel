@@ -1,5 +1,7 @@
 #include "color.h"
 #include <string.h>
+#include "ets_sys.h"
+#include "osapi.h"
 
 struct color_entry {
     const char *name;
@@ -7,10 +9,13 @@ struct color_entry {
 };
 struct color_entry color_list[] = {
     { "white", 0x7 },
+    { "red",   0x1 },
+    { "green", 0x2 },
+    { "blue",  0x4 },
     { 0,0 }
 };
 
-int color_parse(const char *name, color_t *color)
+int ICACHE_FLASH_ATTR color_parse(const char *name, color_t *color)
 {
     struct color_entry *e = &color_list[0];
     while (e) {

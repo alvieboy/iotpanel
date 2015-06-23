@@ -20,16 +20,17 @@
 #define UART0 0
 #endif
 
+#ifndef __linux__
 os_event_t    user_procTaskQueue[user_procTaskQueueLen];
 static void user_procTask(os_event_t *events);
+static volatile os_timer_t some_timer;
+#endif
 
 extern void draw_current_screen();
 
-static volatile os_timer_t some_timer;
-
 /* Framebuffer */
 uint8_t framebuffer[32*32];
-volatile int fbdone=0;
+extern volatile int fbdone;
 
 const struct gfxinfo gfx =
 {
@@ -39,49 +40,6 @@ const struct gfxinfo gfx =
     &framebuffer[0]//fb
 };
 
-static volatile int column=0;
-static int ptr=0;
-static int row=0;
-static int holdoff=0;
-
-#define HOLDOFF 6
-
-#define CPLDCS 5 /* GPIO4?? */
-
-static inline void myspi_master_9bit_write(uint8 spi_no, uint8 high_bit, uint8 low_8bit)
-{
-    uint32 regvalue;
-    uint8 bytetemp;
-
-    if (spi_no > 1) {
-        return;
-    }
-
-    if (high_bit) {
-        bytetemp = (low_8bit >> 1) | 0x80;
-    } else {
-        bytetemp = (low_8bit >> 1) & 0x7f;
-    }
-
-    regvalue = 0x80000000 | ((uint32)bytetemp);		//configure transmission variable,9bit transmission length and first 8 command bit
-
-    if (low_8bit & 0x01) {
-        regvalue |= BIT15;    //write the 9th bit
-    }
-    WRITE_PERI_REG(SPI_FLASH_USER2(spi_no), regvalue);				//write  command and command length into spi reg
-    SET_PERI_REG_MASK(SPI_FLASH_CMD(spi_no), SPI_FLASH_USR);		//transmission start
-}
-
-
-static inline void spi_select(int selected)
-{
-    GPIO_OUTPUT_SET(CPLDCS, selected);
-}
-
-static inline void spi_wait_transmission()
-{
-    while (READ_PERI_REG(SPI_FLASH_CMD(HSPI))&SPI_FLASH_USR);
-}
 
 //Do nothing function
 
@@ -117,6 +75,8 @@ static volatile int count = 0;
 
 int xoffset=0;
 int laststatus = -1;
+
+#ifndef __linux__
 
 LOCAL void ICACHE_FLASH_ATTR wifiUpdate(const char *status)
 {
@@ -159,11 +119,14 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
         break;
     }
 }
+#endif
 
-LOCAL void ICACHE_FLASH_ATTR redraw()
+void ICACHE_FLASH_ATTR redraw()
 {
     draw_current_screen(&gfx);
 }
+
+#ifndef __linux__
 
 static void ICACHE_FLASH_ATTR
 user_procTask(os_event_t *events)
@@ -196,111 +159,7 @@ user_procTask(os_event_t *events)
 
     system_os_post(user_procTaskPrio, 0, 0 );
 }
-
-static void 
-spi_setup()
-{
-    spi_master_init(HSPI);
-    uint32 regvalue = READ_PERI_REG(SPI_FLASH_CTRL2(HSPI));
-    WRITE_PERI_REG(SPI_FLASH_CTRL2(HSPI),regvalue);
-    WRITE_PERI_REG(SPI_FLASH_CLOCK(HSPI), 0x43043); //clear bit 31,set SPI clock div
-}
-
-#define FRC1_ENABLE_TIMER  BIT7
-
-typedef enum {
-    DIVDED_BY_1 = 0,
-    DIVDED_BY_16 = 4,
-    DIVDED_BY_256 = 8,
-} TIMER_PREDIVED_MODE;
-
-typedef enum {
-    TM_LEVEL_INT = 1,
-    TM_EDGE_INT   = 0,
-} TIMER_INT_MODE;
-
-
-static inline void strobe_set(int val)
-{
-    GPIO_OUTPUT_SET(12, val);
-}
-
-static inline void strobe()
-{
-    strobe_set(1);
-    strobe_set(0);
-}
-
-LOCAL void tim1_intr_handler()
-{
-    RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
-    RTC_REG_WRITE(FRC1_LOAD_ADDRESS, 80);
-
-    if (holdoff>0) {
-        holdoff--;
-        return;
-    }
-
-    if (column==0)
-        spi_select(0);
-
-    if (column<=31) {
-        /* get pixel, upper row */
-        uint32 regval = framebuffer[ptr];
-        regval <<= 3;
-        regval |= framebuffer[ptr+(16*32)] & 0x7;
-        regval<<=1;
-        regval|=0x80;
-        myspi_master_9bit_write(HSPI, 1, regval);
-        ptr++;
-        column++;
-    } else if (column==32) {
-        // force clock high.
-        myspi_master_9bit_write(HSPI, 1, 0x00);
-        column++;
-    } else if (column==33) {
-        // Send row.
-        myspi_master_9bit_write(HSPI, 0, row&0xf);
-        // Strobe.
-        column=0;
-        // Disable OE
-        GPIO_OUTPUT_SET(4, 1);
-
-        strobe();
-        // We need to wait here.
-        while (READ_PERI_REG(SPI_FLASH_CMD(HSPI))&SPI_FLASH_USR);
-        // Deselect.
-        spi_select(1);
-        // Enable OE again
-        GPIO_OUTPUT_SET(4, 0);
-
-        column=0;
-
-        if ((row&0xf)==0xf) {
-            ptr=0;
-            holdoff = HOLDOFF * 32;
-            fbdone=1;
-        }
-        row++;
-    } 
-
-
-}
-
-
-static void timer_setup()
-{
-    ETS_FRC_TIMER1_INTR_ATTACH(tim1_intr_handler, NULL);
-    TM1_EDGE_INT_ENABLE();
-    ETS_FRC1_INTR_ENABLE();
-
-    RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
-    RTC_REG_WRITE(FRC1_CTRL_ADDRESS,
-                  DIVDED_BY_16
-                  | FRC1_ENABLE_TIMER
-                  | TM_EDGE_INT);
-    RTC_REG_WRITE(FRC1_LOAD_ADDRESS, 80);
-}
+#endif
 
 static void setupFramebuffer()
 {
@@ -313,27 +172,72 @@ static void setupFramebuffer()
     }
 }
 
+#ifndef __linux__
+
 LOCAL struct station_config sta_conf;
 
-void setupWifi()
+LOCAL void ICACHE_FLASH_ATTR setupWifiSta()
 {
     memset(&sta_conf,0,sizeof(sta_conf));
     memcpy(&sta_conf.ssid, WIFI_SSID, strlen(WIFI_SSID));
     memcpy(&sta_conf.password, WIFI_PWD, strlen(WIFI_PWD));
+
+    wifi_softap_dhcps_stop();
 
     wifi_set_opmode(STATION_MODE);
     wifi_station_set_config(&sta_conf);
     wifi_station_disconnect();
     wifi_station_connect();
 }
+#endif
+
+LOCAL void ICACHE_FLASH_ATTR setupDHCPServer()
+{
+#ifndef __linux__
+    struct ip_info info;
+    info.ip.addr = 0x0A0A0A0A;
+    info.gw.addr = 0x0A0A0A0A;
+    info.netmask.addr = 0x00FFFFFF;
+    wifi_softap_dhcps_stop();
+    wifi_set_ip_info(SOFTAP_IF, &info);
+    wifi_softap_dhcps_start();
+#endif
+}
+
+
+LOCAL void ICACHE_FLASH_ATTR setupWifiAp(const char *ssid, const char *password)
+{
+#ifndef __linux__
+    struct softap_config config;
+
+    int ssidlen = strlen(ssid);
+
+    wifi_softap_get_config(&config);
+    os_memcpy(config.ssid,ssid,ssidlen);
+    config.ssid_len = ssidlen;
+    config.ssid_hidden = 0;
+    config.channel = 10;
+    strcpy(config.password, password);
+    config.authmode = AUTH_WPA_WPA2_PSK;
+
+    wifi_station_dhcpc_stop();
+
+    wifi_softap_set_config(&config);
+    /* Setup DHCP */
+    setupDHCPServer();
+
+    wifi_set_opmode(STATIONAP_MODE);
+#endif
+}
 
 LOCAL void ICACHE_FLASH_ATTR
 uart_setup()
 {
+#ifndef __linux__
     uart_init_single(UART0, BIT_RATE_115200, 1);
 
     WRITE_PERI_REG(UART_INT_ENA(0), 0);
-
+#endif
 }
 
 extern void user_server_init(uint32 port);
@@ -350,7 +254,13 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 
     screen_add_widget(screen, sc, 0, 0);
 
-    //setupScrollingText(&scr, &gfx, font_find("thumb"), 0, "IoT Panel demo - (C) 2015 Alvie");
+    sc = widget_create("rectangle", "re1");
+    widget_set_property(sc, "width", "30");
+    widget_set_property(sc, "height", "20");
+    widget_set_property(sc, "fill", "1");
+    widget_set_property(sc, "color", "green");
+    screen_add_widget(screen, sc, 1, 11);
+
 }
 
 
@@ -358,22 +268,20 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 void ICACHE_FLASH_ATTR
 user_init()
 {
-    // Initialize the GPIO subsystem.
+#ifndef __linux__
     gpio_init();
-//    gpio_output_set(0, BIT4|BIT12, BIT4|BIT12, 0);
-
     gpio16_output_conf();
     gpio16_output_set(0); // GPIO16 low.
-
-    setupFramebuffer();
-    setupDefaultScreen();
-
     spi_setup();
     timer_setup();
     uart_setup();
+#endif
+    setupFramebuffer();
+    setupDefaultScreen();
+
     user_server_init(8081);
 
-
+#ifndef __linux__
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U,  FUNC_GPIO15); // GPIO15.
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U,  FUNC_GPIO12);  // DI
 
@@ -384,16 +292,18 @@ user_init()
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
 
     GPIO_OUTPUT_SET(4, 0);
+#endif
 
     clearFramebuffer(&gfx);
 
-    setupWifi();
-
+    setupWifiAp("IOTPANEL","alvie");
     setupDefaultScreen();
 
     //Start os task
-    system_os_task(user_procTask, user_procTaskPrio,user_procTaskQueue, user_procTaskQueueLen);
-
+#ifdef __linux__
+    user_procTask(NULL);
+#else
+    system_os_task(user_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);
     system_os_post(user_procTaskPrio, 0, 0 );
-
+#endif
 }

@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "widget.h"
 #include <ctype.h>
+#include <string.h>
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;

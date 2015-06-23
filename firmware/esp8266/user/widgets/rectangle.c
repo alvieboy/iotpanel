@@ -6,6 +6,17 @@
 
 LOCAL void ICACHE_FLASH_ATTR rectangle_redraw(widget_t *w, int x, int y, gfxinfo_t *gfx)
 {
+    rectangle_t *r = RECTANGLE(w);
+    uint8_t *pix = &gfx->fb[x];
+    pix += y * gfx->stride;
+
+    int cx,cy;
+    for (cy=0;cy<r->h;cy++) {
+        for (cx=0;cx<r->w;cx++) {
+            pix[cx] = r->bg_color;
+        }
+        pix += gfx->stride;
+    }
 }
 
 LOCAL int ICACHE_FLASH_ATTR rectangle_set_width(widget_t *w, const int *width)

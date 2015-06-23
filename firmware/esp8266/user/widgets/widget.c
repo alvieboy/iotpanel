@@ -93,7 +93,7 @@ void ICACHE_FLASH_ATTR widget_destroy(widget_t *w)
 
 widget_t *ICACHE_FLASH_ATTR widget_create(const char *class, const char *name)
 {
-    const widgetdef_t *def = widgetdef_find(name);
+    const widgetdef_t *def = widgetdef_find(class);
 
     if (NULL==def)
         return NULL;
@@ -103,6 +103,7 @@ widget_t *ICACHE_FLASH_ATTR widget_create(const char *class, const char *name)
     w->priv = def->alloc(NULL);
     w->x=0;
     w->y=0;
+    w->next = NULL;
     strncpy(w->name, name, sizeof(w->name));
     return w;
 }

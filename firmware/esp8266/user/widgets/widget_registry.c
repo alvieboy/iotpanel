@@ -14,7 +14,9 @@ const widgetdef_t *widget_registry[] = {
 const widgetdef_t *widgetdef_find(const char *name)
 {
     const widgetdef_t *w;
-    for (w = widget_registry[0]; w; w++) {
+    int i;
+    for ( i = 0; widget_registry[i]; i++) {
+        w = widget_registry[i];
         if (strcmp(name,w->name)==0)
             return w;
     }
