@@ -14,8 +14,6 @@ void ICACHE_FLASH_ATTR setupScrollingText(scrollingtext_t *t, const gfxinfo_t *d
     t->x = dest->width-1;
     t->y = y;
     t->font = font;
-    t->fg = 0x3;
-    t->bg = 0x3;
     updateScrollingText(t, str);
 
     t->gfx = allocateTextFramebuffer(str, t->font);

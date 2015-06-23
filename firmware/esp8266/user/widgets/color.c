@@ -12,6 +12,8 @@ struct color_entry color_list[] = {
     { "red",   0x1 },
     { "green", 0x2 },
     { "blue",  0x4 },
+    { "black",  0x0 },
+    { "yellow",  0x3 },
     { 0,0 }
 };
 

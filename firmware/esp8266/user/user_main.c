@@ -155,7 +155,7 @@ user_procTask(os_event_t *events)
     laststatus=status;
 #endif
     redraw();
-    os_delay_us(1000);
+    os_delay_us(5000);
 
     system_os_post(user_procTaskPrio, 0, 0 );
 }
@@ -258,7 +258,11 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     widget_set_property(sc, "width", "30");
     widget_set_property(sc, "height", "20");
     widget_set_property(sc, "fill", "1");
-    widget_set_property(sc, "color", "green");
+    widget_set_property(sc, "color", "red");
+    widget_set_property(sc, "bordercolor", "red");
+    widget_set_property(sc, "altcolor", "yellow");
+    widget_set_property(sc, "border", "1");
+    widget_set_property(sc, "flash", "30");
     screen_add_widget(screen, sc, 1, 11);
 
 }

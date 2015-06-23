@@ -7,6 +7,9 @@
 #include <SDL2/SDL.h>
 #include "gfx.h"
 
+#define LEDSIZE 10
+#define LEDBORDER 2
+
 espconn *current_conn = NULL;
 
 // Compats...
@@ -101,7 +104,6 @@ int main()
     user_init();
 }
 
-#define LEDSIZE 10
 
 extern const struct gfxinfo gfx;
 
@@ -113,13 +115,13 @@ void updateImage()
     SDL_SetRenderDrawColor(ren,0x0,0,0,0xff);
     SDL_RenderClear(ren);
 
-    r.w=LEDSIZE-2;
-    r.h=LEDSIZE-2;
+    r.w=LEDSIZE-(LEDBORDER*2);
+    r.h=LEDSIZE-(LEDBORDER*2);
 
     for (y=0;y<32;y++) {
         for (x=0;x<32;x++) {
-            r.x=1 + (x*LEDSIZE);
-            r.y=1 + (y*LEDSIZE);
+            r.x=LEDBORDER + (x*LEDSIZE);
+            r.y=LEDBORDER + (y*LEDSIZE);
             uint8_t color = gfx.fb[x+(y*32)];
             int cr,cg,cb;
             cr = color&1 ? 0xff:0x00;

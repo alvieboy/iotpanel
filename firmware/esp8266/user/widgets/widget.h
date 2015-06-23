@@ -34,7 +34,7 @@ struct widget;
 typedef struct {
     const char *name;
     property_t *properties;
-    struct widget *(*alloc)(void*);
+    void *(*alloc)(void*);
     void (*redraw)(struct widget*, int, int, gfxinfo_t *gfx);
     void (*destroy)(void*);
 } widgetdef_t;
