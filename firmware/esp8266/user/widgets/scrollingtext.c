@@ -2,6 +2,7 @@
 #include "widget.h"
 #include "alloc.h"
 #include "debug.h"
+#include <string.h>
 
 void ICACHE_FLASH_ATTR setupScrollingText(scrollingtext_t *t, const gfxinfo_t *dest,
                                            const font_t *font,
@@ -80,13 +81,6 @@ int ICACHE_FLASH_ATTR scrollingtext_set_color(widget_t *w, const char *name)
     return 0;
 }
 
-static property_t properties[] = {
-    { "text",  T_STRING, SETTER(scrollingtext_set_text),  NULL },
-    { "font",  T_STRING, SETTER(scrollingtext_set_font),  NULL },
-    { "color",  T_STRING, SETTER(scrollingtext_set_color),  NULL },
-    END_OF_PROPERTIES
-};
-
 static void *ICACHE_FLASH_ATTR scrollingtext_new(void*what)
 {
     scrollingtext_t *s = os_malloc(sizeof(scrollingtext_t));
@@ -109,6 +103,13 @@ void ICACHE_FLASH_ATTR scrollingtext_redraw(widget_t *w, int x, int y, gfxinfo_t
     }
     drawScrollingText(t);
 }
+
+static property_t properties[] = {
+    { "text",  T_STRING, SETTER(scrollingtext_set_text),  NULL },
+    { "font",  T_STRING, SETTER(scrollingtext_set_font),  NULL },
+    { "color",  T_STRING, SETTER(scrollingtext_set_color),  NULL },
+    END_OF_PROPERTIES
+};
 
 widgetdef_t scrollingtext_widget = {
     .name = "scrollingtext",

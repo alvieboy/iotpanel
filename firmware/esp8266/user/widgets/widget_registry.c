@@ -4,10 +4,12 @@
 
 extern const widgetdef_t rectangle_widget;
 extern const widgetdef_t scrollingtext_widget;
+extern const widgetdef_t text_widget;
 
 const widgetdef_t *widget_registry[] = {
     &rectangle_widget,
     &scrollingtext_widget,
+    &text_widget,
     0
 };
 

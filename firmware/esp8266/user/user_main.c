@@ -12,6 +12,7 @@
 #include "gfx.h"
 #include "wifi-config.h"
 #include "widget.h"
+#include <string.h>
 
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
@@ -32,7 +33,7 @@ extern void draw_current_screen();
 uint8_t framebuffer[32*32];
 extern volatile int fbdone;
 
-const struct gfxinfo gfx =
+struct gfxinfo gfx =
 {
     32, //stride
     32, //width

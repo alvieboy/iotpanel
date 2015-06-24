@@ -5,6 +5,7 @@
 #include "gfx.h"
 #include "widget_registry.h"
 #include "alloc.h"
+#include <string.h>
 
 LOCAL screen_t screens[MAX_SCREENS] = {{{0}}};
 LOCAL int current_screen = 0;

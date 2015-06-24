@@ -98,18 +98,6 @@ LOCAL int ICACHE_FLASH_ATTR rectangle_set_flash(widget_t *w, const int *v)
     return 0;
 }
 
-static property_t properties[] = {
-    { "width",  T_INT, SETTER(rectangle_set_width),  NULL },
-    { "height", T_INT, SETTER(rectangle_set_height), NULL },
-    { "fill",   T_INT, SETTER(rectangle_set_fill),   NULL },
-    { "border", T_INT, SETTER(rectangle_set_border), NULL },
-    { "color",  T_STRING, SETTER(rectangle_set_color), NULL },
-    { "bordercolor", T_STRING, SETTER(rectangle_set_bordercolor), NULL },
-    { "altcolor", T_STRING, SETTER(rectangle_set_altcolor), NULL },
-    { "flash",  T_INT, SETTER(rectangle_set_flash), NULL },
-    END_OF_PROPERTIES
-};
-
 LOCAL void *ICACHE_FLASH_ATTR rectangle_new(void*what)
 {
     rectangle_t *r = os_malloc(sizeof(rectangle_t));
@@ -122,6 +110,18 @@ LOCAL void ICACHE_FLASH_ATTR rectangle_destroy(void*what)
 {
     os_free(what);
 }
+
+static property_t properties[] = {
+    { "width",  T_INT, SETTER(rectangle_set_width),  NULL },
+    { "height", T_INT, SETTER(rectangle_set_height), NULL },
+    { "fill",   T_INT, SETTER(rectangle_set_fill),   NULL },
+    { "border", T_INT, SETTER(rectangle_set_border), NULL },
+    { "color",  T_STRING, SETTER(rectangle_set_color), NULL },
+    { "bordercolor", T_STRING, SETTER(rectangle_set_bordercolor), NULL },
+    { "altcolor", T_STRING, SETTER(rectangle_set_altcolor), NULL },
+    { "flash",  T_INT, SETTER(rectangle_set_flash), NULL },
+    END_OF_PROPERTIES
+};
 
 widgetdef_t rectangle_widget = {
     .name = "rectangle",
