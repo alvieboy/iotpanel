@@ -74,7 +74,7 @@ begin
   panelen <= 'Z';  -- not used yet
   espen <= 'Z';    -- not used yet
 
-  espreset<='0' when idtr='1' else 'Z';
+  espreset<='0' when idtr='1' else '1';
 
   --espen<='0' when idtr='0' and irx='1' else '1';
 
