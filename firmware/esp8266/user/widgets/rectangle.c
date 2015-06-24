@@ -104,6 +104,7 @@ LOCAL void *ICACHE_FLASH_ATTR rectangle_new(void*what)
     r->alt = 0;
     r->flash = 0;
     r->flashcount = 0;
+    return r;
 }
 
 LOCAL void ICACHE_FLASH_ATTR rectangle_destroy(void*what)
