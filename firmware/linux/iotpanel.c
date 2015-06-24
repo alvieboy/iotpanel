@@ -11,7 +11,7 @@
 #define LEDBORDER 2
 
 espconn *current_conn = NULL;
-
+static int listenfd = -1;
 // Compats...
 
 
@@ -61,24 +61,28 @@ void espconn_regist_time()
 {
 }
 
+void (*cb_data)(void *, char *, unsigned short length) = NULL;
+void (*cb_connect)(void*) = NULL;
+void (*cb_disconn)(void*) = NULL;
+
 int espconn_regist_recvcb(espconn*conn, void (*cb)(void *, char *, unsigned short length))
 {
-    return 0;
+    cb_data = cb;
 }
 
 void espconn_regist_reconcb(espconn*conn, void (*cb)(void *arg, sint8 err))
 {
-    return 0;
+
 }
 
 void espconn_regist_connectcb(espconn*conn, void (*cb)(void*))
 {
-    return 0;
+    cb_connect=cb;
 }
 
 void espconn_regist_disconcb(espconn*conn, void (*cb)(void*))
 {
-    return 0;
+    cb_disconn=cb;
 }
 
 SDL_Window *win;
@@ -138,6 +142,70 @@ void updateImage()
     SDL_RenderPresent(ren);
 }
 
+static void clientData()
+{
+    unsigned char buf[8192];
+    int r = read( current_conn->sockfd, buf, sizeof(buf));
+    if (r<=0) {
+        close(current_conn->sockfd);
+        current_conn->sockfd=-1;
+        cb_disconn(current_conn);
+    } else {
+        cb_data(current_conn,buf, r);
+    }
+}
+
+
+static void newConnection()
+{
+    socklen_t len = sizeof(struct sockaddr_in);
+    current_conn->sockfd = accept( listenfd, (struct sockaddr*)&current_conn->sock, &len);
+    cb_connect(current_conn);
+}
+
+
+static void netCheck()
+{
+    struct timeval tv;
+    fd_set rfs;
+    int retry = 0;
+    int max=-1;
+    tv.tv_sec=0;
+    tv.tv_usec=50000;
+
+    do {
+        FD_ZERO(&rfs);
+
+        if (listenfd>=0) {
+            FD_SET(listenfd,&rfs);
+            if (max<listenfd)
+                max=listenfd;
+        }
+
+        if (current_conn && current_conn->sockfd>=0) {
+            FD_SET(current_conn->sockfd,&rfs);
+            if (max<current_conn->sockfd)
+                max=current_conn->sockfd;
+        }
+        switch(select(max+1, &rfs, NULL, NULL, &tv)) {
+        case 0:
+            retry=0;
+            break;
+        case -1:
+            return;
+        default:
+            if (listenfd>=0 && FD_ISSET(listenfd,&rfs)) {
+                newConnection();
+            }
+            if (current_conn && current_conn->sockfd>=0 &&
+                FD_ISSET(current_conn->sockfd,&rfs)) {
+                clientData();
+            }
+            break;
+        }
+
+    } while (retry);
+}
 
 void user_procTask(void*arg)
 {
@@ -153,7 +221,7 @@ void user_procTask(void*arg)
                 quit = 1;
             }
         }
-        os_delay_us(20000);
+        netCheck();//os_delay_us(20000);
     }
 }
 
@@ -164,4 +232,25 @@ void espconn_sent(espconn*conn, unsigned char *ptr, uint16_t size)
 
 void espconn_accept(espconn*conn)
 {
+    int yes=1;
+    conn->sockfd=-1;
+    current_conn = conn;
+    listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP );
+    if (listenfd<0) {
+        perror("socket");
+        abort();
+    }
+    memset(&conn->sock,0, sizeof(conn->sock));
+    conn->sock.sin_family = AF_INET;
+    conn->sock.sin_addr.s_addr = INADDR_ANY;
+    conn->sock.sin_port = htons(conn->proto.tcp->local_port);
+    if (bind(listenfd, (struct sockaddr*)&conn->sock,sizeof(conn->sock))<0) {
+        perror("bind");
+        abort();
+    }
+    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))<0) {
+        perror("setsockopt");
+        abort();
+    }
+    listen(listenfd,1);
 }
