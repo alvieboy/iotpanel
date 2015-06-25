@@ -9,6 +9,7 @@
 #include "widget.h"
 #include <ctype.h>
 #include <string.h>
+#include "debug.h"
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
@@ -107,18 +108,18 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandPropset(clientInfo_t *cl)
         client_senderror(cl, "UNKNONW");
         return -1;
     }
-    if (cl->argc!=4) {
+    if (cl->argc!=3) {
         client_senderror(cl, "INVALIDARGS");
         return -1;
     }
 
-    widget_t *w = widget_find(cl->argv[1]);
+    widget_t *w = widget_find(cl->argv[0]);
     if (!w) {
         client_senderror(cl,"NOTFOUND");
         return -1;
     }
 
-    if (widget_set_property( w, cl->argv[2], cl->argv[3])<0) {
+    if (widget_set_property( w, cl->argv[1], cl->argv[2])<0) {
         client_senderror(cl,"INVALIDPROP");
         return -1;
     }
@@ -148,13 +149,19 @@ LOCAL ICACHE_FLASH_ATTR void clientInfo_init(clientInfo_t*cl)
 LOCAL int ICACHE_FLASH_ATTR parse_args(clientInfo_t *cl, char *start, char *end)
 {
     enum { NORMAL, STRING, SPACE } state = SPACE;
-    int len = end-start;
     int argc=0;
+
+    end--;
+
+    int len = end-start;
 
     while (len--) {
         if (argc>=8)
             return -1;
-
+        if ( (*start == 0x0d ) || (*start == 0x0a)) {
+            *start++='\0';
+            len=0;
+        }
         switch(state) {
         case NORMAL:
             if (isspace(*start)) {

@@ -20,7 +20,7 @@ struct color_entry color_list[] = {
 int ICACHE_FLASH_ATTR color_parse(const char *name, color_t *color)
 {
     struct color_entry *e = &color_list[0];
-    while (e) {
+    while (e->name) {
         if (strcmp(name,e->name)==0) {
             *color = e->color;
             return 0;

@@ -38,23 +38,18 @@ void ICACHE_FLASH_ATTR drawTextWidget(text_t *t, int x, int y)
 {
     if (t==NULL)
         return;
-    switch (overlayFramebuffer(t->gfx, t->dest, x, y)) {
-    case -1:
-        if (t->update) {
-            if (t->gfx) {
-                updateTextFramebuffer(t->gfx, t->font, t->str);
-            } else {
-                t->gfx = allocateTextFramebuffer(t->str, t->font);
-            }
-            /* Draw */
-            drawText( t->gfx, t->font, 0,0, t->str,  t->fg, t->bg);
-            t->update = 0;
+    
+    if (t->update) {
+        if (t->gfx) {
+            updateTextFramebuffer(t->gfx, t->font, t->str);
+        } else {
+            t->gfx = allocateTextFramebuffer(t->str, t->font);
         }
-
-        break;
-    default:
-        break;
+        /* Draw */
+        drawText( t->gfx, t->font, 0,0, t->str,  t->fg, t->bg);
+        t->update = 0;
     }
+    overlayFramebuffer(t->gfx, t->dest, x, y);
 }
 
 int ICACHE_FLASH_ATTR text_set_font(widget_t *w, const char *name)

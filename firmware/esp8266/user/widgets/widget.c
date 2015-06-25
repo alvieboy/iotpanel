@@ -6,6 +6,7 @@
 #include "widget_registry.h"
 #include "alloc.h"
 #include <string.h>
+#include "debug.h"
 
 LOCAL screen_t screens[MAX_SCREENS] = {{{0}}};
 LOCAL int current_screen = 0;
@@ -16,7 +17,7 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
     int li;
     char *end;
 
-    for (prop = widget->def->properties; prop; prop++) {
+    for (prop = widget->def->properties; prop->name; prop++) {
         if (strcmp(prop->name,name)==0) {
             switch (prop->type) {
             case T_INT:

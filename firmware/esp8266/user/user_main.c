@@ -257,15 +257,21 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 
     sc = widget_create("rectangle", "re1");
     widget_set_property(sc, "width", "30");
-    widget_set_property(sc, "height", "20");
+    widget_set_property(sc, "height", "17");
     widget_set_property(sc, "fill", "1");
     widget_set_property(sc, "color", "red");
     widget_set_property(sc, "bordercolor", "red");
     widget_set_property(sc, "altcolor", "yellow");
     widget_set_property(sc, "border", "1");
     widget_set_property(sc, "flash", "30");
-    screen_add_widget(screen, sc, 1, 11);
+    screen_add_widget(screen, sc, 1, 14);
 
+    sc = widget_create("text", "txt");
+    widget_set_property(sc, "font", "thumb" );
+    widget_set_property(sc, "text", "10:10:10");
+    widget_set_property(sc, "color", "yellow");
+
+    screen_add_widget(screen, sc, 0, 7);
 }
 
 

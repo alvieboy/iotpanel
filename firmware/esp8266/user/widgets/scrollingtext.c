@@ -41,7 +41,7 @@ void ICACHE_FLASH_ATTR drawScrollingText(scrollingtext_t *t)
 {
     if (t==NULL)
         return;
-    DEBUG("Drawing x %d, y %d\n", t->x, t->y);
+    //DEBUG("Drawing x %d, y %d\n", t->x, t->y);
     switch (overlayFramebuffer(t->gfx, t->dest, t->x, t->y)) {
     case -1:
         t->x = t->dest->width-1;

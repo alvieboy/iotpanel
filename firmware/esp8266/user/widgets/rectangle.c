@@ -21,10 +21,13 @@ LOCAL void ICACHE_FLASH_ATTR rectangle_redraw(widget_t *w, int x, int y, gfxinfo
 
     if (r->flash) {
         r->flashcount++;
-    }
-    if (r->flashcount > r->flash) {
-        r->flashcount=0;
-        r->alt = ! r->alt;
+
+        if (r->flashcount > r->flash) {
+            r->flashcount=0;
+            r->alt = ! r->alt;
+        }
+    } else {
+        r->alt = 0;
     }
 
     uint8_t *pix = &gfx->fb[x];
@@ -93,8 +96,6 @@ LOCAL int ICACHE_FLASH_ATTR rectangle_set_flash(widget_t *w, const int *v)
 {
     rectangle_t *r = RECTANGLE(w);
     r->flash = *v;
-    if (r->flash==0)
-        r->alt=0;
     return 0;
 }
 
