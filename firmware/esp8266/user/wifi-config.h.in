@@ -1,3 +1,8 @@
+#include "wifi.h"
+
 /* Change this */
-#define WIFI_SSID "myssid"
-#define WIFI_PWD "mypwd"
+
+struct ap_info accesspoints[] = {
+	{ "myssid", "mypwd" },
+        END_OF_ACCESSPOINTS
+};

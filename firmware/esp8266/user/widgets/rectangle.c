@@ -101,7 +101,7 @@ LOCAL int ICACHE_FLASH_ATTR rectangle_set_flash(widget_t *w, const int *v)
 
 LOCAL void *ICACHE_FLASH_ATTR rectangle_new(void*what)
 {
-    rectangle_t *r = os_malloc(sizeof(rectangle_t));
+    rectangle_t *r = os_calloc(sizeof(rectangle_t),1);
     r->alt = 0;
     r->flash = 0;
     r->flashcount = 0;

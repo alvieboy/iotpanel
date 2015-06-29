@@ -9,7 +9,7 @@
 #include "debug.h"
 
 LOCAL screen_t screens[MAX_SCREENS] = {{{0}}};
-LOCAL int current_screen = 0;
+LOCAL screen_t *current_screen = &screens[0];
 
 int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, const char *value)
 {
@@ -36,6 +36,13 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
     }
     return -1;
 }
+
+void ICACHE_FLASH_ATTR widget_move(widget_t *widget, int x, int y)
+{
+    widget->x = x;
+    widget->y = y;
+}
+
 
 LOCAL void ICACHE_FLASH_ATTR widget_redraw(widget_t *w, gfxinfo_t *gfx)
 {
@@ -69,9 +76,9 @@ void ICACHE_FLASH_ATTR screen_add_widget(screen_t *screen, widget_t *widget, int
 
 void ICACHE_FLASH_ATTR draw_current_screen(gfxinfo_t *gfx)
 {
-    if (screens[current_screen].name[0] == '\0')
+    if ((current_screen == NULL) || (current_screen->name[0] == '\0'))
         return;
-    screen_draw(&screens[current_screen], gfx);
+    screen_draw(current_screen, gfx);
 }
 
 screen_t* ICACHE_FLASH_ATTR screen_create(const char *name)
@@ -85,6 +92,22 @@ screen_t* ICACHE_FLASH_ATTR screen_create(const char *name)
         }
     }
     return NULL;
+}
+
+screen_t* ICACHE_FLASH_ATTR screen_find(const char *name)
+{
+    int i;
+    for (i=0;i<MAX_SCREENS;i++) {
+        if (strcmp(screens[i].name, name)==0) {
+            return &screens[i];
+        }
+    }
+    return NULL;
+}
+
+void ICACHE_FLASH_ATTR screen_select(screen_t *s)
+{
+    current_screen = s;
 }
 
 void ICACHE_FLASH_ATTR widget_destroy(widget_t *w)
@@ -140,7 +163,10 @@ widget_t* ICACHE_FLASH_ATTR widget_find(const char *name)
 void ICACHE_FLASH_ATTR screen_destroy_all()
 {
     int i;
+    current_screen = NULL;
+
     /* Iterate through all screens */
+    
     for (i=0;i<MAX_SCREENS;i++) {
         if (screens[i].name[0] != '\0') {
             /* Destroy all widgets */

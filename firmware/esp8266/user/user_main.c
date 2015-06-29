@@ -132,9 +132,16 @@ void ICACHE_FLASH_ATTR redraw()
 static void ICACHE_FLASH_ATTR
 user_procTask(os_event_t *events)
 {
+
     //char text[10];
     //int len;
-
+    static int startup=1;
+    if (startup) {
+        startup = 0;
+        wifi_set_opmode(STATION_MODE);
+        wifi_scan_ap();
+    }
+    
     while (!fbdone) {
         system_os_post(user_procTaskPrio, 0, 0 );
     }
@@ -175,21 +182,6 @@ static void setupFramebuffer()
 
 #ifndef __linux__
 
-LOCAL struct station_config sta_conf;
-
-LOCAL void ICACHE_FLASH_ATTR setupWifiSta()
-{
-    memset(&sta_conf,0,sizeof(sta_conf));
-    memcpy(&sta_conf.ssid, WIFI_SSID, strlen(WIFI_SSID));
-    memcpy(&sta_conf.password, WIFI_PWD, strlen(WIFI_PWD));
-
-    wifi_softap_dhcps_stop();
-
-    wifi_set_opmode(STATION_MODE);
-    wifi_station_set_config(&sta_conf);
-    wifi_station_disconnect();
-    wifi_station_connect();
-}
 #endif
 
 LOCAL void ICACHE_FLASH_ATTR setupDHCPServer()
@@ -206,7 +198,7 @@ LOCAL void ICACHE_FLASH_ATTR setupDHCPServer()
 }
 
 
-LOCAL void ICACHE_FLASH_ATTR setupWifiAp(const char *ssid, const char *password)
+void ICACHE_FLASH_ATTR setupWifiAp(const char *ssid, const char *password)
 {
 #ifndef __linux__
     struct softap_config config;
@@ -248,6 +240,7 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     int i;
 
     screen_t *screen = screen_create("default");
+
     widget_t *sc = widget_create("scrollingtext","sc");
     widget_set_property(sc, "font", "thumb" );
     widget_set_property(sc, "text", "IoT Panel demo - (C) 2015 Alvie");
@@ -306,11 +299,13 @@ user_init()
 #endif
 
     clearFramebuffer(&gfx);
-
-    setupWifiAp("IOTPANEL","alvie");
+//    setupWifiAp("IOTPANEL","alvie");
     setupDefaultScreen();
 
     //Start os task
+    os_delay_us(5000000);
+
+
 #ifdef __linux__
     user_procTask(NULL);
 #else

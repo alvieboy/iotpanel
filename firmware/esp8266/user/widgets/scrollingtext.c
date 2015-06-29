@@ -39,28 +39,34 @@ void ICACHE_FLASH_ATTR updateScrollingText(scrollingtext_t *t, const char *str)
 
 void ICACHE_FLASH_ATTR drawScrollingText(scrollingtext_t *t)
 {
-    if (t==NULL)
+    if (t==NULL || t->gfx==NULL || t->font==NULL)
         return;
-    //DEBUG("Drawing x %d, y %d\n", t->x, t->y);
+    DEBUG("Drawing x %d, y %d t=%p gfx=%p\n", t->x, t->y, t, t->gfx);
+
     switch (overlayFramebuffer(t->gfx, t->dest, t->x, t->y)) {
     case -1:
         t->x = t->dest->width-1;
         if (t->update) {
             if (t->gfx) {
-                updateTextFramebuffer(t->gfx, t->font, t->str);
+                DEBUG("Need update\n");
+                t->gfx = updateTextFramebuffer(t->gfx, t->font, t->str);
             } else {
+                DEBUG("Need allocate\n");
                 t->gfx = allocateTextFramebuffer(t->str, t->font);
             }
             /* Draw */
+            DEBUG("Draw scrolling\n");
             drawText( t->gfx, t->font, 0,0, t->str,  t->fg, t->bg);
             t->update = 0;
         }
 
         break;
     default:
+        DEBUG("Draw ok\n");
         t->x--;
         break;
     }
+    DEBUG("Finished\n");
 }
 
 int ICACHE_FLASH_ATTR scrollingtext_set_font(widget_t *w, const char *name)
@@ -69,6 +75,7 @@ int ICACHE_FLASH_ATTR scrollingtext_set_font(widget_t *w, const char *name)
     t->font = font_find(name);
     if (t->font==NULL)
         return -1;
+    t->update = 1;
     return 0;
 }
 
@@ -78,13 +85,14 @@ int ICACHE_FLASH_ATTR scrollingtext_set_color(widget_t *w, const char *name)
     if (color_parse(name, &t->fg)<0)
         return -1;
     t->bg = t->fg;
+    t->update = 1;
     return 0;
 }
 
 static void *ICACHE_FLASH_ATTR scrollingtext_new(void*what)
 {
-    scrollingtext_t *s = os_malloc(sizeof(scrollingtext_t));
-    s->gfx = NULL;
+    scrollingtext_t *s = os_calloc(sizeof(scrollingtext_t),1);
+    s->font = font_find("thumb");
     return s;
 }
 

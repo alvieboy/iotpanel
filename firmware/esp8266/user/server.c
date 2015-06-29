@@ -10,6 +10,9 @@
 #include <ctype.h>
 #include <string.h>
 #include "debug.h"
+#include "widget_registry.h"
+#include "protos.h"
+#include <stdlib.h>
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
@@ -39,6 +42,8 @@ typedef int (*commandHandler_t)(clientInfo_t*);
 typedef struct {
     const char *name;
     commandHandler_t handler;
+    unsigned needauth:1;
+    const char *help;
 } commandEntry_t;
 
 
@@ -46,14 +51,21 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandLogin(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandAuth(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandPropset(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandWipe(clientInfo_t *);
-
+LOCAL ICACHE_FLASH_ATTR int handleCommandNewScreen(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandSelect(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandAdd(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandHelp(clientInfo_t *);
 
 commandEntry_t commandHandlers[] = {
-    { "LOGIN", &handleCommandLogin },
-    { "AUTH", &handleCommandAuth },
-    { "PROPSET", &handleCommandPropset },
-    { "WIPE", &handleCommandWipe },
-    { 0, 0 }
+    { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
+    { "LOGIN",   &handleCommandLogin, 0 ,"<username>"},
+    { "AUTH",    &handleCommandAuth, 0, "<authtoken>" },
+    { "PROPSET", &handleCommandPropset, 1, "<widgetname> <propertyname> <value>" },
+    { "WIPE",    &handleCommandWipe, 1 ,""},
+    { "NEWSCREEN",    &handleCommandNewScreen, 1,"<screenname>" },
+    { "SELECT",    &handleCommandSelect, 1,"<screenname>" },
+    { "ADD",    &handleCommandAdd, 1,"<screenname> <widgetclass> <widgetname> <x> <y>" },
+    { 0, 0, 1 }
 };
 
 
@@ -80,6 +92,23 @@ LOCAL ICACHE_FLASH_ATTR void client_senderror(clientInfo_t *cl, const char *args
     client_sendRawLine(cl);
 }
 
+LOCAL ICACHE_FLASH_ATTR int handleCommandHelp(clientInfo_t *cl)
+{
+    if (cl->argc>1) {
+        client_senderror(cl, "INVALIDARGS");
+        return -1;
+    }
+    client_senderror(cl, "INVALIDARGS");
+    return -1;
+#if 0
+    if (cl->argv==0) {
+        //os_sprintf(cl->tline,"%s ERROR %s\n",cl->rline[0]?cl->rline:"?", args);
+        client_sendRawLine(cl);
+    } else {
+    }
+    return 0;
+#endif
+}
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandLogin(clientInfo_t *cl)
 {
@@ -104,10 +133,6 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAuth(clientInfo_t *cl)
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandPropset(clientInfo_t *cl)
 {
-    if (!cl->authenticated) {
-        client_senderror(cl, "UNKNONW");
-        return -1;
-    }
     if (cl->argc!=3) {
         client_senderror(cl, "INVALIDARGS");
         return -1;
@@ -129,14 +154,89 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandPropset(clientInfo_t *cl)
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandWipe(clientInfo_t *cl)
 {
-    if (!cl->authenticated) {
-        client_senderror(cl, "UNKNONW");
-        return -1;
-    }
     screen_destroy_all();
     client_sendOK(cl,"WIPE");
     return 0;
 }
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandNewScreen(clientInfo_t *cl)
+{
+    screen_t *s = screen_create(cl->argv[0]);
+    if (s) {
+        client_sendOK(cl,"NEWSCREEN");
+    } else {
+        client_senderror(cl,"TOOMANY");
+    }
+    return s!=NULL;
+}
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandSelect(clientInfo_t *cl)
+{
+    if (cl->argc!=1) {
+        client_senderror(cl,"INVALIDARGS");
+    }
+    screen_t *s = screen_find(cl->argv[0]);
+    if (s) {
+        screen_select(s);
+        client_sendOK(cl,"SELECT");
+    } else {
+        client_senderror(cl,"NOTFOUND");
+    }
+    return s!=NULL;
+}
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandAdd(clientInfo_t *cl)
+{
+    int x, y;
+    char *end;
+
+    if (cl->argc<5) {
+        client_senderror(cl,"INVALIDARGS");
+    }
+    screen_t *s = screen_find(cl->argv[0]);
+    if (!s) {
+        client_senderror(cl,"NOTFOUND");
+        return -1;
+    }
+
+    const widgetdef_t *c = widgetdef_find(cl->argv[1]);
+    if (!c) {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+
+    widget_t *w = widget_find(cl->argv[2]);
+    if (w) {
+        client_senderror(cl,"ALREADY");
+        return -1;
+    }
+
+    x = (int)strtol(cl->argv[3],&end,10);
+    if (*end !='\0') {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+
+    y = (int)strtol(cl->argv[4],&end,10);
+    if (*end !='\0') {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+
+    /* Ok, create it. */
+
+    w = widget_create(cl->argv[1], cl->argv[2]);
+    if (!w) {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+
+    screen_add_widget(s, w, x, y);
+    client_sendOK(cl,"ADD");
+    return 0;
+}
+
+
 
 LOCAL ICACHE_FLASH_ATTR void clientInfo_init(clientInfo_t*cl)
 {
@@ -234,7 +334,11 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
     commandEntry_t *entry = &commandHandlers[0];
     while (entry->name) {
         if (strcmp(entry->name, cl->cmd)==0) {
-            entry->handler(cl);
+            if (entry->needauth && !cl->authenticated) {
+                client_senderror(cl,"UNKNONW");
+            } else {
+                entry->handler(cl);
+            }
             break;
         }
         entry++;

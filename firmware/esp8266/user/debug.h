@@ -4,7 +4,7 @@
 #ifdef __linux__
 #define DEBUG(x...) printf(x)
 #else
-#define DEBUG(x...)
+#define DEBUG(x...) /* os_printf(x)*/
 #endif
 
 #endif

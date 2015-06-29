@@ -36,12 +36,12 @@ void ICACHE_FLASH_ATTR updateText(text_t *t, const char *str)
 
 void ICACHE_FLASH_ATTR drawTextWidget(text_t *t, int x, int y)
 {
-    if (t==NULL)
+    if (t==NULL || t->gfx==NULL || t->font==NULL)
         return;
     
     if (t->update) {
         if (t->gfx) {
-            updateTextFramebuffer(t->gfx, t->font, t->str);
+            t->gfx = updateTextFramebuffer(t->gfx, t->font, t->str);
         } else {
             t->gfx = allocateTextFramebuffer(t->str, t->font);
         }
@@ -58,6 +58,7 @@ int ICACHE_FLASH_ATTR text_set_font(widget_t *w, const char *name)
     t->font = font_find(name);
     if (t->font==NULL)
         return -1;
+    t->update = 1;
     return 0;
 }
 
@@ -67,13 +68,14 @@ int ICACHE_FLASH_ATTR text_set_color(widget_t *w, const char *name)
     if (color_parse(name, &t->fg)<0)
         return -1;
     t->bg = t->fg;
+    t->update = 1;
     return 0;
 }
 
 static void *ICACHE_FLASH_ATTR text_new(void*what)
 {
-    text_t *s = os_malloc(sizeof(text_t));
-    s->gfx = NULL;
+    text_t *s = os_calloc(sizeof(text_t),1);
+    s->font = font_find("thumb");
     return s;
 }
 

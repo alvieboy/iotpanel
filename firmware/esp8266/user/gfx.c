@@ -6,11 +6,17 @@
 //#include "mem.h"
 #include "alloc.h"
 #include <string.h>
+#include "debug.h"
+#include "protos.h"
 
 void drawChar(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
               uint8 color, uint8 bg)
 {
     const uint8 *cptr;
+
+    if ((NULL==font) || (NULL==gfx))
+        return;
+
     uint8 hc = font->h;
 
     if ( (c<font->start) || (c>font->end)) {
@@ -49,31 +55,43 @@ void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const font_t *font, int x,
 
 LOCAL void ICACHE_FLASH_ATTR freeTextFramebuffer(gfxinfo_t *info)
 {
-    if (info->fb)
+    if (info->fb) {
+        DEBUG("Freeing fb @ %p\n", info->fb);
         os_free(info->fb);
+    }
+    DEBUG("Freeing info @ %p\n", info);
     os_free(info);
 }
 
 gfxinfo_t * ICACHE_FLASH_ATTR allocateTextFramebuffer(const char *str, const font_t *font)
 {
     int size = strlen(str);
-    gfxinfo_t *info = os_malloc(sizeof(gfxinfo_t));
-    if (info==NULL)
+    gfxinfo_t *info = os_calloc(sizeof(gfxinfo_t),1);
+    DEBUG("New info @ %p\n", info);
+
+    if ((info==NULL) || (font==NULL))
         return NULL;
+
     size *= font->w;
     info->width  = size;
     info->stride = size;
     info->height = font->h;
     /**/
     size *= font->h;
-    info->fb = os_malloc(size);
-    memset(info->fb,0,size);
+    DEBUG("New fb size: %d\n",size);
+
+    if (size==0) {
+        info->fb = NULL;
+    } else {
+        info->fb = os_calloc(size,1);
+    }
+    DEBUG("New info: %p\n",info);
     return info;
 }
 
 LOCAL int ICACHE_FLASH_ATTR unpackHexNibbleOr(const char *str, uint8_t *dest)
 {
-    uint8_t v;
+    
     char l = *str;
     if (l>='0' && l<='9') {
         *dest |= (l-'0');
@@ -126,14 +144,18 @@ LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str)
 
 gfxinfo_t * ICACHE_FLASH_ATTR updateTextFramebuffer(gfxinfo_t *gfx, const font_t *font, const char *str)
 {
-    int size = strlen(str) * font->w;
-    if (size > gfx->stride) {
-        freeTextFramebuffer(gfx);
-        gfx = allocateTextFramebuffer(str,font);
+    //    int size = strlen(str) * font->w;
+    //if (size > gfx->stride) {
+    DEBUG("Freeing fb\n");
+    freeTextFramebuffer(gfx);
+    DEBUG("Alloc fb for '%s'\n", str);
+    gfx = allocateTextFramebuffer(str,font);
+#if 0
     } else {
         gfx->width = size;
         memset(gfx->fb,0,gfx->height * gfx->stride);
     }
+#endif
     return gfx;
 }
 
@@ -141,6 +163,9 @@ int ICACHE_FLASH_ATTR overlayFramebuffer( const gfxinfo_t *source, const gfxinfo
 {
     int ptr;
     int src;
+
+    if (source==NULL)
+        return 1;
 
     ptr = (y*dest->stride);
     // Clip
@@ -170,13 +195,19 @@ int ICACHE_FLASH_ATTR overlayFramebuffer( const gfxinfo_t *source, const gfxinfo
 
     /* draw */
     int cw,ch;
-
+    y = dest->height - y;
+    DEBUG("Source height: %d\n", source->height);
     for (ch=0; ch<source->height; ch++) {
+
+        if (y<=0)
+            break;
+
         for (cw=0; cw<w; cw++) {
             dest->fb[ptr + cw] = source->fb[src + cw];
         }
         ptr+=dest->stride;
         src+=source->stride;
+        y--;
     }
 
     return 0;

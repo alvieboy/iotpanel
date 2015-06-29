@@ -12,12 +12,15 @@
 #include "ets_sys.h"
 #include "osapi.h"
 #include "driver/uart.h"
+#include "protos.h"
 
 #define UART0   0
 #define UART1   1
 
 // UartDev is defined and initialized in rom code.
 extern UartDevice UartDev;
+extern void uart_div_modify(int,unsigned);
+extern int uart_tx_one_char(int);
 
 LOCAL void uart0_rx_intr_handler(void *para);
 
