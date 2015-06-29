@@ -18,7 +18,11 @@ static int listenfd = -1;
 
 void *pvPortMalloc(size_t size)
 {
-    return calloc(size,1);
+    return malloc(size);
+}
+void *pvPortCalloc(size_t size, int n)
+{
+    return calloc(size,n);
 }
 
 void vPortFree(void *ptr)
