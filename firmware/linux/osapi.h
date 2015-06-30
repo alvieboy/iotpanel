@@ -1,4 +1,4 @@
-#ifdef __linux__
+#ifdef HOST
 
 
 #endif

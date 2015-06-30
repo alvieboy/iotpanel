@@ -1,7 +1,7 @@
 #ifndef __OSTYPE_H__
 #define __OSTYPE_H__
 
-#ifdef __linux__
+#ifdef HOST
 
 #include <stdlib.h>
 #include <inttypes.h>

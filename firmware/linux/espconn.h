@@ -1,10 +1,14 @@
 #ifndef __ESPCONN_H__
 #define __ESPCONN_H__
 
-#ifdef __linux__
+#ifdef HOST
 
 #include "os_type.h"
+#ifdef __linux__
 #include <netinet/in.h>
+#else
+#include <windows.h>
+#endif
 
 #define ESPCONN_TCP IPPROTO_TCP
 #define ESPCONN_NONE IPPROTO_NONE

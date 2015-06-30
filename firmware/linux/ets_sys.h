@@ -1,7 +1,7 @@
 #ifndef __ETS_SYS__
 #define __ETS_SYS__
 
-#ifdef __linux__
+#ifdef HOST
 
 #include "os_type.h"
 

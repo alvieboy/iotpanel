@@ -1,17 +1,28 @@
+#ifdef __linux__
 #include <sys/socket.h>
 #include <netinet/in.h>
+#else
+#include <windows.h>
+#endif
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include "espconn.h"
 #include <SDL2/SDL.h>
 #include "gfx.h"
+#include <sys/time.h>
 
 #define LEDSIZE 10
 #define LEDBORDER 2
 
 espconn *current_conn = NULL;
 static int listenfd = -1;
+static struct timeval start;
+
+#ifndef linux
+typedef int socklen_t;
+#endif
+
 // Compats...
 
 
@@ -92,7 +103,7 @@ void espconn_regist_disconcb(espconn*conn, void (*cb)(void*))
 SDL_Window *win;
 SDL_Renderer *ren;
 
-int main()
+int main(int argc,char **argv)
 {
     if (SDL_Init(SDL_INIT_VIDEO) != 0){
         return 1;
@@ -109,6 +120,7 @@ int main()
 	SDL_Quit();
 	return 1;
     }
+    gettimeofday(&start,NULL);
     user_init();
 }
 
@@ -232,6 +244,15 @@ void user_procTask(void*arg)
 void espconn_sent(espconn*conn, unsigned char *ptr, uint16_t size)
 {
     send(conn->sockfd, ptr, size, 0);
+}
+
+
+uint32 system_get_time()
+{
+    struct timeval now, delta;
+    gettimeofday(&now,NULL);
+    timersub(&now, &start, &delta);
+    return ((delta.tv_sec*1000) + (delta.tv_usec/1000));
 }
 
 void espconn_accept(espconn*conn)
