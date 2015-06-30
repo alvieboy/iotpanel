@@ -49,7 +49,7 @@ void ICACHE_FLASH_ATTR drawTextWidget(text_t *t, int x, int y)
         drawText( t->gfx, t->font, 0,0, t->str,  t->fg, t->bg);
         t->update = 0;
     }
-    overlayFramebuffer(t->gfx, t->dest, x, y);
+    overlayFramebuffer(t->gfx, t->dest, x, y, t->fg==t->bg ? 0:-1);
 }
 
 int ICACHE_FLASH_ATTR text_set_font(widget_t *w, const char *name)
@@ -67,7 +67,15 @@ int ICACHE_FLASH_ATTR text_set_color(widget_t *w, const char *name)
     text_t *t= TEXT(w);
     if (color_parse(name, &t->fg)<0)
         return -1;
-    t->bg = t->fg;
+    t->update = 1;
+    return 0;
+}
+
+int ICACHE_FLASH_ATTR text_set_bgcolor(widget_t *w, const char *name)
+{
+    text_t *t= TEXT(w);
+    if (color_parse(name, &t->bg)<0)
+        return -1;
     t->update = 1;
     return 0;
 }
@@ -98,6 +106,7 @@ static property_t properties[] = {
     { "text",  T_STRING, SETTER(text_set_text),  NULL },
     { "font",  T_STRING, SETTER(text_set_font),  NULL },
     { "color",  T_STRING, SETTER(text_set_color),  NULL },
+    { "bgcolor",  T_STRING, SETTER(text_set_bgcolor),  NULL },
     END_OF_PROPERTIES
 };
 

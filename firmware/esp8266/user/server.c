@@ -16,6 +16,7 @@
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
+static char currentFw[32] = {{0}};
 
 #define MAX_LINE_LEN 256
 
@@ -55,6 +56,9 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandNewScreen(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandSelect(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandAdd(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandHelp(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandFwGet(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandFwSet(clientInfo_t *);
+
 
 commandEntry_t commandHandlers[] = {
     { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
@@ -65,13 +69,21 @@ commandEntry_t commandHandlers[] = {
     { "NEWSCREEN",    &handleCommandNewScreen, 1,"<screenname>" },
     { "SELECT",    &handleCommandSelect, 1,"<screenname>" },
     { "ADD",    &handleCommandAdd, 1,"<screenname> <widgetclass> <widgetname> <x> <y>" },
-    { 0, 0, 1 }
+    { "FWGET",  &handleCommandFwGet, 1, "" },
+    { "FWSET",  &handleCommandFwSet, 1, "" },
+    { 0, 0, 1, NULL }
 };
 
 
-void client_genRandom(unsigned char *dest)
+LOCAL void ICACHE_FLASH_ATTR client_genRandom(unsigned char *dest)
 {
+    int i, v;
     /* 10 bytes (80 bits) */
+    srand(system_get_time());
+    for (i=0;i<10;i++) {
+        v = rand();
+        *dest++ = v&0xff;
+    }
     //da39a3ee5e6b4b0d3255bfef95601890afd80709
 }
 
@@ -237,6 +249,24 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAdd(clientInfo_t *cl)
 }
 
 
+LOCAL ICACHE_FLASH_ATTR int handleCommandFwGet(clientInfo_t *cl)
+{
+    client_sendOK(cl,currentFw);
+    return 0;
+}
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandFwSet(clientInfo_t *cl)
+{
+    if (cl->argc!=1) {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+    strncpy( currentFw, cl->argv[0], sizeof(currentFw));
+    client_sendOK(cl,"FWSET");
+    return 0;
+}
+
+
 
 LOCAL ICACHE_FLASH_ATTR void clientInfo_init(clientInfo_t*cl)
 {
@@ -323,6 +353,7 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
     if (cl->args) {
         *cl->args++='\0';
     }
+    cl->argc = 0;
     if (cl->args) {
         cl->argc = parse_args(cl, cl->args, &cl->rline[cl->rlinepos]);
         if (cl->argc<0) {

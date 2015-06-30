@@ -46,6 +46,7 @@ void drawChar(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned c
 
 void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const font_t *font, int x, int y, const char *str, uint8 color, uint8 bg)
 {
+    DEBUG("Draw text bg %d fg %d\n", bg, color);
     while (*str) {
         drawChar(gfx, font,x,y,*str,color,bg);
         x+=font->w;
@@ -159,7 +160,7 @@ gfxinfo_t * ICACHE_FLASH_ATTR updateTextFramebuffer(gfxinfo_t *gfx, const font_t
     return gfx;
 }
 
-int ICACHE_FLASH_ATTR overlayFramebuffer( const gfxinfo_t *source, const gfxinfo_t *dest, int x, int y)
+int ICACHE_FLASH_ATTR overlayFramebuffer( const gfxinfo_t *source, const gfxinfo_t *dest, int x, int y, int transparent)
 {
     int ptr;
     int src;
@@ -196,14 +197,15 @@ int ICACHE_FLASH_ATTR overlayFramebuffer( const gfxinfo_t *source, const gfxinfo
     /* draw */
     int cw,ch;
     y = dest->height - y;
-    DEBUG("Source height: %d\n", source->height);
+    //DEBUG("Source height: %d\n", source->height);
     for (ch=0; ch<source->height; ch++) {
 
         if (y<=0)
             break;
 
         for (cw=0; cw<w; cw++) {
-            dest->fb[ptr + cw] = source->fb[src + cw];
+            if (transparent<0 || (transparent != source->fb[src + cw]))
+                dest->fb[ptr + cw] = source->fb[src + cw];
         }
         ptr+=dest->stride;
         src+=source->stride;

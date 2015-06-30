@@ -19,7 +19,7 @@ struct ap_info *ICACHE_FLASH_ATTR wifi_get_ap(const char *ssid)
     return NULL;
 }
 
-LOCAL void ICACHE_FLASH_ATTR setupWifiSta(const char *ssid, const char *pwd)
+void ICACHE_FLASH_ATTR setupWifiSta(const char *ssid, const char *pwd)
 {
     memset(&sta_conf,0,sizeof(sta_conf));
     memcpy(&sta_conf.ssid, ssid, strlen(ssid));
@@ -40,7 +40,7 @@ LOCAL void ICACHE_FLASH_ATTR wifi_ap_found_callback(struct ap_info *ap)
     setupWifiSta( ap->ssid, ap->pwd );
 }
 
-LOCAL void ICACHE_FLASH_ATTR scan_done_cb(void *arg, STATUS status)
+void ICACHE_FLASH_ATTR scan_done_cb(void *arg, STATUS status)
 {
     scaninfo *c = arg;
     struct bss_info *inf;
@@ -69,7 +69,7 @@ LOCAL void ICACHE_FLASH_ATTR scan_done_cb(void *arg, STATUS status)
 void ICACHE_FLASH_ATTR wifi_scan_ap()
 {
     os_printf("Scanning for Access Points\n");
-   /* if (!wifi_station_scan(NULL, &scan_done_cb))
-    os_printf("Cannot scan???\n");
-    */
+    if (!wifi_station_scan(NULL, &scan_done_cb))
+        os_printf("Cannot scan???\n");
+
 }

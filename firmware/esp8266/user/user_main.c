@@ -13,6 +13,7 @@
 #include "wifi-config.h"
 #include "widget.h"
 #include <string.h>
+#include "protos.h"
 
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
@@ -21,13 +22,15 @@
 #define UART0 0
 #endif
 
-#ifndef __linux__
+#ifndef HOST
 os_event_t    user_procTaskQueue[user_procTaskQueueLen];
 static void user_procTask(os_event_t *events);
 static volatile os_timer_t some_timer;
 #endif
 
 extern void draw_current_screen();
+extern void spi_setup();
+extern void timer_setup();
 
 /* Framebuffer */
 uint8_t framebuffer[32*32];
@@ -77,7 +80,7 @@ static volatile int count = 0;
 int xoffset=0;
 int laststatus = -1;
 
-#ifndef __linux__
+#ifndef HOST
 
 LOCAL void ICACHE_FLASH_ATTR wifiUpdate(const char *status)
 {
@@ -93,6 +96,8 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
 
     switch (status) {
     case STATION_IDLE:
+        wifi_set_opmode(STATION_MODE);
+        wifi_scan_ap();
         break;
     case STATION_CONNECTING:
         wifiUpdate("Connecting to WiFI Access Point");
@@ -102,9 +107,13 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
         break;
     case STATION_NO_AP_FOUND:
         wifiUpdate("Error connecting: no AP found");
+        wifi_set_opmode(STATION_MODE);
+        wifi_scan_ap();
         break;
     case STATION_CONNECT_FAIL:
         wifiUpdate("Connection failed, retrying");
+        wifi_set_opmode(STATION_MODE);
+        wifi_scan_ap();
         break;
     case STATION_GOT_IP:
         wifi_get_ip_info(STATION_IF, &ip);
@@ -127,21 +136,11 @@ void ICACHE_FLASH_ATTR redraw()
     draw_current_screen(&gfx);
 }
 
-#ifndef __linux__
+#ifndef HOST
 
 static void ICACHE_FLASH_ATTR
 user_procTask(os_event_t *events)
 {
-
-    //char text[10];
-    //int len;
-    static int startup=1;
-    if (startup) {
-        startup = 0;
-        wifi_set_opmode(STATION_MODE);
-        wifi_scan_ap();
-    }
-    
     while (!fbdone) {
         system_os_post(user_procTaskPrio, 0, 0 );
     }
@@ -154,8 +153,10 @@ user_procTask(os_event_t *events)
 
 #if 1
     int status = wifi_station_get_connect_status();
-    if (laststatus<0)
+    if (laststatus<0) {
         laststatus=status;
+        newWifiStatus(status, laststatus);
+    }
 
     if (laststatus!=status) {
         newWifiStatus(status, laststatus);
@@ -180,13 +181,13 @@ static void setupFramebuffer()
     }
 }
 
-#ifndef __linux__
+#ifndef HOST
 
 #endif
 
 LOCAL void ICACHE_FLASH_ATTR setupDHCPServer()
 {
-#ifndef __linux__
+#ifndef HOST
     struct ip_info info;
     info.ip.addr = 0x0A0A0A0A;
     info.gw.addr = 0x0A0A0A0A;
@@ -200,7 +201,7 @@ LOCAL void ICACHE_FLASH_ATTR setupDHCPServer()
 
 void ICACHE_FLASH_ATTR setupWifiAp(const char *ssid, const char *password)
 {
-#ifndef __linux__
+#ifndef HOST
     struct softap_config config;
 
     int ssidlen = strlen(ssid);
@@ -210,7 +211,7 @@ void ICACHE_FLASH_ATTR setupWifiAp(const char *ssid, const char *password)
     config.ssid_len = ssidlen;
     config.ssid_hidden = 0;
     config.channel = 10;
-    strcpy(config.password, password);
+    strcpy((char*)config.password, password);
     config.authmode = AUTH_WPA_WPA2_PSK;
 
     wifi_station_dhcpc_stop();
@@ -226,7 +227,7 @@ void ICACHE_FLASH_ATTR setupWifiAp(const char *ssid, const char *password)
 LOCAL void ICACHE_FLASH_ATTR
 uart_setup()
 {
-#ifndef __linux__
+#ifndef HOST
     uart_init_single(UART0, BIT_RATE_115200, 1);
 
     WRITE_PERI_REG(UART_INT_ENA(0), 0);
@@ -272,7 +273,7 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 void ICACHE_FLASH_ATTR
 user_init()
 {
-#ifndef __linux__
+#ifndef HOST
     gpio_init();
     gpio16_output_conf();
     gpio16_output_set(0); // GPIO16 low.
@@ -282,10 +283,12 @@ user_init()
 #endif
     setupFramebuffer();
     setupDefaultScreen();
-
+#ifndef HOST
+    setupWifiSta("","");
+#endif
     user_server_init(8081);
 
-#ifndef __linux__
+#ifndef HOST
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U,  FUNC_GPIO15); // GPIO15.
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U,  FUNC_GPIO12);  // DI
 
@@ -303,10 +306,12 @@ user_init()
     setupDefaultScreen();
 
     //Start os task
+#ifndef HOST
     os_delay_us(5000000);
+#endif
 
 
-#ifdef __linux__
+#ifdef HOST
     user_procTask(NULL);
 #else
     system_os_task(user_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);
