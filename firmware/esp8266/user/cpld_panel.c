@@ -89,10 +89,13 @@ static inline void strobe()
     strobe_set(0);
 }
 
+
+#define PRELOAD 35
+
 LOCAL void tim1_intr_handler()
 {
     RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
-    RTC_REG_WRITE(FRC1_LOAD_ADDRESS, 80);
+    RTC_REG_WRITE(FRC1_LOAD_ADDRESS, PRELOAD);
 
     if (holdoff>0) {
         // Disable OE
@@ -165,5 +168,5 @@ void ICACHE_FLASH_ATTR timer_setup()
                   DIVDED_BY_16
                   | FRC1_ENABLE_TIMER
                   | TM_EDGE_INT);
-    RTC_REG_WRITE(FRC1_LOAD_ADDRESS, 80);
+    RTC_REG_WRITE(FRC1_LOAD_ADDRESS, PRELOAD);
 }

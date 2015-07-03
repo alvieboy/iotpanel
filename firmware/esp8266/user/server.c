@@ -16,7 +16,7 @@
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
-static char currentFw[32] = {{0}};
+static char currentFw[32] = {0};
 
 #define MAX_LINE_LEN 256
 
@@ -414,20 +414,20 @@ LOCAL ICACHE_FLASH_ATTR void client_data(clientInfo_t*cl, char *data, unsigned s
 LOCAL void ICACHE_FLASH_ATTR server_recv(void *arg, char *pusrdata, unsigned short length)
 {
     //struct espconn *pesp_conn = arg;
-    os_printf("Server data: %d\n", length);
+    DEBUG("Server data: %d\n", length);
     client_data( &clientInfo, pusrdata, length);
 }
 
 LOCAL ICACHE_FLASH_ATTR void server_recon(void *arg, sint8 err)
 {
     //struct espconn *pesp_conn = arg;
-    os_printf("Server recon\n");
+    DEBUG("Server recon\n");
 }
 
 LOCAL ICACHE_FLASH_ATTR void server_conn(void *arg)
 {
     struct espconn *pesp_conn = arg;
-    os_printf("Server conn\n");
+    DEBUG("Server conn\n");
     clientInfo_init(&clientInfo);
 
     espconn_regist_time(pesp_conn, 0, 1);
@@ -437,7 +437,7 @@ LOCAL ICACHE_FLASH_ATTR void server_conn(void *arg)
 LOCAL ICACHE_FLASH_ATTR void server_discon(void *arg)
 {
     //struct espconn *pesp_conn = arg;
-    os_printf("Server discon\n");
+    DEBUG("Server discon\n");
 }
 
 

@@ -177,6 +177,7 @@ void ICACHE_FLASH_ATTR screen_destroy_all()
                 widget_destroy(d);
             }
             screens[i].name[0] = '\0';
+            screens[i].widgets = NULL;
          }
      }
  

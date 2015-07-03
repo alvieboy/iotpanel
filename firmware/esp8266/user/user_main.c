@@ -145,12 +145,12 @@ user_procTask(os_event_t *events)
         system_os_post(user_procTaskPrio, 0, 0 );
     }
     fbdone=0;
-
+            /*
     while (!fbdone) {
         system_os_post(user_procTaskPrio, 0, 0 );
     }
     fbdone=0;
-
+              */
 #if 1
     int status = wifi_station_get_connect_status();
     if (laststatus<0) {
@@ -236,6 +236,8 @@ uart_setup()
 
 extern void user_server_init(uint32 port);
 
+#define ESC "\x1b"
+
 LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 {
     int i;
@@ -244,8 +246,18 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 
     widget_t *sc = widget_create("scrollingtext","sc");
     widget_set_property(sc, "font", "thumb" );
-    widget_set_property(sc, "text", "IoT Panel demo - (C) 2015 Alvie");
+    widget_set_property(sc, "text", "IoT "
+                        ESC "c01"
+                        "R"
+                        ESC "c02"
+                        "G"
+                        ESC "c04"
+                        "B"
+                        ESC "cff"
+                        " "
+                        "Panel demo - (C) 2015 Alvie");
     widget_set_property(sc, "color", "white");
+    widget_set_property(sc, "speed", "4");
 
     screen_add_widget(screen, sc, 0, 0);
 
@@ -255,9 +267,9 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     widget_set_property(sc, "fill", "1");
     widget_set_property(sc, "color", "red");
     widget_set_property(sc, "bordercolor", "red");
-    widget_set_property(sc, "altcolor", "yellow");
+    widget_set_property(sc, "altcolor", "black");
     widget_set_property(sc, "border", "1");
-    widget_set_property(sc, "flash", "30");
+    widget_set_property(sc, "flash", "60");
     screen_add_widget(screen, sc, 1, 14);
 
     sc = widget_create("text", "txt");
@@ -307,7 +319,7 @@ user_init()
 
     //Start os task
 #ifndef HOST
-    os_delay_us(5000000);
+//    os_delay_us(5000000);
 #endif
 
 

@@ -8,6 +8,14 @@
 #include <string.h>
 #include "debug.h"
 #include "protos.h"
+#include "color.h"
+
+#ifndef swap
+#define swap(a, b) { int t = a; a = b; b = t; }
+#endif
+
+LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str);
+LOCAL int unpackHexByte(const char *str, uint8_t *dest);
 
 void drawChar(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
               uint8 color, uint8 bg)
@@ -47,7 +55,38 @@ void drawChar(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned c
 void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const font_t *font, int x, int y, const char *str, uint8 color, uint8 bg)
 {
     DEBUG("Draw text bg %d fg %d\n", bg, color);
+    uint8_t code;
+
     while (*str) {
+        if (*str==0x1b) {
+            str++;
+            if (*str=='\0')
+                return;
+            switch (*str) {
+            case 'f':
+                if (unpackHexByte(++str, &code)<0)
+                    return;
+                color = code;
+                str+=2;
+                break;
+            case 'b':
+                if (unpackHexByte(++str, &code)<0)
+                    return;
+                bg = code;
+                str+=2;
+                break;
+            case 'c':
+                if (unpackHexByte(++str, &code)<0)
+                    return;
+                bg = color = code;
+                str+=2;
+                break;
+            default:
+                return;
+            }
+            continue;
+        }
+
         drawChar(gfx, font,x,y,*str,color,bg);
         x+=font->w;
         str++;
@@ -66,7 +105,10 @@ LOCAL void ICACHE_FLASH_ATTR freeTextFramebuffer(gfxinfo_t *info)
 
 gfxinfo_t * ICACHE_FLASH_ATTR allocateTextFramebuffer(const char *str, const font_t *font)
 {
-    int size = strlen(str);
+    int size = textComputeLength(str);
+    if (size==-1)
+        return NULL;
+
     gfxinfo_t *info = os_calloc(sizeof(gfxinfo_t),1);
     DEBUG("New info @ %p\n", info);
 
@@ -129,7 +171,9 @@ LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str)
                 return -1;
             switch (*str) {
             case 'f':
-                if (unpackHexByte(str, &code)<0)
+            case 'b':
+            case 'c':
+                if (unpackHexByte(++str, &code)<0)
                     return -1;
                 str+=2;
                 break;
@@ -218,6 +262,50 @@ int ICACHE_FLASH_ATTR overlayFramebuffer( const gfxinfo_t *source, const gfxinfo
 void ICACHE_FLASH_ATTR gfx_clear(gfxinfo_t *gfx)
 {
     memset(gfx->fb, 0,gfx->height * gfx->stride);
+}
+
+
+
+void ICACHE_FLASH_ATTR gfx_drawLine(gfxinfo_t *gfx,
+                                    int x0, int y0,
+                                    int x1, int y1,
+                                    color_t color) {
+  int steep = abs(y1 - y0) > abs(x1 - x0);
+  if (steep) {
+    swap(x0, y0);
+    swap(x1, y1);
+  }
+
+  if (x0 > x1) {
+    swap(x0, x1);
+    swap(y0, y1);
+  }
+
+  int dx, dy;
+  dx = x1 - x0;
+  dy = abs(y1 - y0);
+
+  int err = dx / 2;
+  int ystep;
+
+  if (y0 < y1) {
+    ystep = 1;
+  } else {
+    ystep = -1;
+  }
+
+  for (; x0<=x1; x0++) {
+    if (steep) {
+      drawPixel(gfx, y0, x0, color);
+    } else {
+      drawPixel(gfx, x0, y0, color);
+    }
+    err -= dy;
+    if (err < 0) {
+      y0 += ystep;
+      err += dx;
+    }
+  }
 }
 
 

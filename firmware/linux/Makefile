@@ -20,6 +20,7 @@ SOURCES = \
 ../esp8266/user/widgets/widget.c               \
 ../esp8266/user/widgets/rectangle.c            \
 ../esp8266/user/widgets/text.c 	               \
+../esp8266/user/widgets/line.c 	               \
 ../esp8266/user/widgets/widget_registry.c      \
 iotpanel.c
 

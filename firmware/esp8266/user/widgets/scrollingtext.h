@@ -15,6 +15,7 @@ typedef struct
     int update;
     int x,y;
     uint8 fg,bg;
+    uint8 count, max;
     const font_t *font;
 } scrollingtext_t;
 

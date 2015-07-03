@@ -6,6 +6,7 @@
 #include "gpio.h"
 #include "os_type.h"
 #include "font.h"
+#include "color.h"
 
 typedef struct gfxinfo
 {
@@ -28,5 +29,11 @@ void drawText(const gfxinfo_t*,const font_t*,int x, int y, const char *str, uint
 gfxinfo_t *allocateTextFramebuffer(const char *str, const font_t*);
 gfxinfo_t *updateTextFramebuffer(gfxinfo_t *gfx, const font_t*,const char *str);
 int overlayFramebuffer( const gfxinfo_t *source, const gfxinfo_t *dest, int x, int y, int transparentcolor);
+
+
+void gfx_drawLine(gfxinfo_t *gfx,
+                  int x0, int y0,
+                  int x1, int y1,
+                  color_t color);
 
 #endif // __GFX_H__

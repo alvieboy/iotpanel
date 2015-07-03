@@ -63,7 +63,12 @@ void ICACHE_FLASH_ATTR drawScrollingText(scrollingtext_t *t)
         break;
     default:
         DEBUG("Draw ok\n");
-        t->x--;
+        if (t->count<=0) {
+            t->x--;
+            t->count = t->max;
+        } else {
+            t->count--;
+        }
         break;
     }
     DEBUG("Finished\n");
@@ -89,10 +94,20 @@ int ICACHE_FLASH_ATTR scrollingtext_set_color(widget_t *w, const char *name)
     return 0;
 }
 
+int ICACHE_FLASH_ATTR scrollingtext_set_speed(widget_t *w, int *value)
+{
+    scrollingtext_t *t= SCROLLINGTEXT(w);
+    if (value<0)
+        return -1;
+    t->max = *value;
+    return 0;
+}
+
 static void *ICACHE_FLASH_ATTR scrollingtext_new(void*what)
 {
     scrollingtext_t *s = os_calloc(sizeof(scrollingtext_t),1);
     s->font = font_find("thumb");
+    s->count = 4;
     return s;
 }
 
@@ -116,6 +131,7 @@ static property_t properties[] = {
     { "text",  T_STRING, SETTER(scrollingtext_set_text),  NULL },
     { "font",  T_STRING, SETTER(scrollingtext_set_font),  NULL },
     { "color",  T_STRING, SETTER(scrollingtext_set_color),  NULL },
+    { "speed",  T_INT, SETTER(scrollingtext_set_speed),  NULL },
     END_OF_PROPERTIES
 };
 

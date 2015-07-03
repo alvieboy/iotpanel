@@ -4,7 +4,7 @@
 #include "osapi.h"
 #include "alloc.h"
 
-int ICACHE_FLASH_ATTR rectangle_is_border(rectangle_t*r,int x, int y)
+LOCAL  int ICACHE_FLASH_ATTR rectangle_is_border(rectangle_t*r,int x, int y)
 {
     if ( ( x < r->border ) ||
         ( x >= (r->w) - (r->border)) ||

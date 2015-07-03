@@ -3,7 +3,7 @@
 
 #include "gfx.h"
 
-#define MAX_SCREENS 4
+#define MAX_SCREENS 8
 #define NAMELEN 8
 
 typedef enum {
