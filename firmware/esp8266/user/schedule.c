@@ -27,7 +27,9 @@ LOCAL int current_delay = 0;
 void schedule_event()
 {
     screen_t *s;
-#ifdef __linux__
+    if (!schedule_running)
+        return;
+#ifdef DEBUG
     printf("Schedule: current tick %d, delay %d, cptr %p\n",
            current_tick, current_delay, current);
 #endif
@@ -39,7 +41,7 @@ void schedule_event()
         } else {
             // Handle event.
             if (current) {
-#ifdef __linux__
+#ifdef DEBUG
                 printf("New schedule, type %d\n", current->type);
 #endif
                 switch (current->type) {
@@ -48,7 +50,7 @@ void schedule_event()
                     if (s) {
                         screen_select(s);
                     } else {
-#ifdef __linux__
+#ifdef DEBUG
                         printf("Cannot find screen\n");
                         abort();
 #endif
