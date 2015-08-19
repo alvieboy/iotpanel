@@ -16,12 +16,13 @@ typedef enum {
 struct widget;
 
 typedef struct {
+    uint8_t id;
     const char *name;
     eType type;
     int (*setter)(void*, void*);
     void *data;
 } property_t;
-#define END_OF_PROPERTIES { 0,0,0 }
+#define END_OF_PROPERTIES { 0,0,0,0,0 }
 
 #define INT_PROPERTY(name, struct, field) { \
     .name = name, \

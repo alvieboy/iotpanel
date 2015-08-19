@@ -43,7 +43,7 @@ void vPortFree(void *ptr)
 
 void system_os_post()
 {
-    usleep(20000);
+    usleep(10000);
 }
 
 void os_delay_us(int us)

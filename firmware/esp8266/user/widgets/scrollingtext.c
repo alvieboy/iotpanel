@@ -128,10 +128,10 @@ void ICACHE_FLASH_ATTR scrollingtext_redraw(widget_t *w, int x, int y, gfxinfo_t
 }
 
 static property_t properties[] = {
-    { "text",  T_STRING, SETTER(scrollingtext_set_text),  NULL },
-    { "font",  T_STRING, SETTER(scrollingtext_set_font),  NULL },
-    { "color",  T_STRING, SETTER(scrollingtext_set_color),  NULL },
-    { "speed",  T_INT, SETTER(scrollingtext_set_speed),  NULL },
+    { 1,"text",  T_STRING, SETTER(scrollingtext_set_text),  NULL },
+    { 2,"font",  T_STRING, SETTER(scrollingtext_set_font),  NULL },
+    { 3,"color",  T_STRING, SETTER(scrollingtext_set_color),  NULL },
+    { 4,"speed",  T_INT, SETTER(scrollingtext_set_speed),  NULL },
     END_OF_PROPERTIES
 };
 

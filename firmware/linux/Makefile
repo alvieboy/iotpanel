@@ -9,6 +9,7 @@ SOURCES = \
 ../esp8266/user/font_apple6x10.c               \
 ../esp8266/user/glcdfont.c                     \
 ../esp8266/user/server.c                       \
+../esp8266/user/schedule.c                     \
 ../esp8266/user/font_apple4x6.c                \
 ../esp8266/user/font_apple5x7.c                \
 ../esp8266/user/user_main.c                    \

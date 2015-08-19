@@ -103,10 +103,10 @@ void ICACHE_FLASH_ATTR text_redraw(widget_t *w, int x, int y, gfxinfo_t *gfx)
 }
 
 static property_t properties[] = {
-    { "text",  T_STRING, SETTER(text_set_text),  NULL },
-    { "font",  T_STRING, SETTER(text_set_font),  NULL },
-    { "color",  T_STRING, SETTER(text_set_color),  NULL },
-    { "bgcolor",  T_STRING, SETTER(text_set_bgcolor),  NULL },
+    { 1,"text",  T_STRING, SETTER(text_set_text),  NULL },
+    { 2,"font",  T_STRING, SETTER(text_set_font),  NULL },
+    { 3,"color",  T_STRING, SETTER(text_set_color),  NULL },
+    { 4,"bgcolor",  T_STRING, SETTER(text_set_bgcolor),  NULL },
     END_OF_PROPERTIES
 };
 

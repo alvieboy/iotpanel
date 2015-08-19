@@ -12,6 +12,7 @@
 #include "debug.h"
 #include "widget_registry.h"
 #include "protos.h"
+#include "schedule.h"
 #include <stdlib.h>
 
 LOCAL esp_tcp esptcp;
@@ -58,7 +59,9 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAdd(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandHelp(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandFwGet(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandFwSet(clientInfo_t *);
-
+LOCAL ICACHE_FLASH_ATTR int handleCommandNewSchedule(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandAddSchedule(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandSchedule(clientInfo_t *);
 
 commandEntry_t commandHandlers[] = {
     { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
@@ -66,11 +69,14 @@ commandEntry_t commandHandlers[] = {
     { "AUTH",    &handleCommandAuth, 0, "<authtoken>" },
     { "PROPSET", &handleCommandPropset, 1, "<widgetname> <propertyname> <value>" },
     { "WIPE",    &handleCommandWipe, 1 ,""},
-    { "NEWSCREEN",    &handleCommandNewScreen, 1,"<screenname>" },
+    { "NEWSCREEN", &handleCommandNewScreen, 1,"<screenname>" },
     { "SELECT",    &handleCommandSelect, 1,"<screenname>" },
     { "ADD",    &handleCommandAdd, 1,"<screenname> <widgetclass> <widgetname> <x> <y>" },
     { "FWGET",  &handleCommandFwGet, 1, "" },
     { "FWSET",  &handleCommandFwSet, 1, "" },
+    { "NEWSCHEDULE",  &handleCommandNewSchedule, 1, "" },
+    { "ADDSCHEDULE",  &handleCommandAddSchedule, 1, "(SELECT|WAIT) <args>" },
+    { "SCHEDULE",  &handleCommandSchedule, 1, "(START|STOP)" },
     { 0, 0, 1, NULL }
 };
 
@@ -263,6 +269,43 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandFwSet(clientInfo_t *cl)
     }
     strncpy( currentFw, cl->argv[0], sizeof(currentFw));
     client_sendOK(cl,"FWSET");
+    return 0;
+}
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandNewSchedule(clientInfo_t *cl)
+{
+    schedule_reset();
+    return 0;
+}
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandAddSchedule(clientInfo_t *cl)
+{
+    if (cl->argc<2) {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+    if (strcmp(cl->argv[0], "SELECT")==0) {
+        schedule_append(SCHEDULE_SELECT, cl->argv[1]);
+    } else if (strcmp(cl->argv[0], "WAIT")==0) {
+        schedule_append(SCHEDULE_WAIT, cl->argv[1]);
+    }
+    return 0;
+}
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandSchedule(clientInfo_t *cl)
+{
+    if (cl->argc!=1) {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+    if (strcmp(cl->argv[0], "START")==0) {
+        schedule_start();
+    } else if (strcmp(cl->argv[0], "STOP")==0) {
+        schedule_stop();
+    } else {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
     return 0;
 }
 

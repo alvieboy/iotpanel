@@ -14,6 +14,7 @@
 #include "widget.h"
 #include <string.h>
 #include "protos.h"
+#include "schedule.h"
 
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
@@ -133,6 +134,7 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
 
 void ICACHE_FLASH_ATTR redraw()
 {
+    schedule_event();
     draw_current_screen(&gfx);
 }
 
@@ -278,6 +280,23 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     widget_set_property(sc, "color", "yellow");
 
     screen_add_widget(screen, sc, 0, 7);
+
+    screen = screen_create("extra");
+
+    sc = widget_create("scrollingtext","sc2");
+    widget_set_property(sc, "font", "thumb" );
+    widget_set_property(sc, "text", "Second screen");
+    widget_set_property(sc, "color", "red");
+    widget_set_property(sc, "speed", "4");
+
+    screen_add_widget(screen, sc, 0, 0);
+
+    schedule_reset();
+    schedule_append(SCHEDULE_SELECT, "default");
+    schedule_append(SCHEDULE_WAIT, "4");
+    schedule_append(SCHEDULE_SELECT, "extra");
+    schedule_append(SCHEDULE_WAIT, "4");
+    schedule_start();
 }
 
 
