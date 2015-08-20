@@ -8,6 +8,8 @@
 #include "font.h"
 #include "color.h"
 
+#define HORIZONTAL_PANELS 2
+
 typedef struct gfxinfo
 {
     int stride;

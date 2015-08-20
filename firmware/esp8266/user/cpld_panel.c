@@ -8,13 +8,14 @@
 #include "driver/uart.h"
 #include "user_interface.h"
 #include "clock.h"
+#include "gfx.h"
 
 static int holdoff=0;
 volatile int fbdone=0;
 static volatile int column=0;
 static int ptr=0;
 static int row=0;
-extern uint8_t framebuffer[32*32];
+extern uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
 
 #define CPLDCS 5 /* GPIO4?? */
 
@@ -90,7 +91,7 @@ static inline void strobe()
 }
 
 
-#define PRELOAD 35
+#define PRELOAD (36/HORIZONTAL_PANELS)
 
 LOCAL void tim1_intr_handler()
 {
@@ -99,7 +100,7 @@ LOCAL void tim1_intr_handler()
 
     if (holdoff>0) {
         // Disable OE
-        if (holdoff==((HOLDOFF-1)*32)-1)
+        if (holdoff==((HOLDOFF-1)*(32*HORIZONTAL_PANELS))-1)
             GPIO_OUTPUT_SET(4, 1);
 
         holdoff--;
@@ -109,21 +110,21 @@ LOCAL void tim1_intr_handler()
     if (column==0)
         spi_select(0);
 
-    if (column<=31) {
+    if (column<=(32*HORIZONTAL_PANELS-1)) {
         /* get pixel, upper row */
         uint32 regval = framebuffer[ptr];
         regval <<= 3;
-        regval |= framebuffer[ptr+(16*32)] & 0x7;
+        regval |= framebuffer[ptr+(16*32*HORIZONTAL_PANELS)] & 0x7;
         regval<<=1;
         regval|=0x80;
         myspi_master_9bit_write(HSPI, 1, regval);
         ptr++;
         column++;
-    } else if (column==32) {
+    } else if (column==(32*HORIZONTAL_PANELS)) {
         // force clock high.
         myspi_master_9bit_write(HSPI, 1, 0x00);
         column++;
-    } else if (column==33) {
+    } else if (column==(32*HORIZONTAL_PANELS)+1) {
         // Send row.
         myspi_master_9bit_write(HSPI, 0, row&0xf);
         // Strobe.
@@ -143,7 +144,7 @@ LOCAL void tim1_intr_handler()
 
         if ((row&0xf)==0xf) {
             ptr=0;
-            holdoff = HOLDOFF * 32;
+            holdoff = HOLDOFF * (32*HORIZONTAL_PANELS);
             fbdone=1;
         }
         row++;

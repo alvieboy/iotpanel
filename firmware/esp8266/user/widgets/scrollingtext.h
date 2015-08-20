@@ -11,7 +11,7 @@ typedef struct
 {
     gfxinfo_t *gfx;
     const gfxinfo_t *dest;
-    char str[128];
+    char str[512];
     int update;
     int x,y;
     uint8 fg,bg;

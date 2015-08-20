@@ -80,14 +80,14 @@ int ICACHE_FLASH_ATTR text_set_bgcolor(widget_t *w, const char *name)
     return 0;
 }
 
-static void *ICACHE_FLASH_ATTR text_new(void*what)
+void *ICACHE_FLASH_ATTR text_new(void*what)
 {
     text_t *s = os_calloc(sizeof(text_t),1);
     s->font = font_find("thumb");
     return s;
 }
 
-static void ICACHE_FLASH_ATTR text_destroy(void*what)
+void ICACHE_FLASH_ATTR text_destroy(void*what)
 {
     os_free(what);
 }

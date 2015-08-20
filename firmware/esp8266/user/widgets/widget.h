@@ -42,15 +42,20 @@ typedef struct {
 
 typedef struct widget {
     char name[NAMELEN+1];
-    struct widget *next;
     const widgetdef_t *def;
     void *priv;
-    int x, y;
+    uint8_t ref;
 } widget_t;
+
+typedef struct widget_entry {
+    struct widget_entry *next;
+    widget_t *widget;
+    int x, y;
+} widget_entry_t;
 
 typedef struct {
     char name[NAMELEN+1];
-    widget_t *widgets;
+    widget_entry_t *widgets;
 } screen_t;
 
 
@@ -65,8 +70,9 @@ void draw_current_screen(gfxinfo_t *gfx);
 int widget_set_property(widget_t*widget, const char *name, const char *value);
 screen_t* screen_create(const char *name);
 widget_t *widget_create(const char *class, const char *name);
-void widget_destroy(widget_t *w);
 widget_t* widget_find(const char *name);
+void widget_ref(widget_t*widget);
+void widget_unref(widget_t*widget);
 
 
 #endif

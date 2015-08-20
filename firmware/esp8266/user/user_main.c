@@ -34,13 +34,13 @@ extern void spi_setup();
 extern void timer_setup();
 
 /* Framebuffer */
-uint8_t framebuffer[32*32];
+uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
 extern volatile int fbdone;
 
 struct gfxinfo gfx =
 {
-    32, //stride
-    32, //width
+    32*HORIZONTAL_PANELS, //stride
+    32*HORIZONTAL_PANELS, //width
     32, //height
     &framebuffer[0]//fb
 };
@@ -167,6 +167,7 @@ user_procTask(os_event_t *events)
 #endif
     redraw();
     os_delay_us(5000);
+    time_tick();
 
     system_os_post(user_procTaskPrio, 0, 0 );
 }
@@ -175,7 +176,7 @@ user_procTask(os_event_t *events)
 static void setupFramebuffer()
 {
     int x,y,p=0;
-    for (x=0;x<32;x++) {
+    for (x=0;x<32*HORIZONTAL_PANELS;x++) {
         for (y=0;y<32;y++) {
             framebuffer[p] = 0;//y & 0x7;
             p++;
@@ -274,9 +275,8 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     widget_set_property(sc, "flash", "60");
     screen_add_widget(screen, sc, 1, 14);
 
-    sc = widget_create("text", "txt");
+    sc = widget_create("clock", "txt");
     widget_set_property(sc, "font", "thumb" );
-    widget_set_property(sc, "text", "10:10:10");
     widget_set_property(sc, "color", "yellow");
 
     screen_add_widget(screen, sc, 0, 7);
@@ -335,6 +335,7 @@ user_init()
     clearFramebuffer(&gfx);
 //    setupWifiAp("IOTPANEL","alvie");
     setupDefaultScreen();
+
 
     //Start os task
 #ifndef HOST

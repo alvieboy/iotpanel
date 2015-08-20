@@ -108,7 +108,7 @@ int main(int argc,char **argv)
     if (SDL_Init(SDL_INIT_VIDEO) != 0){
         return 1;
     }
-    win = SDL_CreateWindow("IoT Panel", 100, 100, 320, 320, SDL_WINDOW_SHOWN);
+    win = SDL_CreateWindow("IoT Panel", 100, 100, 320*HORIZONTAL_PANELS, 320, SDL_WINDOW_SHOWN);
     if (win == NULL){
         SDL_Quit();
         return 1;
@@ -139,10 +139,10 @@ void updateImage()
     r.h=LEDSIZE-(LEDBORDER*2);
 
     for (y=0;y<32;y++) {
-        for (x=0;x<32;x++) {
+        for (x=0;x<32*HORIZONTAL_PANELS;x++) {
             r.x=LEDBORDER + (x*LEDSIZE);
             r.y=LEDBORDER + (y*LEDSIZE);
-            uint8_t color = gfx.fb[x+(y*32)];
+            uint8_t color = gfx.fb[x+(y*32*HORIZONTAL_PANELS)];
             int cr,cg,cb;
             cr = color&1 ? 0xff:0x00;
             cg = color&2 ? 0xff:0x00;
@@ -229,6 +229,7 @@ void user_procTask(void*arg)
     int quit=0;
     while (!quit) {
         redraw();
+        time_tick();
         updateImage();
 
         while (SDL_PollEvent(&e)){
@@ -252,7 +253,7 @@ uint32 system_get_time()
     struct timeval now, delta;
     gettimeofday(&now,NULL);
     timersub(&now, &start, &delta);
-    return ((delta.tv_sec*1000) + (delta.tv_usec/1000));
+    return ((delta.tv_sec*1000000) + (delta.tv_usec));
 }
 
 void espconn_accept(espconn*conn)

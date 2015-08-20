@@ -62,6 +62,9 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandFwSet(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandNewSchedule(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandAddSchedule(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandSchedule(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandSetTime(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandClone(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandLogout(clientInfo_t *);
 
 commandEntry_t commandHandlers[] = {
     { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
@@ -77,6 +80,9 @@ commandEntry_t commandHandlers[] = {
     { "NEWSCHEDULE",  &handleCommandNewSchedule, 1, "" },
     { "ADDSCHEDULE",  &handleCommandAddSchedule, 1, "(SELECT|WAIT) <args>" },
     { "SCHEDULE",  &handleCommandSchedule, 1, "(START|STOP)" },
+    { "SETTIME",  &handleCommandSetTime, 1, "<seconds>" },
+    { "CLONE",  &handleCommandClone, 1, "<widgetname> <screenname> <x> <y>" },
+    { "LOGOUT",   &handleCommandLogout, 0 ,""},
     { 0, 0, 1, NULL }
 };
 
@@ -254,6 +260,44 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAdd(clientInfo_t *cl)
     return 0;
 }
 
+LOCAL ICACHE_FLASH_ATTR int handleCommandClone(clientInfo_t *cl)
+{
+    int x, y;
+    char *end;
+
+    if (cl->argc<5) {
+        client_senderror(cl,"INVALIDARGS");
+    }
+    screen_t *s = screen_find(cl->argv[1]);
+    if (!s) {
+        client_senderror(cl,"NOTFOUND");
+        return -1;
+    }
+
+    widget_t *w = widget_find(cl->argv[0]);
+    if (!w) {
+        client_senderror(cl,"NOTFOUND");
+        return -1;
+    }
+
+    x = (int)strtol(cl->argv[2],&end,10);
+    if (*end !='\0') {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+
+    y = (int)strtol(cl->argv[3],&end,10);
+    if (*end !='\0') {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+
+    /* Ok, create it. */
+    screen_add_widget(s, w, x, y);
+    client_sendOK(cl,"CLONE");
+    return 0;
+}
+
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandFwGet(clientInfo_t *cl)
 {
@@ -275,6 +319,8 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandFwSet(clientInfo_t *cl)
 LOCAL ICACHE_FLASH_ATTR int handleCommandNewSchedule(clientInfo_t *cl)
 {
     schedule_reset();
+    client_sendOK(cl,"NEWSCHEDULE");
+
     return 0;
 }
 
@@ -289,6 +335,8 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAddSchedule(clientInfo_t *cl)
     } else if (strcmp(cl->argv[0], "WAIT")==0) {
         schedule_append(SCHEDULE_WAIT, cl->argv[1]);
     }
+    client_sendOK(cl,"ADDSCHEDULE");
+
     return 0;
 }
 
@@ -306,10 +354,38 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandSchedule(clientInfo_t *cl)
         client_senderror(cl,"INVALID");
         return -1;
     }
+    client_sendOK(cl,"SCHEDULE");
+
     return 0;
 }
 
+LOCAL ICACHE_FLASH_ATTR int handleCommandSetTime(clientInfo_t *cl)
+{
+    uint32 s;
+    char *end = NULL;
 
+    if (cl->argc!=1) {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+
+    s = (unsigned int)strtol(cl->argv[0],&end,10);
+    if (end && *end=='\0') {
+        time_set_seconds(s);
+        client_sendOK(cl,"SETTIME");
+        return 0;
+    } else {
+        return -1;
+    }
+
+}
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandLogout(clientInfo_t *cl)
+{
+    client_sendOK(cl,"LOGOUT");
+    cl->authenticated=0;
+    return 0;
+}
 
 LOCAL ICACHE_FLASH_ATTR void clientInfo_init(clientInfo_t*cl)
 {

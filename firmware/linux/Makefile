@@ -10,6 +10,7 @@ SOURCES = \
 ../esp8266/user/glcdfont.c                     \
 ../esp8266/user/server.c                       \
 ../esp8266/user/schedule.c                     \
+../esp8266/user/clock.c                        \
 ../esp8266/user/font_apple4x6.c                \
 ../esp8266/user/font_apple5x7.c                \
 ../esp8266/user/user_main.c                    \
@@ -22,6 +23,7 @@ SOURCES = \
 ../esp8266/user/widgets/rectangle.c            \
 ../esp8266/user/widgets/text.c 	               \
 ../esp8266/user/widgets/line.c 	               \
+../esp8266/user/widgets/clockw.c 	       \
 ../esp8266/user/widgets/widget_registry.c      \
 iotpanel.c
 

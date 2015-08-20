@@ -37,21 +37,21 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
     return -1;
 }
 
-void ICACHE_FLASH_ATTR widget_move(widget_t *widget, int x, int y)
+void ICACHE_FLASH_ATTR widget_move(widget_entry_t *widget, int x, int y)
 {
     widget->x = x;
     widget->y = y;
 }
 
 
-LOCAL void ICACHE_FLASH_ATTR widget_redraw(widget_t *w, gfxinfo_t *gfx)
+LOCAL void ICACHE_FLASH_ATTR widget_redraw(widget_entry_t *w, gfxinfo_t *gfx)
 {
-    w->def->redraw(w, w->x, w->y, gfx);
+    w->widget->def->redraw(w->widget, w->x, w->y, gfx);
 }
 
 void ICACHE_FLASH_ATTR screen_draw(screen_t *screen, gfxinfo_t *gfx)
 {
-    widget_t *w;
+    widget_entry_t *w;
     gfx_clear(gfx);
     for (w=screen->widgets;w;w=w->next) {
         widget_redraw(w,gfx);
@@ -61,17 +61,21 @@ void ICACHE_FLASH_ATTR screen_draw(screen_t *screen, gfxinfo_t *gfx)
 
 void ICACHE_FLASH_ATTR screen_add_widget(screen_t *screen, widget_t *widget, int x, int y)
 {
-    widget->next = NULL;
+    widget_entry_t *e = os_malloc(sizeof(widget_entry_t));
+    widget_ref(widget);
+    e->widget = widget;
+
+    e->next = NULL;
     if (screen->widgets==NULL)
-        screen->widgets = widget;
+        screen->widgets = e;
     else {
-        widget_t *it = screen->widgets;
+        widget_entry_t *it = screen->widgets;
         while (it->next)
             it = it->next;
-        it->next = widget;
+        it->next = e;
     }
-    widget->x = x;
-    widget->y = y;
+    e->x = x;
+    e->y = y;
 }
 
 void ICACHE_FLASH_ATTR draw_current_screen(gfxinfo_t *gfx)
@@ -105,15 +109,29 @@ screen_t* ICACHE_FLASH_ATTR screen_find(const char *name)
     return NULL;
 }
 
+LOCAL void ICACHE_FLASH_ATTR widget_destroy(widget_t *w)
+{
+    w->def->destroy(w->priv);
+    os_free(w);
+}
+
+
 void ICACHE_FLASH_ATTR screen_select(screen_t *s)
 {
     current_screen = s;
 }
 
-void ICACHE_FLASH_ATTR widget_destroy(widget_t *w)
+void ICACHE_FLASH_ATTR widget_unref(widget_t *w)
 {
-    w->def->destroy(w->priv);
-    os_free(w);
+    if (w->ref>0)
+        w->ref--;
+    if (w->ref==0)
+        widget_destroy(w);
+}
+
+void ICACHE_FLASH_ATTR widget_ref(widget_t *w)
+{
+    w->ref++;
 }
 
 widget_t *ICACHE_FLASH_ATTR widget_create(const char *class, const char *name)
@@ -125,10 +143,8 @@ widget_t *ICACHE_FLASH_ATTR widget_create(const char *class, const char *name)
 
     widget_t *w = os_malloc(sizeof(widget_t));
     w->def = def;
+    w->ref = 0;
     w->priv = def->alloc(NULL);
-    w->x=0;
-    w->y=0;
-    w->next = NULL;
     strncpy(w->name, name, sizeof(w->name));
     return w;
 }
@@ -136,13 +152,15 @@ widget_t *ICACHE_FLASH_ATTR widget_create(const char *class, const char *name)
 
 LOCAL widget_t* ICACHE_FLASH_ATTR widget_find_in_screen(screen_t *s, const char *name)
 {
-    widget_t *w = s->widgets;
+    widget_entry_t *w = s->widgets;
     while (w) {
-        if (strcmp(name,w->name)==0)
+        if (strcmp(name,w->widget->name)==0)
             break;
         w = w->next;
     }
-    return w;
+    if (w)
+        return w->widget;
+    return NULL;
 }
 
 widget_t* ICACHE_FLASH_ATTR widget_find(const char *name)
@@ -170,11 +188,13 @@ void ICACHE_FLASH_ATTR screen_destroy_all()
     for (i=0;i<MAX_SCREENS;i++) {
         if (screens[i].name[0] != '\0') {
             /* Destroy all widgets */
-            widget_t *w = screens[i].widgets;
+            widget_entry_t *w = screens[i].widgets;
             while (w) {
-                widget_t *d = w;
+                widget_entry_t *d = w;
                 w=w->next;
-                widget_destroy(d);
+                //widget_destroy(d->widget);
+                widget_unref(d->widget);
+                os_free(d);
             }
             screens[i].name[0] = '\0';
             screens[i].widgets = NULL;

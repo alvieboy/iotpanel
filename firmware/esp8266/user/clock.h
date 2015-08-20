@@ -9,5 +9,7 @@ uint32 time_get_seconds();
 void time_get(uint32 *seconds, uint32 *millis);
 void time_tick();
 void time_set(uint32 seconds, uint32 millis);
+void time_get_hmsm(uint8_t *hour, uint8_t *min, uint8_t *seconds, unsigned *millis);
+void time_set_seconds(uint32 seconds);
 
 #endif
