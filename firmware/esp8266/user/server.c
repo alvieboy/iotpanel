@@ -265,7 +265,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandClone(clientInfo_t *cl)
     int x, y;
     char *end;
 
-    if (cl->argc<5) {
+    if (cl->argc<4) {
         client_senderror(cl,"INVALIDARGS");
     }
     screen_t *s = screen_find(cl->argv[1]);
