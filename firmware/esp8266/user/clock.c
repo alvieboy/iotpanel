@@ -49,6 +49,7 @@ void ICACHE_FLASH_ATTR time_tick()
 
     if (clkmillis < lastclock) {
         /* Overflow */
+        os_printf("Overflow %u %u\n", clkmillis,lastclock);
         overflows++;
     }
     lastclock = clkmillis;

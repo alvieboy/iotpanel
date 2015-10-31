@@ -7,6 +7,7 @@
 #include "alloc.h"
 #include <string.h>
 #include "debug.h"
+#include "serdes.h"
 
 LOCAL screen_t screens[MAX_SCREENS] = {{{0}}};
 LOCAL screen_t *current_screen = &screens[0];
@@ -64,6 +65,7 @@ void ICACHE_FLASH_ATTR screen_add_widget(screen_t *screen, widget_t *widget, int
     widget_entry_t *e = os_malloc(sizeof(widget_entry_t));
     widget_ref(widget);
     e->widget = widget;
+    widget->parent = screen;
 
     e->next = NULL;
     if (screen->widgets==NULL)
@@ -200,5 +202,76 @@ void ICACHE_FLASH_ATTR screen_destroy_all()
             screens[i].widgets = NULL;
          }
      }
- 
 }
+
+int ICACHE_FLASH_ATTR widget_serialize_properties(serializer_t *ser, widget_t*widget)
+{
+    property_t *prop;
+    char *strval;
+    unsigned intval;
+
+
+    for (prop = widget->def->properties; prop->name; prop++) {
+        os_printf("Serialize prop %s\n", prop->name);
+
+        serialize_string( ser, prop->name );
+
+        switch (prop->type) {
+        case T_INT:
+            prop->getter( widget, &intval);
+            serialize_uint32( ser, intval );
+            break;
+        case T_STRING:
+            prop->getter( widget, &strval);
+            serialize_string( ser, strval );
+            break;
+        default:
+            return -1;
+        }
+    }
+    return 0;
+}
+
+void ICACHE_FLASH_ATTR screen_serialize(serializer_t *ser, screen_t *screen)
+{
+    serialize_string( ser, screen->name );
+
+    widget_entry_t *w = screen->widgets;
+    while (w) {
+        if (screen != w->widget->parent) {
+            /* Cloned widget */
+            serialize_uint8(ser, 0x02);
+        } else {
+            /* Normal widget */
+            serialize_uint8(ser, 0x01);
+        }
+        os_printf("Serialize widget %s\n", w->widget->def->name);
+        serialize_string(ser, w->widget->name);
+        serialize_uint8(ser, w->x);
+        serialize_uint8(ser, w->y);
+
+        if (screen == w->widget->parent) {
+            widget_serialize_properties(ser, w->widget);
+        }
+        w = w->next;
+    }
+    /* Last */
+    serialize_uint8(ser, 0x00);
+}
+
+void ICACHE_FLASH_ATTR screen_serialize_all(serializer_t *ser)
+{
+    int i;
+    current_screen = NULL;
+
+    /* Iterate through all screens */
+    
+    for (i=0;i<MAX_SCREENS;i++) {
+        if (screens[i].name[0] != '\0') {
+            screen_serialize( ser, &screens[i]);
+        }
+    }
+    /* Last one */
+    serialize_uint8( ser, 0x00 );
+}
+

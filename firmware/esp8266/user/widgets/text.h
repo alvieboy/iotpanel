@@ -12,10 +12,12 @@ typedef struct
 {
     gfxinfo_t *gfx;
     const gfxinfo_t *dest;
-    char str[128];
+    char *pstr;
+    char *paltstr;
     int update;
     uint8 fg,bg;
     const font_t *font;
+    uint8 speed;
 } text_t;
 
 void setupText(text_t *t, const gfxinfo_t *dest, const font_t*, const char *str);

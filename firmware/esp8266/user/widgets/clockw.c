@@ -103,7 +103,7 @@ void ICACHE_FLASH_ATTR clock_redraw(widget_t *w, int x, int y, gfxinfo_t *gfx)
 }
 
 static property_t properties[] = {
-    { 1,"font",  T_STRING, SETTER(clock_set_font),  NULL },
+    { 1,"font",  T_STRING, SETTER(clock_set_font), NULL },
     { 2,"color",  T_STRING, SETTER(clock_set_color),  NULL },
     { 3,"bgcolor",  T_STRING, SETTER(clock_set_bgcolor),  NULL },
     END_OF_PROPERTIES

@@ -1,7 +1,7 @@
 SDL_CFLAGS=$(shell pkg-config --cflags sdl2)
 SDL_LIBS=$(shell pkg-config --libs sdl2)
 
-CFLAGS=-I. -O2 -g -I../esp8266/user -I../esp8266/user/widgets -I./drivers $(SDL_CFLAGS) -DHOST
+CFLAGS=-I. -ffunction-sections -fdata-sections -Wall -O2 -g -I../esp8266/user -I../esp8266/user/widgets -I./drivers $(SDL_CFLAGS) -DHOST
 
 
 SOURCES = \
@@ -17,6 +17,9 @@ SOURCES = \
 ../esp8266/user/gfx.c                          \
 ../esp8266/user/font_6x10.c                    \
 ../esp8266/user/font_tom_thumb.c               \
+../esp8266/user/font_16x16.c                   \
+../esp8266/user/font_12x16.c                   \
+../esp8266/user/serdes.c                       \
 ../esp8266/user/widgets/color.c                \
 ../esp8266/user/widgets/scrollingtext.c        \
 ../esp8266/user/widgets/widget.c               \
@@ -30,7 +33,7 @@ iotpanel.c
 all: iotpanel iotlogin
 
 iotpanel: $(SOURCES)
-	$(CC) $(CFLAGS) $(SOURCES) -o $@ $(SDL_LIBS)
+	$(CC) $(CFLAGS) $(SOURCES) -o $@ $(SDL_LIBS)  -Wl,--gc-sections
 
 clean:
 	rm -f iotpanel iotlogin

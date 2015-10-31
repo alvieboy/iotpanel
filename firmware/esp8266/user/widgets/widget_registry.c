@@ -7,6 +7,7 @@ extern const widgetdef_t scrollingtext_widget;
 extern const widgetdef_t text_widget;
 extern const widgetdef_t line_widget;
 extern const widgetdef_t clock_widget;
+extern const widgetdef_t chrono_widget;
 
 const widgetdef_t *widget_registry[] = {
     &rectangle_widget,
@@ -14,6 +15,7 @@ const widgetdef_t *widget_registry[] = {
     &text_widget,
     &line_widget,
     &clock_widget,
+//    &chrono_widget,
     0
 };
 

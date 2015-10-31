@@ -13,6 +13,8 @@ typedef enum {
 
 #define SETTER(x) ( (int(*)(void*,void*))&x )
 
+typedef struct serializer_t serializer_t;
+
 struct widget;
 
 typedef struct {
@@ -20,6 +22,7 @@ typedef struct {
     const char *name;
     eType type;
     int (*setter)(void*, void*);
+    int (*getter)(void*, void*);
     void *data;
 } property_t;
 #define END_OF_PROPERTIES { 0,0,0,0,0 }
@@ -31,6 +34,7 @@ typedef struct {
     .data = offsetof( struct, field ) \
 }
 struct widget;
+struct screen;
 
 typedef struct {
     const char *name;
@@ -40,9 +44,42 @@ typedef struct {
     void (*destroy)(void*);
 } widgetdef_t;
 
+#define GENERIC_GETTER(class, type, field) \
+    LOCAL int get_##field(void *w, void *target) \
+    { class *me = (class*)((widget_t*)w)->priv; \
+    type *ti = (type*)target; \
+    *ti = me->field; \
+    return 0; \
+    }
+
+#define STRING_GETTER(class, field) \
+    LOCAL int get_##field(void *w, void *target) \
+    { class *me = (class*)((widget_t*)w)->priv; \
+    const char **ti = (const char**)target; \
+    *ti = &me->field[0]; \
+    return 0; \
+    }
+
+#define FONT_GETTER(class, field) \
+    LOCAL int get_##field(void *w, void *target) \
+    { class *me = (class*)((widget_t*)w)->priv; \
+    const char**ti = (const char**)target; \
+    *ti = me->field->name; \
+    return 0; \
+    }
+
+#define COLOR_GETTER(class, field) \
+    LOCAL int get_##field(void *w, void *target) \
+    { class *me = (class*)((widget_t*)w)->priv; \
+    const char **ti = (const char**)target; \
+    *ti = color_name(me->field); \
+    return 0; \
+    }
+
 typedef struct widget {
     char name[NAMELEN+1];
     const widgetdef_t *def;
+    struct screen *parent;
     void *priv;
     uint8_t ref;
 } widget_t;
@@ -53,7 +90,7 @@ typedef struct widget_entry {
     int x, y;
 } widget_entry_t;
 
-typedef struct {
+typedef struct screen {
     char name[NAMELEN+1];
     widget_entry_t *widgets;
 } screen_t;
@@ -73,6 +110,9 @@ widget_t *widget_create(const char *class, const char *name);
 widget_t* widget_find(const char *name);
 void widget_ref(widget_t*widget);
 void widget_unref(widget_t*widget);
+
+void screen_serialize(serializer_t *ser, screen_t *screen);
+void screen_serialize_all(serializer_t *ser);
 
 
 #endif

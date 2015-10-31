@@ -10,10 +10,11 @@
 #include "espconn.h"
 #include <SDL2/SDL.h>
 #include "gfx.h"
+#include "serdes.h"
 #include <sys/time.h>
 
-#define LEDSIZE 10
-#define LEDBORDER 2
+#define LEDSIZE 6
+#define LEDBORDER 1
 
 espconn *current_conn = NULL;
 static int listenfd = -1;
@@ -22,6 +23,38 @@ static struct timeval start;
 #ifndef linux
 typedef int socklen_t;
 #endif
+
+void ser_initialize(struct serializer_t *me)
+{
+}
+
+int ser_write(struct serializer_t *me, const void *data, unsigned size)
+{
+    const unsigned char *cptr=data;
+    printf("Write %d: ",size);
+    while (size--) {
+        printf("%02x ", *cptr);
+        cptr++;
+    }
+    printf("\n");
+    return 0;
+}
+
+int ser_read(struct serializer_t *me, void *data, unsigned size)
+{
+    return -1;
+}
+void ser_rewind(struct serializer_t *me)
+{
+}
+
+
+struct serializer_t debug_serializer = {
+    .write = &ser_write,
+    .read = &ser_read,
+    .rewind = &ser_rewind,
+    .initialize = &ser_initialize
+};
 
 // Compats...
 
@@ -43,7 +76,7 @@ void vPortFree(void *ptr)
 
 void system_os_post()
 {
-    usleep(10000);
+    usleep(5000);
 }
 
 void os_delay_us(int us)
@@ -108,7 +141,7 @@ int main(int argc,char **argv)
     if (SDL_Init(SDL_INIT_VIDEO) != 0){
         return 1;
     }
-    win = SDL_CreateWindow("IoT Panel", 100, 100, 320*HORIZONTAL_PANELS, 320, SDL_WINDOW_SHOWN);
+    win = SDL_CreateWindow("IoT Panel", 100, 100, 32*HORIZONTAL_PANELS*LEDSIZE, 32*LEDSIZE, SDL_WINDOW_SHOWN);
     if (win == NULL){
         SDL_Quit();
         return 1;
@@ -238,6 +271,15 @@ void user_procTask(void*arg)
                 quit = 1;
             }
         }
+#if 0
+        // Test
+        if (serc==1) {
+            printf("Ser\n"),
+            screen_serialize_all(&debug_serializer);
+        }
+        if (serc>0)
+            serc--;
+#endif
         netCheck();//os_delay_us(20000);
     }
 }

@@ -31,3 +31,15 @@ int ICACHE_FLASH_ATTR color_parse(const char *name, color_t *color)
     }
     return -1;
 }
+
+const char * ICACHE_FLASH_ATTR color_name(color_t color)
+{
+    struct color_entry *e = &color_list[0];
+    while (e->name) {
+        if (color == e->color) {
+            return e->name;
+        }
+        e++;
+    }
+    return color_list[0].name;
+}

@@ -157,8 +157,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAuth(clientInfo_t *cl)
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandPropset(clientInfo_t *cl)
 {
-    if (cl->argc!=3) {
-        client_senderror(cl, "INVALIDARGS");
+    if (cl->argc!=3) {                  client_senderror(cl, "INVALIDARGS");
         return -1;
     }
 
@@ -308,7 +307,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandFwGet(clientInfo_t *cl)
 LOCAL ICACHE_FLASH_ATTR int handleCommandFwSet(clientInfo_t *cl)
 {
     if (cl->argc!=1) {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,"INVALIDARGS");
         return -1;
     }
     strncpy( currentFw, cl->argv[0], sizeof(currentFw));

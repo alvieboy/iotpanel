@@ -17,13 +17,54 @@
 LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str);
 LOCAL int unpackHexByte(const char *str, uint8_t *dest);
 
-void drawChar(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
+LOCAL void ICACHE_FLASH_ATTR drawChar16(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
+                                        uint8 color, uint8 bg)
+{
+    const uint8 *cptr;
+    //printf("Draw 16 %d %d \n", font->w, font->h);
+    uint8 hc = font->h;
+    uint16 mask = (1<<(font->w-1));
+
+    if ( (c<font->start) || (c>font->end)) {
+        c = font->start;
+    }
+    cptr = (uint8*) ( &font->bitmap[(c - font->start)*(font->h)*2] );
+    //printf("Start char %d, index is %d\n", c,  (c - font->start)*(font->h)*2 );
+    // Draw.
+    do {
+        uint16 line = (uint16)(*cptr++)<<8;
+        line += (uint16)*cptr++;
+        //printf("Line: 0x%04x mask 0x%04x\n",line,mask);
+        uint8 wc = font->w;
+        int sx=x;
+        do {
+            int pixel = line & mask;
+            line <<=1;
+            if (pixel) {
+                drawPixel(gfx, x, y, color);
+            } else if (bg != color) {
+                drawPixel(gfx, x, y, bg);
+            }
+            x++;
+        } while (--wc);
+        x=sx;
+        y++;
+    } while (--hc);
+}
+
+
+void ICACHE_FLASH_ATTR drawChar(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
               uint8 color, uint8 bg)
 {
     const uint8 *cptr;
 
     if ((NULL==font) || (NULL==gfx))
         return;
+
+    if (font->w > 8) {
+        drawChar16(gfx, font, x, y, c, color, bg);
+        return;
+    }
 
     uint8 hc = font->h;
 
@@ -121,7 +162,7 @@ gfxinfo_t * ICACHE_FLASH_ATTR allocateTextFramebuffer(const char *str, const fon
     info->height = font->h;
     /**/
     size *= font->h;
-    DEBUG("New fb size: %d\n",size);
+    DEBUG("New fb size: %d '%s'\n",size,str);
 
     if (size==0) {
         info->fb = NULL;
