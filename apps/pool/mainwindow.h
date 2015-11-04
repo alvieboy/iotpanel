@@ -40,16 +40,19 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow(QApplication &app, QWidget *parent = 0);
     ~MainWindow();
 public slots:
     void onAutoConnection();
     void onManualConnection();
-    void onResetScore();
     void broadcastDataReady();
     void checkConnection();
     void onHostConnected();
-    void onHostData();
+    void onSendUpdate();
+    //void onHostData();
+    void onIncrease1Score();
+    void onIncrease2Score();
+    void onResetScore();
 protected:
     void SetupBroadcastListener();
     void HandleIPAddress(const QHostAddress &);
@@ -58,6 +61,8 @@ protected:
     void ContactHost();
     void NewIP();
     void handleIncomingData();
+    void SaveSettings();
+
 
     bool Transfer(const QStringList &list, QString &error);
     bool Transfer(const QString &str, QString &error);
@@ -77,6 +82,8 @@ private:
     QMutex m_txmutex;
     QByteArray m_incomeData;
     QLabel *statusLabel;
+    QApplication &m_app;
+    QStringList m_queue;
 };
 
 #endif // MAINWINDOW_H

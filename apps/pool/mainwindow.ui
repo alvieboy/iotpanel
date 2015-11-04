@@ -346,7 +346,72 @@
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onSendUpdate()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>415</x>
+     <y>402</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>232</x>
+     <y>222</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_3</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onIncrease1Score()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>215</x>
+     <y>357</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>232</x>
+     <y>222</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_4</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onIncrease2Score()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>301</x>
+     <y>357</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>232</x>
+     <y>222</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>pushButton_2</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onResetScore()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>396</x>
+     <y>357</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>232</x>
+     <y>222</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
  <slots>
   <slot>onAutoConnection()</slot>
   <slot>onManualConnection()</slot>
