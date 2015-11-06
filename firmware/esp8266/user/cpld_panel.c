@@ -15,12 +15,17 @@ volatile int fbdone=0;
 static volatile int column=0;
 static int ptr=0;
 static int row=0;
+static int blank=99;
 extern uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
 
 #define CPLDCS 5 /* GPIO4?? */
 
 #define HOLDOFF 6
 
+void setBlanking(int a)
+{
+    blank = a;
+}
 
 LOCAL inline void myspi_master_9bit_write(uint8 spi_no, uint8 high_bit, uint8 low_8bit)
 {
@@ -118,6 +123,11 @@ LOCAL void tim1_intr_handler()
         regval<<=1;
         regval|=0x80;
         myspi_master_9bit_write(HSPI, 1, regval);
+        if (column==blank) {
+            // Disable OE
+            GPIO_OUTPUT_SET(4, 1);
+        }
+
         ptr++;
         column++;
     } else if (column==(32*HORIZONTAL_PANELS)) {

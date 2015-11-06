@@ -295,6 +295,8 @@ extern void user_server_init(uint32 port);
 
 #define ESC "\x1b"
 
+extern char currentFw[];
+
 LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 {
     int i;
@@ -317,7 +319,9 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     widget_set_property(sc, "speed", "2");
 
     screen_add_widget(screen, sc, 0, 0);
+    strcpy(currentFw,"default");
 }
+
 #ifndef HOST
 LOCAL esp_udp eudp;
 

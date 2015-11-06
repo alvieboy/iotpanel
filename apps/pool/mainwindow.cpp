@@ -1,6 +1,15 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <QTimer>
+#include <stdexcept>
+
+struct ConnectionError: public std::exception
+{
+};
+
+struct ReplyError: public std::exception
+{
+};
 
 MainWindow::MainWindow(QApplication&app,QWidget *parent) :
     QMainWindow(parent),
@@ -128,12 +137,15 @@ void MainWindow::NewIP()
 bool MainWindow::Transfer(const QString &str, QString &error)
 {
     QStringList l = TransferAndGet(str, error);
+
     if (l.size()<2) {
         return false;
     }
+
     if (l[1] != "OK") {
         return false;
     }
+
     return true;
 }
 
@@ -148,17 +160,24 @@ bool MainWindow::Transfer(const QStringList &list, QString &error)
 
 QStringList MainWindow::TransferAndGet(const QString &str, QString &dest)
 {
+    int waitcount = 10000;
     QString msg = "1 " + str + "\n";
     qDebug()<<">>" <<"1 "<<str;
 
     QByteArray array (msg.toStdString().c_str()) ;
 
-    connectionSocket->write(array);
+    if (connectionSocket->write(array)<=0)
+        throw ConnectionError();
 
     while ( ! connectionSocket->canReadLine()) {
         m_app.processEvents(0, 1000);
+        waitcount--;
+        if (waitcount==0)
+            throw ConnectionError();
     }
+
     dest = connectionSocket->readLine();
+
     if (dest.length()>0) {
         int nl = dest.indexOf('\n');
         if (nl>=0) {
@@ -166,6 +185,8 @@ QStringList MainWindow::TransferAndGet(const QString &str, QString &dest)
         }
         qDebug()<<"<< "<<dest;
         return dest.split(" ");
+    } else {
+        throw ConnectionError();
     }
     return QStringList();
 }
@@ -291,41 +312,45 @@ void MainWindow::onHostConnected()
     /* Auth */
     QString error;
     qDebug()<<"Connection established";
-    Transfer("LOGIN admin",error);
-    Transfer("AUTH admin",error);
+    try {
+        Transfer("LOGIN admin",error);
+        Transfer("AUTH admin",error);
 
-    QStringList l = TransferAndGet("FWGET", error);
-    if (l.size()>=2) {
-        // Check firmware
-        qDebug() << "Firmware is "<<l[2];
-        if (m_firmware!=l[2]) {
-            // Transfer new firmware
-            Transfer("WIPE", error);
-            QStringList layout = QString( m_ps.layout ).split("\n");
-            foreach (QString l, layout) {
-                Transfer(l,error);
+        QStringList l = TransferAndGet("FWGET", error);
+        if (l.size()>=2) {
+            // Check firmware
+            qDebug() << "Firmware is "<<l[2];
+            if (m_firmware!=l[2]) {
+                // Transfer new firmware
+                Transfer("WIPE", error);
+                QStringList layout = QString( m_ps.layout ).split("\n");
+                foreach (QString l, layout) {
+                    Transfer(l,error);
+                }
+
+                QStringList schedule = QString( m_ps.schedule ).split("\n");
+                Transfer("NEWSCHEDULE",error);
+                foreach (QString l, schedule) {
+                    Transfer(l,error);
+                }
+                Transfer("SCHEDULE START",error);
+
+                Transfer(QString("FWSET ") + m_firmware, error);
             }
-
-            QStringList schedule = QString( m_ps.schedule ).split("\n");
-            Transfer("NEWSCHEDULE",error);
-            foreach (QString l, schedule) {
-                Transfer(l,error);
-            }
-            Transfer("SCHEDULE START",error);
-
-            Transfer(QString("FWSET ") + m_firmware, error);
         }
-    }
-    // Send queue of commands
-    QStringList c = m_queue;
-    m_queue.clear();
-    foreach (QString l, c) {
-        Transfer(l,error);
-    }
+        // Send queue of commands
+        QStringList c = m_queue;
+        m_queue.clear();
+        foreach (QString l, c) {
+            Transfer(l,error);
+        }
 
-    Transfer("LOGOUT", error);
-    // Close
-    connectionSocket->close();
+        Transfer("LOGOUT", error);
+        // Close
+        connectionSocket->close();
+    } catch (ConnectionError &e) {
+        statusLabel->setText("Connection error");
+    }
 }
 
 void MainWindow::ContactHost()

@@ -17,7 +17,7 @@
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
-static char currentFw[32] = {0};
+char currentFw[32] = {0};
 
 #define MAX_LINE_LEN 256
 
@@ -65,6 +65,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandSchedule(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandSetTime(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandClone(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandLogout(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandBlank(clientInfo_t *);
 
 commandEntry_t commandHandlers[] = {
     { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
@@ -82,6 +83,7 @@ commandEntry_t commandHandlers[] = {
     { "SCHEDULE",  &handleCommandSchedule, 1, "(START|STOP)" },
     { "SETTIME",  &handleCommandSetTime, 1, "<seconds>" },
     { "CLONE",  &handleCommandClone, 1, "<widgetname> <screenname> <x> <y>" },
+    { "BLANK",  &handleCommandBlank, 1, "<blank>" },
     { "LOGOUT",   &handleCommandLogout, 0 ,""},
     { 0, 0, 1, NULL }
 };
@@ -255,6 +257,24 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAdd(clientInfo_t *cl)
     }
 
     screen_add_widget(s, w, x, y);
+    client_sendOK(cl,"ADD");
+    return 0;
+}
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandBlank(clientInfo_t *cl)
+{
+    int b;
+    char *end;
+
+    if (cl->argc<1) {
+        client_senderror(cl,"INVALIDARGS");
+    }
+    b = (int)strtol(cl->argv[0],&end,10);
+    if (*end !='\0') {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+    //setBlanking(b);
     client_sendOK(cl,"ADD");
     return 0;
 }
