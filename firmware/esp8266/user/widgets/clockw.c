@@ -101,11 +101,21 @@ void ICACHE_FLASH_ATTR clock_redraw(widget_t *w, int x, int y, gfxinfo_t *gfx)
     }
     text_redraw(&wt, x, y, gfx);
 }
+#if 0
+LOCAL int clockw_t_get_font(widget_t *w, void *target)
+{
+    clockw_t *me = CLOCK(w);
+    return text_t_get_font(
+    const char **ti = (const char**)target; \
+    *ti = &me->field[0]; \
+    return 0; \
+    }
+#endif
 
 static property_t properties[] = {
-    { 1,"font",  T_STRING, SETTER(clock_set_font), NULL },
-    { 2,"color",  T_STRING, SETTER(clock_set_color),  NULL },
-    { 3,"bgcolor",  T_STRING, SETTER(clock_set_bgcolor),  NULL },
+    { 1, T_STRING, "font",    SETTER(clock_set_font),   NULL },
+    { 2, T_STRING, "color",   SETTER(clock_set_color),  NULL },
+    { 3, T_STRING, "bgcolor", SETTER(clock_set_bgcolor),NULL },
     END_OF_PROPERTIES
 };
 

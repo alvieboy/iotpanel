@@ -12,6 +12,7 @@ typedef enum {
 } eType;
 
 #define SETTER(x) ( (int(*)(void*,void*))&x )
+#define GETTER(x) ( (int(*)(void*,void*))&x )
 
 typedef struct serializer_t serializer_t;
 
@@ -19,13 +20,13 @@ struct widget;
 
 typedef struct {
     uint8_t id;
-    const char *name;
     eType type;
+    const char *name;
     int (*setter)(void*, void*);
     int (*getter)(void*, void*);
-    void *data;
 } property_t;
-#define END_OF_PROPERTIES { 0,0,0,0,0 }
+
+#define END_OF_PROPERTIES { 0,0,(const char*)0,0,0 }
 
 #define INT_PROPERTY(name, struct, field) { \
     .name = name, \
@@ -45,7 +46,7 @@ typedef struct {
 } widgetdef_t;
 
 #define GENERIC_GETTER(class, type, field) \
-    LOCAL int get_##field(void *w, void *target) \
+    int class ##_get_##field(void *w, void *target) \
     { class *me = (class*)((widget_t*)w)->priv; \
     type *ti = (type*)target; \
     *ti = me->field; \
@@ -53,7 +54,7 @@ typedef struct {
     }
 
 #define STRING_GETTER(class, field) \
-    LOCAL int get_##field(void *w, void *target) \
+    int class ##_get_##field(void *w, void *target) \
     { class *me = (class*)((widget_t*)w)->priv; \
     const char **ti = (const char**)target; \
     *ti = &me->field[0]; \
@@ -61,7 +62,7 @@ typedef struct {
     }
 
 #define FONT_GETTER(class, field) \
-    LOCAL int get_##field(void *w, void *target) \
+    int class ##_get_##field(void *w, void *target) \
     { class *me = (class*)((widget_t*)w)->priv; \
     const char**ti = (const char**)target; \
     *ti = me->field->name; \
@@ -69,7 +70,7 @@ typedef struct {
     }
 
 #define COLOR_GETTER(class, field) \
-    LOCAL int get_##field(void *w, void *target) \
+    int class ##_get_##field(void *w, void *target) \
     { class *me = (class*)((widget_t*)w)->priv; \
     const char **ti = (const char**)target; \
     *ti = color_name(me->field); \

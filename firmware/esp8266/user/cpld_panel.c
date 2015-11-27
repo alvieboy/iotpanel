@@ -66,7 +66,11 @@ void ICACHE_FLASH_ATTR spi_setup()
 {
     spi_master_init(HSPI);
     uint32 regvalue = READ_PERI_REG(SPI_FLASH_CTRL2(HSPI));
+
     WRITE_PERI_REG(SPI_FLASH_CTRL2(HSPI),regvalue);
+
+    // CNT_L = 0x3, CNT_H = 0x01, CNT_N = 0x3, DIV_PRE=0x1
+    // 01 000011 000001 000011
     WRITE_PERI_REG(SPI_FLASH_CLOCK(HSPI), 0x43043); //clear bit 31,set SPI clock div
 }
 

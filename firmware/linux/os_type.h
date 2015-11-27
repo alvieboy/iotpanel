@@ -16,6 +16,8 @@ typedef uint32_t uint32;
 
 typedef void os_event_t;
 
+typedef int bool;
+
 #endif
 
 #endif

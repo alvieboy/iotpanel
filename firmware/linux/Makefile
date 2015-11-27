@@ -19,6 +19,8 @@ SOURCES = \
 ../esp8266/user/font_tom_thumb.c               \
 ../esp8266/user/font_16x16.c                   \
 ../esp8266/user/font_12x16.c                   \
+../esp8266/user/upgrade.c                      \
+../esp8266/user/cdecode.c                      \
 ../esp8266/user/serdes.c                       \
 ../esp8266/user/widgets/color.c                \
 ../esp8266/user/widgets/scrollingtext.c        \

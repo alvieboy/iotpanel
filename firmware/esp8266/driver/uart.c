@@ -32,7 +32,7 @@ LOCAL void uart0_rx_intr_handler(void *para);
  * Parameters   : uart_no, use UART0 or UART1 defined ahead
  * Returns      : NONE
 *******************************************************************************/
-LOCAL void ICACHE_FLASH_ATTR
+LOCAL void 
 uart_config(uint8 uart_no)
 {
     if (uart_no == UART1) {
@@ -72,7 +72,7 @@ uart_config(uint8 uart_no)
  * Parameters   : uint8 TxChar - character to tx
  * Returns      : OK
 *******************************************************************************/
-LOCAL STATUS ICACHE_FLASH_ATTR
+LOCAL STATUS 
 uart1_tx_one_char(uint8 TxChar)
 {
     while (true)
@@ -94,7 +94,7 @@ uart1_tx_one_char(uint8 TxChar)
  * Parameters   : char c - character to tx
  * Returns      : NONE
 *******************************************************************************/
-LOCAL void ICACHE_FLASH_ATTR
+LOCAL void 
 uart1_write_char(char c)
 {
     if (c == '\n') {
@@ -113,7 +113,7 @@ uart1_write_char(char c)
  * Parameters   : char c - character to tx
  * Returns      : NONE
 *******************************************************************************/
-LOCAL void ICACHE_FLASH_ATTR
+void
 uart_write_char(char c)
 {
     if (c == '\n') {
@@ -176,7 +176,7 @@ uart0_rx_intr_handler(void *para)
  *                uint16 len - buffer len
  * Returns      :
 *******************************************************************************/
-void ICACHE_FLASH_ATTR
+void 
 uart0_tx_buffer(uint8 *buf, uint16 len)
 {
     uint16 i;
@@ -193,7 +193,7 @@ uart0_tx_buffer(uint8 *buf, uint16 len)
  *                UartBautRate uart1_br - uart1 bautrate
  * Returns      : NONE
 *******************************************************************************/
-void ICACHE_FLASH_ATTR
+void 
 uart_init(UartBautRate uart0_br, UartBautRate uart1_br)
 {
     // rom use 74880 baut_rate, here reinitialize
@@ -213,7 +213,7 @@ uart_init(UartBautRate uart0_br, UartBautRate uart1_br)
  * Parameters   : UartBautRate uart_br - uart bautrate
  * Returns      : NONE
 *******************************************************************************/
-void ICACHE_FLASH_ATTR
+void 
 uart_init_single(uint8 uartno, UartBautRate uart_br, uint8 isdefault)
 {
     // rom use 74880 baut_rate, here reinitialize

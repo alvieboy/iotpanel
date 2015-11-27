@@ -144,12 +144,12 @@ COLOR_GETTER( text_t, fg );
 COLOR_GETTER( text_t, bg );
 
 static property_t properties[] = {
-    { 1,"text",   T_STRING, SETTER(text_set_text),  &get_pstr, NULL },
-    { 2,"font",   T_STRING, SETTER(text_set_font),  &get_font, NULL },
-    { 3,"color",  T_STRING, SETTER(text_set_color), &get_fg, NULL },
-    { 4,"bgcolor",  T_STRING, SETTER(text_set_bgcolor),&get_bg,  NULL },
-    { 5,"alttext",  T_STRING, SETTER(text_set_alttext), &get_paltstr, NULL },
-    { 6,"speed",  T_INT, SETTER(text_set_speed), &get_speed, NULL },
+    { 1, T_STRING, "text",   SETTER(text_set_text),    &text_t_get_pstr },
+    { 2, T_STRING, "font",   SETTER(text_set_font),    &text_t_get_font },
+    { 3, T_STRING, "color",  SETTER(text_set_color),   &text_t_get_fg },
+    { 4, T_STRING, "bgcolor",SETTER(text_set_bgcolor), &text_t_get_bg },
+    { 5, T_STRING, "alttext",SETTER(text_set_alttext), &text_t_get_paltstr },
+    { 6, T_INT,    "speed",  SETTER(text_set_speed),   &text_t_get_speed },
     END_OF_PROPERTIES
 };
 

@@ -138,10 +138,10 @@ COLOR_GETTER( scrollingtext_t, fg );
 GENERIC_GETTER( scrollingtext_t, int, max );
 
 static property_t properties[] = {
-    { 1,"text",  T_STRING, SETTER(scrollingtext_set_text),  &get_str, NULL },
-    { 2,"font",  T_STRING, SETTER(scrollingtext_set_font),  &get_font, NULL },
-    { 3,"color",  T_STRING, SETTER(scrollingtext_set_color),  &get_fg, NULL },
-    { 4,"speed",  T_INT, SETTER(scrollingtext_set_speed),  &get_max, NULL },
+    { 1, T_STRING,"text",  SETTER(scrollingtext_set_text),  &scrollingtext_t_get_str },
+    { 2, T_STRING,"font",  SETTER(scrollingtext_set_font),  &scrollingtext_t_get_font },
+    { 3, T_STRING,"color", SETTER(scrollingtext_set_color), &scrollingtext_t_get_fg },
+    { 4, T_INT,   "speed", SETTER(scrollingtext_set_speed), &scrollingtext_t_get_max },
     END_OF_PROPERTIES
 };
 

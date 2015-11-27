@@ -31,10 +31,9 @@ typedef struct {
     uint8_t pad;
 } firmware_chunk_t;
 
-int read_current_irom0_size();
-int read_current_icache_seg0_size();
 int get_free_flash();
-int check_and_apply_firmware();
+int apply_firmware();
+int has_new_firmware();
 uint32_t get_last_firmware_status();
 void ota_initialize();
 int ota_set_chunk(uint32_t address, int size_bytes);

@@ -14,12 +14,14 @@
 #include "protos.h"
 #include "schedule.h"
 #include <stdlib.h>
+#include "upgrade.h"
+#include "cdecode.h"
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
 char currentFw[32] = {0};
 
-#define MAX_LINE_LEN 256
+#define MAX_LINE_LEN 1024
 
 typedef struct {
     char rline[MAX_LINE_LEN+1];
@@ -32,7 +34,7 @@ typedef struct {
     unsigned char authtoken[10];
     unsigned  authenticated:1;
     char *argv[8];
-
+    struct espconn *conn;
 } clientInfo_t;
 
 static clientInfo_t clientInfo;
@@ -66,6 +68,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandSetTime(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandClone(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandLogout(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandBlank(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *);
 
 commandEntry_t commandHandlers[] = {
     { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
@@ -84,6 +87,7 @@ commandEntry_t commandHandlers[] = {
     { "SETTIME",  &handleCommandSetTime, 1, "<seconds>" },
     { "CLONE",  &handleCommandClone, 1, "<widgetname> <screenname> <x> <y>" },
     { "BLANK",  &handleCommandBlank, 1, "<blank>" },
+    { "OTA",  &handleCommandOTA, 1, "<blank>" },
     { "LOGOUT",   &handleCommandLogout, 0 ,""},
     { 0, 0, 1, NULL }
 };
@@ -403,8 +407,96 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandLogout(clientInfo_t *cl)
 {
     client_sendOK(cl,"LOGOUT");
     cl->authenticated=0;
+    return -2;
+}
+
+static unsigned char otachunk[512];
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
+{
+    char otainfo[128];
+    char *end = NULL;
+
+    if (cl->argc<1) {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+
+    if (strcmp(cl->argv[0],"STATUS")==0) {
+        os_sprintf(otainfo,"STATUS 0x%08x free 0x%08x",
+                   get_last_firmware_status(),
+                   get_free_flash()
+                  );
+
+        client_sendOK(cl, otainfo);
+        return 0;
+    } else if (strcmp(cl->argv[0],"START")==0) {
+        ota_initialize();
+    } else if (strcmp(cl->argv[0],"CHUNK")==0) {
+        if (cl->argc<3) {
+            client_senderror(cl,"INVALID");
+            return -1;
+        } else {
+            // Parse address and size
+            uint32 start = (unsigned int)strtol(cl->argv[1],&end,10);
+            uint32 size;
+            if (end && *end=='\0') {
+                // Parse address and size
+                size = (unsigned int)strtol(cl->argv[2],&end,10);
+                if (end && *end=='\0') {
+                    if (ota_set_chunk(start,size)<0) {
+                        client_senderror(cl,"OTA CHUNKERROR");
+                        return -1;
+                  }
+                } else {
+                    client_senderror(cl,"MALFORMED");
+                    return -1;
+                }
+            } else {
+                client_senderror(cl,"MALFORMED");
+                return -1;
+            }
+        }
+    } else if (strcmp(cl->argv[0],"DATA")==0) {
+
+        base64_decodestate b64state;
+
+        if ( cl->argc<2) {
+            client_senderror(cl,"INVALID");
+            return -1;
+        }
+        base64_init_decodestate(&b64state);
+        // Attempt to parse it
+        int r = base64_decode_block((char*)cl->argv[1],
+                                strlen(cl->argv[1]),
+                                (char*)otachunk,
+                                    &b64state);
+        if (r!= 512) {
+            os_printf("Invalid len of %d\n", r);
+            client_senderror(cl,"INVALIDLEN");
+            return -1;
+        }
+
+
+        if (ota_program_chunk(otachunk)<0) {
+            client_senderror(cl,"OTA PROGRAM");
+            return -1;
+        }
+    } else if (strcmp(cl->argv[0],"FINALISE")==0) {
+        client_sendOK(cl,"OTA");
+        espconn_disconnect(cl->conn);
+        ota_finalize();
+    } else {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+
+    client_sendOK(cl,"OTA");
+
     return 0;
 }
+
+
 
 LOCAL ICACHE_FLASH_ATTR void clientInfo_init(clientInfo_t*cl)
 {
@@ -506,7 +598,9 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
             if (entry->needauth && !cl->authenticated) {
                 client_senderror(cl,"UNKNONW");
             } else {
-                entry->handler(cl);
+                if (entry->handler(cl)==-2) {
+                    espconn_disconnect(cl->conn);
+                }
             }
             break;
         }
@@ -567,8 +661,9 @@ LOCAL ICACHE_FLASH_ATTR void server_conn(void *arg)
     struct espconn *pesp_conn = arg;
     DEBUG("Server conn\n");
     clientInfo_init(&clientInfo);
+    clientInfo.conn = pesp_conn;
 
-    espconn_regist_time(pesp_conn, 0, 1);
+    espconn_regist_time(pesp_conn, 7200, 1);
 
 }
 
@@ -597,7 +692,7 @@ void ICACHE_FLASH_ATTR user_server_init(uint32 port)
      esp_conn.proto.tcp = &esptcp;
      esp_conn.proto.tcp->local_port = port;
      espconn_regist_connectcb(&esp_conn, server_listen);
-     espconn_regist_time(&esp_conn, 65535, 0);
+     espconn_regist_time(&esp_conn, 7200, 0);
 
 
 

@@ -43,9 +43,9 @@ LOCAL void ICACHE_FLASH_ATTR line_destroy(void*what)
 }
 
 static property_t properties[] = {
-    { 1, "dx",  T_INT, SETTER(line_set_dx),  NULL },
-    { 2, "dy", T_INT, SETTER(line_set_dy), NULL },
-    { 3, "color",  T_STRING, SETTER(line_set_color), NULL },
+    { 1, T_INT,   "dx",   SETTER(line_set_dx),  NULL },
+    { 2, T_INT,   "dy",   SETTER(line_set_dy), NULL },
+    { 3, T_STRING,"color",SETTER(line_set_color), NULL },
     END_OF_PROPERTIES
 };
 

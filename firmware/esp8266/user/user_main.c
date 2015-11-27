@@ -16,6 +16,7 @@
 #include "protos.h"
 #include "schedule.h"
 #include "alloc.h"
+#include "upgrade.h"
 
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
@@ -119,7 +120,7 @@ LOCAL void ICACHE_FLASH_ATTR broadcastIP()
         payload[size++] = lip>>8;
         payload[size++] = lip;
         int i = espconn_sent( &conn_udpb, payload, size);
-        os_printf("Sending broadcast: %d\n",i);
+        os_printf("Sending new broadcast: %d\n",i);
     }
 }
 
@@ -347,45 +348,64 @@ LOCAL void ICACHE_FLASH_ATTR broadcast_setup()
 }
 #endif
 
+LOCAL void upgrade_procTask(os_event_t *events)
+{
+    gpio_init();
+    uart_setup();
+    os_printf("Applying OTA upgrade.\n");
+    apply_firmware();
+    while (1) {}
+}
+
+
 void ICACHE_FLASH_ATTR user_init()
 {
+    if (has_new_firmware()) {
 #ifndef HOST
-    gpio_init();
-    gpio16_output_conf();
-    gpio16_output_set(0); // GPIO16 low.
-    spi_setup();
-    timer_setup();
-    uart_setup();
-    broadcast_setup();
+        system_os_task(upgrade_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);
+        system_os_post(user_procTaskPrio, 0, 0 );
 #endif
-    setupFramebuffer();
-    setupDefaultScreen();
+    } else {
 #ifndef HOST
-    setupWifiSta("","");
+        gpio_init();
+        gpio16_output_conf();
+        gpio16_output_set(0); // GPIO16 low.
+        spi_setup();
+        timer_setup();
+        uart_setup();
+        os_printf("Last FW status: 0x%08x\n", get_last_firmware_status());
+        broadcast_setup();
+
 #endif
-    user_server_init(8081);
+        setupFramebuffer();
+        setupDefaultScreen();
+#ifndef HOST
+        setupWifiSta("","");
+#endif
+        user_server_init(8081);
 
 #ifndef HOST
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U,  FUNC_GPIO15); // GPIO15.
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U,  FUNC_GPIO12);  // DI
+        PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U,  FUNC_GPIO15); // GPIO15.
+        PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U,  FUNC_GPIO12);  // DI
 
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3);
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
+        PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3);
+        PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
 
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO4_U, FUNC_GPIO4);
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
+        PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO4_U, FUNC_GPIO4);
+        PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
 
-    GPIO_OUTPUT_SET(4, 0);
+        GPIO_OUTPUT_SET(4, 0);
 #endif
 
-    clearFramebuffer(&gfx);
-    setupDefaultScreen();
+        clearFramebuffer(&gfx);
+        setupDefaultScreen();
 
 #ifdef HOST
-    user_procTask(NULL);
+        user_procTask(NULL);
 #else
-    system_os_task(user_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);
+        system_os_task(user_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);
 
-    system_os_post(user_procTaskPrio, 0, 0 );
+        system_os_post(user_procTaskPrio, 0, 0 );
 #endif
+    }
 }

@@ -3,6 +3,7 @@
 #include "osapi.h"
 #include "user_interface.h"
 #include "alloc.h"
+#include "driver/uart.h"
 
 extern char _irom0_text_start;
 extern char _irom0_text_end;
@@ -21,12 +22,13 @@ typedef struct {
 
 #define OTA_NUM_CHUNKS 2
 
+#define RESERVED_SECTORS (16/4) /* 8KB reserved */
+
 #define CHUNK0_SECTOR_START 0x0
 #define CHUNK0_SIZE  0x40
 #define CHUNK1_SECTOR_START 0x40 /* Sector where ITEXT starts */
-#define CHUNK1_SIZE 0x40 /* Sector where ITEXT starts */
+#define CHUNK1_SIZE (0x40 - RESERVED_SECTORS) /* Sector where ITEXT starts */
 
-#define RESERVED_SECTORS (8/4) /* 8KB reserved */
 
 #define BLOCKSIZE 512
 
@@ -49,7 +51,72 @@ static struct {
     int fwchunk;
 } ota_state;
 
-int read_current_irom0_size()
+
+extern void uart_write_char(char c);
+
+LOCAL void uart_putstr(const char *str)
+{
+    while (*str) {
+        uart_write_char(*str);
+        str++;
+    }
+}
+
+LOCAL void uart_putnibble(char nibble)
+{
+    nibble&=0xf;
+    if (nibble>9) {
+        uart_write_char('A'+(nibble-10));
+    } else {
+        uart_write_char('0'+nibble);
+    }
+}
+
+LOCAL void uart_puthexbyte(unsigned char byte)
+{
+    uart_putnibble(byte>>4);
+    uart_putnibble(byte);
+}
+
+LOCAL void uart_puthex(uint32_t val)
+{
+    uart_write_char('0');
+    uart_write_char('x');
+    uart_puthexbyte(val>>24);
+    uart_puthexbyte(val>>16);
+    uart_puthexbyte(val>>8);
+    uart_puthexbyte(val);
+}
+
+LOCAL void dump_sector(unsigned char *contents)
+{
+    int i;
+    for (i=0; i<4096; i++) {
+        uart_puthexbyte(*contents);
+        uart_write_char(' ');
+        contents++;
+        if ((i%16)==15) {
+            uart_write_char('\n');
+        }
+    }
+    uart_write_char('\n');
+}
+
+LOCAL void dump_block(unsigned char *contents)
+{
+    int i;
+    for (i=0; i<512; i++) {
+        uart_puthexbyte(*contents);
+        uart_write_char(' ');
+        contents++;
+        if ((i%16)==15) {
+            uart_write_char('\n');
+        }
+    }
+    uart_write_char('\n');
+}
+
+LOCAL int read_current_irom0_size()
 {
     const char *start = &_irom0_text_start;
     const char *end = &_irom0_text_end;
@@ -57,7 +124,7 @@ int read_current_irom0_size()
     return end - start;
 }
 
-int read_current_icache_seg0_size()
+LOCAL int read_current_icache_seg0_size()
 {
     uint32 readbuf[2];
     unsigned offset = 0;
@@ -88,22 +155,22 @@ int read_current_icache_seg0_size()
     return (offset); // Size of next free
 }
 
-int get_free_flash()
+int ICACHE_FLASH_ATTR get_free_flash()
 {
     int total_flash = 512*1024; // 512KB
-    int reserved_flash = 8*1024; // 8KB
+    int reserved_flash = RESERVED_SECTORS * SECTORSIZE;
 
-    int irom0size = ALIGN(read_current_icache_seg0_size(), 4096);
+    int irom0size = ALIGN(read_current_icache_seg0_size(), SECTORSIZE);
     if (irom0size<0)
         return -1;
-    int seg0size = ALIGN(read_current_irom0_size(), 4096);
+    int seg0size = ALIGN(read_current_irom0_size(), SECTORSIZE);
     if (seg0size<0)
         return -1;
 
     return total_flash-(reserved_flash+irom0size+seg0size);
 }
 
-void clear_firmware_info(uint32_t val)
+LOCAL void clear_firmware_info(uint32_t val)
 {
     uint32_t status = val;
     system_rtc_mem_write( RTC_FIRMWARE_OFFSET, &status, sizeof(status));
@@ -118,7 +185,18 @@ uint32_t get_last_firmware_status()
     return fwinfo.magic;
 }
 
-int check_and_apply_firmware()
+int has_new_firmware()
+{
+    firmware_info_t fwinfo;
+    uint32_t rtcoffset = RTC_FIRMWARE_OFFSET;
+
+    system_rtc_mem_read( rtcoffset, &fwinfo, sizeof(fwinfo));
+    if ( fwinfo.magic == FIRMWARE_MAGIC )
+        return 1;
+    return 0; // No firmware
+}
+
+int apply_firmware()
 {
     firmware_info_t fwinfo;
     firmware_chunk_t chunk;
@@ -141,18 +219,34 @@ int check_and_apply_firmware()
         clear_firmware_info( FIRMWARE_ERROR_NORESOURCES );
         return -1;
     }
-
+    // NOTE NOTE : from this point onwards no function in flash can be used.
+    uart_putstr("Segments ");
+    uart_puthex( fwinfo.chunks );
+    uart_write_char('\n');
     for (chunkno=0; chunkno<fwinfo.chunks; chunkno++) {
         /* Read current chunk */
         system_rtc_mem_read( rtcoffset, &chunk, sizeof(chunk));
         rtcoffset += sizeof(chunk)/sizeof(uint32_t);
+
+        uart_putstr(" > Block size ");
+        uart_puthex( (uint32)chunk.chunksize_blocks );
+        uart_putstr(" source ");
+        uart_puthex( (uint32)chunk.source_sector );
+        uart_putstr(" target ");
+        uart_puthex( (uint32)chunk.dest_sector );
+        uart_write_char('\n');
+
         for (block=0; block<chunk.chunksize_blocks; block++) {
             /* Read source block */
             uint32_t source = ((uint32_t)chunk.source_sector)<<SECTORBITS;
+
+
             if (spi_flash_read( source, (uint32*)buf, SECTORSIZE )<0) {
                 clear_firmware_info( FIRMWARE_ERROR_SPIREADERROR | source );
                 return -1;
             }
+           // uart_putstr("  >> block\n");
+           // dump_sector( buf );
             /* Erase sector */
             if (spi_flash_erase_sector( (uint16)chunk.dest_sector) <0) {
                 clear_firmware_info( FIRMWARE_ERROR_SPIERASEERROR | chunk.dest_sector );
@@ -169,11 +263,12 @@ int check_and_apply_firmware()
         }
     }
     clear_firmware_info( FIRMWARE_UPGRADE_OK );
+    uart_putstr("Done, restarting\n");
     system_restart();
     return 0;
 }
 
-void ota_initialize()
+void ICACHE_FLASH_ATTR ota_initialize()
 {
     /* Fill in chunks */
     int irom0size_sectors = ALIGN(read_current_icache_seg0_size(), SECTORSIZE) >> SECTORBITS;
@@ -209,7 +304,7 @@ void ota_initialize()
     }
 }
 
-static void ota_save_chunk()
+LOCAL void ICACHE_FLASH_ATTR ota_save_chunk()
 {
     firmware_chunk_t c;
     struct ota_chunk *chunk = &ota_state.chunks[ ota_state.current_chunk ];
@@ -243,12 +338,13 @@ static void ota_save_chunk()
     ota_state.start_address += ((uint32)c.chunksize_blocks)<<SECTORBITS;
 }
 
-int ota_program_chunk(void *data) // Needs to be 512 bytes
+int ICACHE_FLASH_ATTR ota_program_chunk(void *data) // Needs to be 512 bytes
 {
     // See if we still have space in current chunk
     struct ota_chunk *chunk = &ota_state.chunks[ ota_state.current_chunk ];
+#ifdef DEBUG_OTA
     os_printf("Programming current chunk %d\n",ota_state.current_chunk);
-
+#endif
     if (ota_state.size<BLOCKSIZE) {
         return -1;
     }
@@ -260,8 +356,9 @@ int ota_program_chunk(void *data) // Needs to be 512 bytes
         chunk->remaining--;
         if (chunk->remaining) {
             // See if we still have room.
-
+#ifdef DEBUG_OTA
             os_printf("Remaining in this chunk: %d\n", chunk->remaining);
+#endif
         } else {
             // Need to move to next chunk
             ota_save_chunk();
@@ -279,12 +376,14 @@ int ota_program_chunk(void *data) // Needs to be 512 bytes
 
     unsigned target_offset = ((unsigned)target_sector * SECTORSIZE) +
         chunk->block * BLOCKSIZE;
-
+#ifdef DEBUG_OTA
     os_printf("Target sector is %d, offset 0x%x\n", target_sector, target_offset);
-
+#endif
     // Do we need to erase ? If yes, do so
     if (!chunk->erased) {
+#ifdef DEBUG_OTA
         os_printf("Erasing sector %d\n", target_sector);
+#endif
         if ( spi_flash_erase_sector( (uint16)target_sector ) < 0) {
             // Ups.
             return -1;
@@ -292,36 +391,37 @@ int ota_program_chunk(void *data) // Needs to be 512 bytes
         chunk->erased = 1;
     }
     // Write-out block
+#ifdef DEBUG_OTA
     os_printf("Writing block at 0x%8x\n", target_offset);
+#endif
+    //dump_block(data);
     if (spi_flash_write( target_offset, (uint32*)data, BLOCKSIZE)<0) {
         return -1;
     }
     // And increment it.
     chunk->block++;
     ota_state.size -= BLOCKSIZE;
+#ifdef DEBUG_OTA
     os_printf("Size to go: %d\n", ota_state.size);
+#endif
     if (ota_state.size==0) {
         // Chunk done.
         ota_state.size=-1;
         chunk->block=0;
+        chunk->erased=0;
         chunk->remaining--;
-        ota_save_chunk_block();
+        ota_save_chunk();
     }
     return 0;
 }
 
-void ota_save_chunk_block()
-{
-    ota_save_chunk();
-}
-
-int ota_finalize()
+int ICACHE_FLASH_ATTR ota_finalize()
 {
     firmware_chunk_t c;
     firmware_info_t fwinfo;
-
+#ifdef DEBUG_OTA
     os_printf("Finalizing OTA: chunks %d\n", ota_state.fwchunk);
-
+#endif
     unsigned offset = RTC_FIRMWARE_OFFSET +
         (sizeof(firmware_info_t)/sizeof(uint32));
 
@@ -330,13 +430,13 @@ int ota_finalize()
         system_rtc_mem_read( offset, &c, sizeof(c));
 
         offset += sizeof(firmware_chunk_t)/sizeof(uint32);
-
+#ifdef DEBUG_OTA
         os_printf(" > source sector %d, dest %d, size %d\n",
                   c.source_sector,
                   c.dest_sector,
                   c.chunksize_blocks
                  );
-
+#endif
     }
 
     fwinfo.magic = FIRMWARE_MAGIC;
@@ -345,9 +445,10 @@ int ota_finalize()
     system_rtc_mem_write( RTC_FIRMWARE_OFFSET, &fwinfo, sizeof(fwinfo));
 
     system_restart();
+    return 0; // Never reached
 }
 
-int ota_set_chunk(uint32_t address, int size_bytes)
+int ICACHE_FLASH_ATTR ota_set_chunk(uint32_t address, int size_bytes)
 {
     if (ota_state.size==-1) {
         // Nothing set, we're OK.

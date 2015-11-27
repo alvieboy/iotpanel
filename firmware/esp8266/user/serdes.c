@@ -1,6 +1,6 @@
 #include "serdes.h"
 
-int IOTFLASH serialize_string(serializer_t *f, const char *str)
+int ICACHE_FLASH_ATTR serialize_string(serializer_t *f, const char *str)
 {
     uint16_t len = strlen(str);
     int r;
@@ -11,29 +11,29 @@ int IOTFLASH serialize_string(serializer_t *f, const char *str)
     return r;
 }
 
-int IOTFLASH serialize_bytearray(serializer_t *f, const unsigned char *ptr, unsigned size)
+int ICACHE_FLASH_ATTR serialize_bytearray(serializer_t *f, const unsigned char *ptr, unsigned size)
 {
     return f->write(f, ptr, size);
 }
 
-int IOTFLASH serialize_int8(serializer_t *f, int8_t i)
+int ICACHE_FLASH_ATTR serialize_int8(serializer_t *f, int8_t i)
 {
     return serialize_uint8(f,(uint8_t)i);
 }
 
-int IOTFLASH serialize_uint8(serializer_t *f, uint8_t i)
+int ICACHE_FLASH_ATTR serialize_uint8(serializer_t *f, uint8_t i)
 {
     uint8_t data;
     data = i;
     return f->write(f, &data, sizeof(data) );
 }
 
-int IOTFLASH serialize_int16(serializer_t *f, int16_t i)
+int ICACHE_FLASH_ATTR serialize_int16(serializer_t *f, int16_t i)
 {
     return serialize_uint16(f,(uint16_t)i);
 }
 
-int IOTFLASH serialize_uint16(serializer_t *f, uint16_t i)
+int ICACHE_FLASH_ATTR serialize_uint16(serializer_t *f, uint16_t i)
 {
     uint8_t data[2];
     data[0] = i>>8;
@@ -41,12 +41,12 @@ int IOTFLASH serialize_uint16(serializer_t *f, uint16_t i)
     return f->write(f, &data[0], sizeof(data) );
 }
 
-int IOTFLASH serialize_int32(serializer_t *f, int32_t i)
+int ICACHE_FLASH_ATTR serialize_int32(serializer_t *f, int32_t i)
 {
     return serialize_uint32(f,(uint32_t)i);
 }
 
-int IOTFLASH serialize_uint32(serializer_t *f, uint32_t i)
+int ICACHE_FLASH_ATTR serialize_uint32(serializer_t *f, uint32_t i)
 {
     uint8_t data[4];
     data[0] = i>>24;
@@ -56,7 +56,7 @@ int IOTFLASH serialize_uint32(serializer_t *f, uint32_t i)
     return f->write(f, &data[0], sizeof(data) );
 }
 
-int IOTFLASH deserialize_string(serializer_t *f, char *dest, unsigned *size, unsigned maxsize)
+int ICACHE_FLASH_ATTR deserialize_string(serializer_t *f, char *dest, unsigned *size, unsigned maxsize)
 {
     uint16_t len = 0;
     int r;
@@ -77,18 +77,18 @@ int IOTFLASH deserialize_string(serializer_t *f, char *dest, unsigned *size, uns
     return r;
 }
 
-int IOTFLASH deserialize_bytearray(serializer_t *f, unsigned char *dest, unsigned size)
+int ICACHE_FLASH_ATTR deserialize_bytearray(serializer_t *f, unsigned char *dest, unsigned size)
 {
     int r = f->read(f, dest, size);
     return r;
 }
 
-int IOTFLASH deserialize_int8(serializer_t *f, int8_t *i)
+int ICACHE_FLASH_ATTR deserialize_int8(serializer_t *f, int8_t *i)
 {
     return deserialize_uint8(f, (uint8_t*)i);
 }
 
-int IOTFLASH deserialize_uint8(serializer_t *f, uint8_t *i)
+int ICACHE_FLASH_ATTR deserialize_uint8(serializer_t *f, uint8_t *i)
 {
     uint8_t data;
     int r;
@@ -99,12 +99,12 @@ int IOTFLASH deserialize_uint8(serializer_t *f, uint8_t *i)
     return r;
 }
 
-int IOTFLASH deserialize_int16(serializer_t *f, int16_t *i)
+int ICACHE_FLASH_ATTR deserialize_int16(serializer_t *f, int16_t *i)
 {
     return deserialize_uint16(f,(uint16_t*)i);
 }
 
-int IOTFLASH deserialize_uint16(serializer_t *f, uint16_t *i)
+int ICACHE_FLASH_ATTR deserialize_uint16(serializer_t *f, uint16_t *i)
 {
     uint8_t data[2];
     uint16_t val;
@@ -118,12 +118,12 @@ int IOTFLASH deserialize_uint16(serializer_t *f, uint16_t *i)
     return r;
 }
 
-int IOTFLASH deserialize_int32(serializer_t *f, int32_t *i)
+int ICACHE_FLASH_ATTR deserialize_int32(serializer_t *f, int32_t *i)
 {
     return deserialize_uint32(f,(uint32_t*)i);
 }
 
-int IOTFLASH deserialize_uint32(serializer_t *f, uint32_t *i)
+int ICACHE_FLASH_ATTR deserialize_uint32(serializer_t *f, uint32_t *i)
 {
     uint8_t data[4];
     uint32_t val;

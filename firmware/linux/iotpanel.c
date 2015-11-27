@@ -12,6 +12,7 @@
 #include "gfx.h"
 #include "serdes.h"
 #include <sys/time.h>
+#include <fcntl.h>
 
 #define LEDSIZE 6
 #define LEDBORDER 1
@@ -122,7 +123,11 @@ void espconn_regist_reconcb(espconn*conn, void (*cb)(void *arg, sint8 err))
 {
 
 }
-
+void espconn_disconnect(espconn*conn)
+{
+    if (conn)
+        close(conn->sockfd);
+}
 void espconn_regist_connectcb(espconn*conn, void (*cb)(void*))
 {
     cb_connect=cb;
@@ -322,3 +327,80 @@ void espconn_accept(espconn*conn)
     }
     listen(listenfd,1);
 }
+
+unsigned char rtcmem[ 128*4 ] = {0};
+
+bool system_rtc_mem_read(uint8 src_addr, void *des_addr, uint16 load_size)
+{
+    int s = src_addr*4;
+    memcpy(des_addr, &rtcmem[s], load_size);
+}
+bool system_rtc_mem_write(uint8 des_addr, const void *src_addr, uint16 save_size)
+{
+    int s = des_addr*4;
+    memcpy(&rtcmem[s], src_addr, save_size);
+}
+
+// SPI flash
+#define SECTORSIZE 4096
+
+static int spiflashfd=-1;
+
+static void openspi()
+{
+    if (spiflashfd<0) {
+        spiflashfd = open("spi.bin",O_RDWR);
+        if (spiflashfd<0) {
+            perror("Cannot open spi.bin");
+            abort();
+        }
+        ftruncate(spiflashfd, 128*SECTORSIZE);
+    }
+}
+
+unsigned char _irom0_text_start;
+unsigned char _irom0_text_end;
+
+void system_restart()
+{
+    abort();
+}
+
+void uart_write_char(char c)
+{
+    if (c == '\n') {
+        putchar('\r');
+        putchar('\n');
+    } else if (c == '\r') {
+    } else {
+        putchar(c);
+    }
+
+}
+
+int spi_flash_erase_sector(uint16 sec)
+{
+    char sector[4096];
+    openspi();
+    uint32_t off = (uint32_t)sec * SECTORSIZE;
+    lseek( spiflashfd, off, SEEK_SET);
+    memset(sector, 0xff, sizeof(sector));
+    write( spiflashfd, sector, sizeof(sector));
+}
+int spi_flash_write(uint32 des_addr, uint32 *src_addr, uint32 size)
+{
+    openspi();
+    uint32_t off = des_addr;
+    lseek( spiflashfd, off, SEEK_SET);
+    write( spiflashfd, src_addr,size);
+    return 0;
+}
+int spi_flash_read(uint32 src_addr, uint32 *des_addr, uint32 size)
+{
+    openspi();
+    uint32_t off = src_addr;
+    lseek( spiflashfd, off, SEEK_SET);
+    read( spiflashfd, des_addr, size);
+    return 0;
+}
+

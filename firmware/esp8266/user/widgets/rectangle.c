@@ -114,14 +114,14 @@ LOCAL void ICACHE_FLASH_ATTR rectangle_destroy(void*what)
 }
 
 static property_t properties[] = {
-    { 1,"width",  T_INT, SETTER(rectangle_set_width),  NULL },
-    { 2,"height", T_INT, SETTER(rectangle_set_height), NULL },
-    { 3,"fill",   T_INT, SETTER(rectangle_set_fill),   NULL },
-    { 4,"border", T_INT, SETTER(rectangle_set_border), NULL },
-    { 5,"color",  T_STRING, SETTER(rectangle_set_color), NULL },
-    { 6,"bordercolor", T_STRING, SETTER(rectangle_set_bordercolor), NULL },
-    { 7,"altcolor", T_STRING, SETTER(rectangle_set_altcolor), NULL },
-    { 8,"flash",  T_INT, SETTER(rectangle_set_flash), NULL },
+    { 1, T_INT,"width",  SETTER(rectangle_set_width),  NULL },
+    { 2, T_INT,"height", SETTER(rectangle_set_height), NULL },
+    { 3, T_INT,"fill",   SETTER(rectangle_set_fill),   NULL },
+    { 4, T_INT,"border", SETTER(rectangle_set_border), NULL },
+    { 5, T_STRING,"color",  SETTER(rectangle_set_color), NULL },
+    { 6, T_STRING,"bordercolor", SETTER(rectangle_set_bordercolor), NULL },
+    { 7, T_STRING,"altcolor",  SETTER(rectangle_set_altcolor), NULL },
+    { 8, T_INT, "flash",        SETTER(rectangle_set_flash), NULL },
     END_OF_PROPERTIES
 };
 
