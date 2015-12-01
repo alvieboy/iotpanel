@@ -9,12 +9,13 @@
 #include "debug.h"
 #include "protos.h"
 #include "color.h"
+#include <ctype.h>
 
 #ifndef swap
 #define swap(a, b) { int t = a; a = b; b = t; }
 #endif
 
-LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str);
+LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str, const textrendersettings_t *s, int *width, int *height);
 LOCAL int unpackHexByte(const char *str, uint8_t *dest);
 
 LOCAL void ICACHE_FLASH_ATTR drawChar16(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
@@ -93,7 +94,7 @@ void ICACHE_FLASH_ATTR drawChar(const gfxinfo_t *gfx, const font_t *font, int x,
     } while (--hc);
 }
 
-void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const font_t *font, int x, int y, const char *str, uint8 color, uint8 bg)
+void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t *s, int x, int y, const char *str, uint8 color, uint8 bg)
 {
     DEBUG("Draw text bg %d fg %d\n", bg, color);
     uint8_t code;
@@ -128,8 +129,8 @@ void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const font_t *font, int x,
             continue;
         }
 
-        drawChar(gfx, font,x,y,*str,color,bg);
-        x+=font->w;
+        drawChar(gfx, s->font,x,y,*str,color,bg);
+        x+=s->font->w;
         str++;
     }
 }
@@ -144,24 +145,24 @@ LOCAL void ICACHE_FLASH_ATTR freeTextFramebuffer(gfxinfo_t *info)
     os_free(info);
 }
 
-gfxinfo_t * ICACHE_FLASH_ATTR allocateTextFramebuffer(const char *str, const font_t *font)
+gfxinfo_t * ICACHE_FLASH_ATTR allocateTextFramebuffer(const char *str, const textrendersettings_t *s)
 {
-    int size = textComputeLength(str);
-    if (size==-1)
+    int size_x, size_y;
+    if (textComputeLength(str,s,&size_x,&size_y)<0)
         return NULL;
 
     gfxinfo_t *info = os_calloc(sizeof(gfxinfo_t),1);
     DEBUG("New info @ %p\n", info);
 
-    if ((info==NULL) || (font==NULL))
+    if ((info==NULL) || (s->font==NULL))
         return NULL;
 
-    size *= font->w;
-    info->width  = size;
-    info->stride = size;
-    info->height = font->h;
+    //size_x *= s->font->w;
+    info->width  = size_x;
+    info->stride = size_x;
+    info->height = size_y;
     /**/
-    size *= font->h;
+    int size = size_x * size_y;
     DEBUG("New fb size: %d '%s'\n",size,str);
 
     if (size==0) {
@@ -199,10 +200,50 @@ LOCAL int unpackHexByte(const char *str, uint8_t *dest)
         return -1;
     return 0;
 }
+#if 0
+LOCAL int skipUnprintable(const char **str)
+{
+    if (*(*str)==0x1b) {
+        (*str)++;
+        if (*(*str)=='\0')
+            return -1;
+        switch (*(*str)) {
+        case 'f':
+        case 'b':
+        case 'c':
+            (*str)++;
+            if (unpackHexByte((**str), &code)<0)
+                return -1;
+            (*str)+=2;
+            break;
+        default:
+            return -1;
+        }
+    }
+    return 0;
+}
 
-LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str)
+LOCAL int strlen_wrap(const char *str, int charwidth, int maxwidth)
+{
+    const char *lastspace = NULL;
+    int usedsize;
+    while (*str) {
+        if (skipUnprintable(&str)<0) {
+            return -1;
+        }
+    }
+}
+#endif
+
+LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str, const textrendersettings_t *s, int *width, int *height)
 {
     int size = 0;
+    int maxsize = 0;
+    int room = s->w;
+    const char *spacechar = NULL;
+
+    *height = s->font->h;
+
     uint8_t code;
     /* We need to skip color stuff */
     while (*str) {
@@ -223,19 +264,57 @@ LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str)
             }
             continue;
         }
-        str++, size++;
-    }
-    return size;
+        // Check if we have room for this char.
+        if (room>0 && room<s->font->w) {
+            int hasspace=0;
+            while (isspace(*str)) {
+                str++;
+                hasspace=1;
+            }
+            if (!hasspace) {
+                // Move back if possible
+                if (spacechar) {
+                    int lentorecover = (str - spacechar-1);
+                    size-=(lentorecover*s->font->w);
+                    room+=(lentorecover*s->font->w);
+                    str = spacechar+1;
+                }
+            }
+            // Does not fit, move to next line.
+            *height += s->font->h;
+            if (size>maxsize)
+                maxsize = size;
+            size = 0;
+            spacechar = NULL;
+        }
+        if (isspace(*str)) {
+            spacechar = str;
+        }
+        str++;
+        size+=s->font->w;
+        if (room>0) {
+            room -= (s->font->w+1); // +1 means spacing between chars
+        }
+        if (size>maxsize)
+            maxsize = size;
+   }
+
+    if (size>maxsize)
+        maxsize = size;
+
+    *width = maxsize;
+
+    return 0;
 }
 
-gfxinfo_t * ICACHE_FLASH_ATTR updateTextFramebuffer(gfxinfo_t *gfx, const font_t *font, const char *str)
+gfxinfo_t * ICACHE_FLASH_ATTR updateTextFramebuffer(gfxinfo_t *gfx, const textrendersettings_t *s, const char *str)
 {
     //    int size = strlen(str) * font->w;
     //if (size > gfx->stride) {
     DEBUG("Freeing fb\n");
     freeTextFramebuffer(gfx);
     DEBUG("Alloc fb for '%s'\n", str);
-    gfx = allocateTextFramebuffer(str,font);
+    gfx = allocateTextFramebuffer(str,s);
 #if 0
     } else {
         gfx->width = size;

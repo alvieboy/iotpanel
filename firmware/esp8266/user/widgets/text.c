@@ -3,6 +3,7 @@
 #include "alloc.h"
 #include "debug.h"
 #include <string.h>
+#include "protos.h"
 
 void ICACHE_FLASH_ATTR setupText(text_t *t, const gfxinfo_t *dest,
                                  const font_t *font,
@@ -15,8 +16,14 @@ void ICACHE_FLASH_ATTR setupText(text_t *t, const gfxinfo_t *dest,
     t->font = font;
     updateText(t, str);
 
-    t->gfx = allocateTextFramebuffer(str, t->font);
-    drawText( t->gfx, t->font,0,0, str,  t->fg, t->bg);
+    textrendersettings_t render;
+    render.font = t->font;
+    render.w = t->width;
+    render.h = t->height;
+    render.wrap = t->wrap;
+
+    t->gfx = allocateTextFramebuffer(str, &render);
+    drawText( t->gfx, &render, 0, 0, str,  t->fg, t->bg);
 }
 
 LOCAL void ICACHE_FLASH_ATTR text_set_text(widget_t *w, const char *str)
@@ -48,15 +55,21 @@ void ICACHE_FLASH_ATTR drawTextWidget(text_t *t, int x, int y)
     const char *str = textGetCurrentString(t);
     if (str==NULL)
         return;
-    
+
     if (t->update) {
+        textrendersettings_t render;
+        render.font = t->font;
+        render.w = t->width;
+        render.h = t->height;
+        render.wrap = t->wrap;
+
         if (t->gfx) {
-            t->gfx = updateTextFramebuffer(t->gfx, t->font, str );
+            t->gfx = updateTextFramebuffer(t->gfx, &render, str );
         } else {
-            t->gfx = allocateTextFramebuffer( str, t->font);
+            t->gfx = allocateTextFramebuffer( str, &render);
         }
         /* Draw */
-        drawText( t->gfx, t->font, 0,0, str,  t->fg, t->bg);
+        drawText( t->gfx, &render, 0,0, str,  t->fg, t->bg);
         t->update = 0;
     }
     overlayFramebuffer(t->gfx, t->dest, x, y, t->fg==t->bg ? 0:-1);
@@ -96,6 +109,9 @@ void *ICACHE_FLASH_ATTR text_new(void*what)
     s->font = font_find("thumb");
     s->pstr = NULL;
     s->gfx = NULL;
+    s->width = -1;
+    s->height = -1;
+    s->wrap = 0;
     return s;
 }
 
@@ -136,12 +152,29 @@ LOCAL int ICACHE_FLASH_ATTR text_set_speed(widget_t *w, const char *name)
     return 0;
 }
 
+LOCAL int ICACHE_FLASH_ATTR text_set_width(widget_t *w, int val)
+{
+    text_t *t=TEXT(w);
+    t->width = val;
+    return 0;
+}
+
+LOCAL int ICACHE_FLASH_ATTR text_set_wrap(widget_t *w, int val)
+{
+    text_t *t=TEXT(w);
+    t->wrap = !!val;
+    return 0;
+}
+
 STRING_GETTER( text_t, pstr );
 STRING_GETTER( text_t, paltstr );
 GENERIC_GETTER( text_t, int, speed );
 FONT_GETTER( text_t, font );
 COLOR_GETTER( text_t, fg );
 COLOR_GETTER( text_t, bg );
+GENERIC_GETTER( text_t, int8_t, width );
+GENERIC_GETTER( text_t, uint8_t, wrap );
+//GENERIC_GETTER( text_t, int8_t, height );
 
 static property_t properties[] = {
     { 1, T_STRING, "text",   SETTER(text_set_text),    &text_t_get_pstr },
@@ -150,6 +183,10 @@ static property_t properties[] = {
     { 4, T_STRING, "bgcolor",SETTER(text_set_bgcolor), &text_t_get_bg },
     { 5, T_STRING, "alttext",SETTER(text_set_alttext), &text_t_get_paltstr },
     { 6, T_INT,    "speed",  SETTER(text_set_speed),   &text_t_get_speed },
+    { 7, T_INT,    "width",  SETTER(text_set_width),   &text_t_get_width },
+    { 8, T_INT,    "wrap",   SETTER(text_set_wrap),    &text_t_get_wrap },
+
+//    { 8, T_INT,    "height",  SETTER(text_set_speed),   &text_t_get_speed },
     END_OF_PROPERTIES
 };
 

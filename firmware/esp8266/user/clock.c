@@ -1,6 +1,8 @@
 #include "ets_sys.h"
 #include "osapi.h"
 #include "os_type.h"
+#include "user_interface.h"
+#include "protos.h"
 
 LOCAL uint32 time_seconds;
 LOCAL uint32 time_millis;

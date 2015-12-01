@@ -21,9 +21,10 @@
 extern UartDevice UartDev;
 extern void uart_div_modify(int,unsigned);
 extern int uart_tx_one_char(int);
-
+extern void ets_install_putc1(void*);
+#if 0
 LOCAL void uart0_rx_intr_handler(void *para);
-
+#endif
 /******************************************************************************
  * FunctionName : uart_config
  * Description  : Internal used function
@@ -131,7 +132,8 @@ uart_write_char(char c)
  *                UART0 interrupt handler, add self handle code inside
  * Parameters   : void *para - point to ETS_UART_INTR_ATTACH's arg
  * Returns      : NONE
-*******************************************************************************/
+ *******************************************************************************/
+#if 0
 LOCAL void
 uart0_rx_intr_handler(void *para)
 {
@@ -167,7 +169,7 @@ uart0_rx_intr_handler(void *para)
         }
     }
 }
-
+#endif
 
 /******************************************************************************
  * FunctionName : uart0_tx_buffer

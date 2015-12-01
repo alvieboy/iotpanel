@@ -34,6 +34,10 @@ MainWindow::MainWindow(QApplication&app,QWidget *parent) :
     ui->player1Entry->setText(m_ps.player1name);
     ui->player2Entry->setText(m_ps.player2name);
 
+    ui->layoutText->setText(m_ps.layout);
+    ui->scheduleText->setText(m_ps.schedule);
+    ui->firmwareEntry->setText(m_firmware);
+    ui->brightnessSpin->setValue(m_ps.brightness);
 #ifdef __linux__
     m_ip = QHostAddress("127.0.0.1");
     NewIP();
@@ -42,6 +46,7 @@ MainWindow::MainWindow(QApplication&app,QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
+    delete m_settings;
     delete ui;
 }
 
@@ -262,6 +267,7 @@ void MainWindow::SetupDefaults()
     m_ps.layout = m_settings->value("layout", getDefaultLayout()).toString();
     m_ps.schedule = m_settings->value("schedule", getDefaultSchedule()).toString();
     m_firmware = m_settings->value("firmware", "poolfw").toString();
+    m_ps.brightness = m_settings->value("brightness",32).toInt();
 }
 
 void MainWindow::SaveSettings()
@@ -271,6 +277,7 @@ void MainWindow::SaveSettings()
     m_settings->setValue("score2",m_ps.iScore2);
     m_settings->setValue("player1",m_ps.player1name);
     m_settings->setValue("player2",m_ps.player2name);
+    m_settings->setValue("brightness", m_ps.brightness);
 
     m_settings->setValue("layout", m_ps.layout);
     m_settings->setValue("schedule", m_ps.schedule);
@@ -370,14 +377,18 @@ void MainWindow::onSendUpdate()
     m_ps.iScore2 = ui->score2Spin->value();
     m_ps.player1name = ui->player1Entry->text();
     m_ps.player2name = ui->player2Entry->text();
-
+    m_ps.brightness = ui->brightnessSpin->value();
+    m_ps.layout = ui->layoutText->toPlainText();
     SaveSettings();
 
     m_queue.clear();
 
-#if 0
+#if 1
     if (m_sentSettings.layout != m_ps.layout){
-        m_queue.append( m_ps.layout );
+        QStringList list = m_ps.layout.split("\n");
+        foreach (QString item, list) {
+            m_queue.append( item );
+        }
     }
 #endif
 
@@ -396,9 +407,17 @@ void MainWindow::onSendUpdate()
     if (m_sentSettings.iScore2 != m_ps.iScore2){
         m_queue.append(QString("PROPSET ")+"s2"+" text "+QString::number(m_ps.iScore2));
     }
-#if 0
+
+    if (m_sentSettings.brightness != m_ps.brightness){
+        m_queue.append(QString("BLANK ")+QString::number(m_ps.brightness));
+    }
+#if 1
+
     if (m_sentSettings.schedule != m_ps.schedule){
-        m_queue.append( m_ps.schedule );
+        QStringList list = m_ps.schedule.split("\n");
+        foreach (QString item, list) {
+            m_queue.append( item );
+        }
     }
 #endif
     ContactHost();

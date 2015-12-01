@@ -206,7 +206,7 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_4">
             <item>
-             <widget class="QTextBrowser" name="layoutText">
+             <widget class="QTextEdit" name="layoutText">
               <property name="readOnly">
                <bool>false</bool>
               </property>
@@ -223,7 +223,7 @@
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_5">
             <item>
-             <widget class="QTextBrowser" name="textBrowser_2">
+             <widget class="QTextEdit" name="scheduleText">
               <property name="readOnly">
                <bool>false</bool>
               </property>

@@ -19,17 +19,41 @@ struct ap_info *ICACHE_FLASH_ATTR wifi_get_ap(const char *ssid)
     }
     return NULL;
 }
+
+LOCAL int ICACHE_FLASH_ATTR isAPMode()
+{
+    return 1;
+}
+
 void ICACHE_FLASH_ATTR wifiConnect()
 {
     if (!wifi_do_reconnect)
         return;
     wifi_do_reconnect=0;
+    if (isAPMode()) {
+        struct softap_config config;
+        wifi_station_disconnect();
+        wifi_set_opmode(0x03);
 
-    wifi_station_disconnect();
-    wifi_softap_dhcps_stop();
-    wifi_set_opmode(STATION_MODE);
-    wifi_station_set_config(&sta_conf);
-    wifi_station_connect();
+        wifi_softap_get_config(&config); // Get config first.
+        os_memset(config.ssid, 0, 32);
+        os_memset(config.password, 0, 64);
+
+        os_memcpy(config.ssid, "Panel", 5);
+        os_memcpy(config.password, "ApP4ss4u", 8);
+
+        config.authmode = AUTH_WPA_WPA2_PSK;
+        config.ssid_len = 5;// or its actual length
+        config.max_connection = 2; // how many stations can connect to ESP8266 softAP at most.
+
+        wifi_softap_set_config(&config);// Set ESP8266 softap config
+    } else {
+        wifi_station_disconnect();
+        wifi_softap_dhcps_stop();
+        wifi_set_opmode(STATION_MODE);
+        wifi_station_set_config(&sta_conf);
+        wifi_station_connect();
+    }
 
 }
 void ICACHE_FLASH_ATTR setupWifiSta(const char *ssid, const char *pwd)
@@ -76,6 +100,8 @@ void ICACHE_FLASH_ATTR scan_done_cb(void *arg, STATUS status)
 
 void ICACHE_FLASH_ATTR wifi_scan_ap()
 {
+    if (isAPMode())
+        return;
     os_printf("Scanning for Access Points\n");
 #if 1
     if (!wifi_station_scan(NULL, &scan_done_cb))

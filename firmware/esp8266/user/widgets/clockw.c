@@ -5,7 +5,7 @@
 #include "debug.h"
 #include <string.h>
 #include "widget_registry.h"
-
+#include "protos.h"
 
 int ICACHE_FLASH_ATTR clock_set_font(widget_t *w, const char *name)
 {

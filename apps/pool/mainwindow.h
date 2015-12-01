@@ -21,6 +21,7 @@ struct PanelSettings
     void Reset() {
         iScore1=-1;
         iScore2=-1;
+        brightness=64;
         player1name.clear();
         player2name.clear();
         layout.clear();
@@ -30,6 +31,7 @@ struct PanelSettings
     int iScore1, iScore2;
     QString player1name, player2name;
     QString layout, schedule;
+    int brightness;
 };
 
 #define DIRTY(x,y,field)  (x.field != y.field)

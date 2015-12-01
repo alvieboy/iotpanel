@@ -19,6 +19,13 @@ typedef struct gfxinfo
 } gfxinfo_t;
 
 
+typedef struct {
+    const font_t *font;
+    int8_t w; // width clip
+    int8_t h; // height clip
+    int8_t wrap:1; // Wrap or not text
+} textrendersettings_t;
+
 void gfx_clear(gfxinfo_t *gfx);
 
 static inline void drawPixel(const gfxinfo_t *gfx, int x, int y, uint8 color)
@@ -27,9 +34,9 @@ static inline void drawPixel(const gfxinfo_t *gfx, int x, int y, uint8 color)
     gfx->fb[x] = color;
 }
 
-void drawText(const gfxinfo_t*,const font_t*,int x, int y, const char *str, uint8 color, uint8 bg);
-gfxinfo_t *allocateTextFramebuffer(const char *str, const font_t*);
-gfxinfo_t *updateTextFramebuffer(gfxinfo_t *gfx, const font_t*,const char *str);
+void drawText(const gfxinfo_t*,const textrendersettings_t*,int x, int y, const char *str, uint8 color, uint8 bg);
+gfxinfo_t *allocateTextFramebuffer(const char *str, const textrendersettings_t*);
+gfxinfo_t *updateTextFramebuffer(gfxinfo_t *gfx, const textrendersettings_t*,const char *str);
 int overlayFramebuffer( const gfxinfo_t *source, const gfxinfo_t *dest, int x, int y, int transparentcolor);
 
 

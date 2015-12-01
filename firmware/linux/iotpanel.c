@@ -196,6 +196,10 @@ void updateImage()
     SDL_RenderPresent(ren);
 }
 
+void setBlanking(int x)
+{
+}
+
 static void clientData()
 {
     unsigned char buf[8192];

@@ -19,11 +19,17 @@ void ICACHE_FLASH_ATTR setupScrollingText(scrollingtext_t *t, const gfxinfo_t *d
         t->str[0] = '\0';
     }
 
+    textrendersettings_t render;
+    render.font = t->font;
+    render.w = -1;
+    render.h = -1;
+    render.wrap = 0;
+
     updateScrollingText(t, str);
 
-    t->gfx = allocateTextFramebuffer(str, t->font);
+    t->gfx = allocateTextFramebuffer(str, &render);
 
-    drawText( t->gfx, t->font,0,0, str,  t->fg, t->bg);
+    drawText( t->gfx, &render, 0, 0, str,  t->fg, t->bg);
 
 }
 
@@ -52,16 +58,23 @@ void ICACHE_FLASH_ATTR drawScrollingText(scrollingtext_t *t)
     case -1:
         t->x = t->dest->width-1;
         if (t->update) {
+
+            textrendersettings_t render;
+            render.font = t->font;
+            render.w = -1;
+            render.h = -1;
+            render.wrap = 0;
+
             if (t->gfx) {
                 DEBUG("Need update\n");
-                t->gfx = updateTextFramebuffer(t->gfx, t->font, t->str);
+                t->gfx = updateTextFramebuffer(t->gfx, &render, t->str);
             } else {
                 DEBUG("Need allocate\n");
-                t->gfx = allocateTextFramebuffer(t->str, t->font);
+                t->gfx = allocateTextFramebuffer(t->str, &render);
             }
             /* Draw */
             DEBUG("Draw scrolling\n");
-            drawText( t->gfx, t->font, 0,0, t->str,  t->fg, t->bg);
+            drawText( t->gfx, &render, 0,0, t->str,  t->fg, t->bg);
             t->update = 0;
         }
 

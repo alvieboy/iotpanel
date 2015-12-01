@@ -8,6 +8,7 @@
 #include <string.h>
 #include "debug.h"
 #include "serdes.h"
+#include "protos.h"
 
 LOCAL screen_t screens[MAX_SCREENS] = {{{0}}};
 LOCAL screen_t *current_screen = &screens[0];

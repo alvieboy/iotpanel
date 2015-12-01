@@ -16,10 +16,13 @@
 #include <stdlib.h>
 #include "upgrade.h"
 #include "cdecode.h"
+#include "clock.h"
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
 char currentFw[32] = {0};
+
+extern void setBlanking(int);
 
 #define MAX_LINE_LEN 1024
 
@@ -278,7 +281,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandBlank(clientInfo_t *cl)
         client_senderror(cl,"INVALID");
         return -1;
     }
-    //setBlanking(b);
+    setBlanking(b);
     client_sendOK(cl,"ADD");
     return 0;
 }

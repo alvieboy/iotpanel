@@ -9,6 +9,7 @@
 #include "user_interface.h"
 #include "clock.h"
 #include "gfx.h"
+#include "protos.h"
 
 static int holdoff=0;
 volatile int fbdone=0;

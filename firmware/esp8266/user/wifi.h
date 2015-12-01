@@ -10,5 +10,6 @@ struct ap_info {
 
 struct ap_info *wifi_get_ap(const char *name);
 void wifi_scan_ap();
-
+void wifiConnect();
+void setupWifiSta(const char *,const char*);
 #endif

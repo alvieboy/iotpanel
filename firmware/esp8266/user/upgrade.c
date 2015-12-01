@@ -4,6 +4,7 @@
 #include "user_interface.h"
 #include "alloc.h"
 #include "driver/uart.h"
+#include "protos.h"
 
 extern char _irom0_text_start;
 extern char _irom0_text_end;
@@ -87,7 +88,7 @@ LOCAL void uart_puthex(uint32_t val)
     uart_puthexbyte(val>>8);
     uart_puthexbyte(val);
 }
-
+#if 0
 LOCAL void dump_sector(unsigned char *contents)
 {
     int i;
@@ -115,6 +116,7 @@ LOCAL void dump_block(unsigned char *contents)
     }
     uart_write_char('\n');
 }
+#endif
 
 LOCAL int read_current_irom0_size()
 {

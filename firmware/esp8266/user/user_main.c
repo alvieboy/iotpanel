@@ -17,6 +17,8 @@
 #include "schedule.h"
 #include "alloc.h"
 #include "upgrade.h"
+#include "wifi.h"
+#include "clock.h"
 
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
@@ -124,7 +126,7 @@ LOCAL void ICACHE_FLASH_ATTR broadcastIP()
     }
 }
 
-static int broadcastRunning=0;
+//static int broadcastRunning=0;
 
 LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
 {
@@ -300,7 +302,7 @@ extern char currentFw[];
 
 LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 {
-    int i;
+    //int i;
 
     screen_t *screen = screen_create("default");
 
@@ -320,6 +322,16 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     widget_set_property(sc, "speed", "2");
 
     screen_add_widget(screen, sc, 0, 0);
+
+    widget_t *text = widget_create("text","example");
+    widget_set_property(text, "font", "thumb" );
+    widget_set_property(text, "wrap", "1" );
+    widget_set_property(text, "width", "64" );
+    widget_set_property(text, "text", "Example" );
+    widget_set_property(text, "color", "white" );
+
+    screen_add_widget(screen, text, 0, 16);
+
     strcpy(currentFw,"default");
 }
 
