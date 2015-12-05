@@ -55,6 +55,7 @@ public slots:
     void onIncrease1Score();
     void onIncrease2Score();
     void onResetScore();
+    void onReconfigure();
 protected:
     void SetupBroadcastListener();
     void HandleIPAddress(const QHostAddress &);
