@@ -16,6 +16,8 @@
 #endif
 
 LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str, const textrendersettings_t *s, int *width, int *height);
+LOCAL int getNumberOfPrintableChars(const char *str, const textrendersettings_t *settings);
+
 LOCAL int unpackHexByte(const char *str, uint8_t *dest);
 
 LOCAL void ICACHE_FLASH_ATTR drawChar16(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
@@ -24,7 +26,7 @@ LOCAL void ICACHE_FLASH_ATTR drawChar16(const gfxinfo_t *gfx, const font_t *font
     const uint8 *cptr;
     //printf("Draw 16 %d %d \n", font->w, font->h);
     uint8 hc = font->h;
-    uint16 mask = (1<<(font->w-1));
+    uint16 mask = 0x8000;//(1<<(font->w-1));
 
     if ( (c<font->start) || (c>font->end)) {
         c = font->start;
@@ -93,7 +95,87 @@ void ICACHE_FLASH_ATTR drawChar(const gfxinfo_t *gfx, const font_t *font, int x,
         y++;
     } while (--hc);
 }
+LOCAL int parseUnprintable(const char**str, uint8 *color, uint8 *bg)
+{
+    uint8_t code;
 
+    if (**str==0x1b) {
+        (*str)++;
+        if (**str=='\0')
+            return 0;
+        switch (**str) {
+        case 'f':
+            (*str)++;
+            if (unpackHexByte(*str, &code)<0)
+                return -1;
+            *color = code;
+            (*str)+=2;
+            break;
+        case 'b':
+            (*str)++;
+            if (unpackHexByte(*str, &code)<0)
+                return -1;
+            *bg = code;
+            (*str)+=2;
+            break;
+        case 'c':
+            (*str)++;
+            if (unpackHexByte(*str, &code)<0)
+                return -1;
+            *bg = *color = code;
+            (*str)+=2;
+            break;
+        default:
+            return 0;
+        }
+    }
+
+    return 0;
+}
+
+
+#if 1
+void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t *s, int x, int y, const char *str, uint8 color, uint8 bg)
+{
+    int i,j;
+    int sx = x;
+    DEBUG("Draw text bg %d fg %d, maxwidth %d, wrap %d\n", (int)bg, (int)color, (int)s->w, (int)s->wrap);
+    do {
+        i = getNumberOfPrintableChars(str, s);
+        if (i<0) {
+            return;
+        }
+        x = sx;
+#if 1
+        if (s->w >0) {
+
+            if (s->align == ALIGN_RIGHT ) {
+                // Check excess
+
+                int used = (s->font->w * i);
+                //printf("Align right: used %d, avail %d\n", used, gfx->width);
+                used = gfx->width - used;
+                //if (used<0)
+                //    used=0;
+                x+=used;
+                //printf("Offset now %d fixup %d\n",x,used );
+            }
+        }
+#endif
+        DEBUG("Printing %d chars at %d %d\n", i, x, y);
+        for (j=0;j<i;j++) {
+
+            if (parseUnprintable(&str,&color,&bg)<0)
+                return;
+            drawChar(gfx, s->font,x,y,*str,color,bg);
+            x += s->font->w;
+            str++;
+        }
+        y += s->font->h+1;
+
+    } while (*str);
+}
+#else
 void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t *s, int x, int y, const char *str, uint8 color, uint8 bg)
 {
     DEBUG("Draw text bg %d fg %d\n", bg, color);
@@ -134,12 +216,14 @@ void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t
         str++;
     }
 }
+#endif
 
 LOCAL void ICACHE_FLASH_ATTR freeTextFramebuffer(gfxinfo_t *info)
 {
     if (info->fb) {
         DEBUG("Freeing fb @ %p\n", info->fb);
         os_free(info->fb);
+        info->fb = NULL;
     }
     DEBUG("Freeing info @ %p\n", info);
     os_free(info);
@@ -163,14 +247,14 @@ gfxinfo_t * ICACHE_FLASH_ATTR allocateTextFramebuffer(const char *str, const tex
     info->height = size_y;
     /**/
     int size = size_x * size_y;
-    DEBUG("New fb size: %d '%s'\n",size,str);
+    DEBUG("New fb size %d x %d: %d '%s'\n", size_x, size_y, size, str);
 
     if (size==0) {
         info->fb = NULL;
     } else {
         info->fb = os_calloc(size,1);
     }
-    DEBUG("New info: %p\n",info);
+    DEBUG("New fb: %p\n",info->fb);
     return info;
 }
 
@@ -200,9 +284,10 @@ LOCAL int unpackHexByte(const char *str, uint8_t *dest)
         return -1;
     return 0;
 }
-#if 0
+
 LOCAL int skipUnprintable(const char **str)
 {
+    uint8_t code;
     if (*(*str)==0x1b) {
         (*str)++;
         if (*(*str)=='\0')
@@ -212,7 +297,7 @@ LOCAL int skipUnprintable(const char **str)
         case 'b':
         case 'c':
             (*str)++;
-            if (unpackHexByte((**str), &code)<0)
+            if (unpackHexByte((*str), &code)<0)
                 return -1;
             (*str)+=2;
             break;
@@ -223,87 +308,65 @@ LOCAL int skipUnprintable(const char **str)
     return 0;
 }
 
-LOCAL int strlen_wrap(const char *str, int charwidth, int maxwidth)
+LOCAL int getNumberOfPrintableChars(const char *str,
+                                    const textrendersettings_t *settings)
 {
+    int skip;
+    int count = 0;
     const char *lastspace = NULL;
-    int usedsize;
-    while (*str) {
-        if (skipUnprintable(&str)<0) {
+    int maxwidth = settings->w;
+    /* Skip spaces first? */
+
+    do {
+        skip = skipUnprintable(&str);
+        if (skip<0) {
             return -1;
         }
-    }
+        if (maxwidth>=0) {
+            if (maxwidth < settings->font->w) {
+
+                if (settings->wrap && lastspace) {
+                    //printf("lastspace\n");
+                    lastspace++;
+                    //printf("will restart at '%s'\n",lastspace);
+                    count-=(str-lastspace);
+                }
+                return count;
+            }
+            if (isspace(*str))
+                lastspace = str;
+        }
+        count++;
+        str++;
+        if (maxwidth>0) {
+            maxwidth-=settings->font->w;
+        }
+    } while (*str);
+
+    return count;
 }
-#endif
+
 
 LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str, const textrendersettings_t *s, int *width, int *height)
 {
-    int size = 0;
-    int maxsize = 0;
-    int room = s->w;
-    const char *spacechar = NULL;
-
-    *height = s->font->h;
-
-    uint8_t code;
-    /* We need to skip color stuff */
-    while (*str) {
-        if (*str==0x1b) {
-            str++;
-            if (*str=='\0')
-                return -1;
-            switch (*str) {
-            case 'f':
-            case 'b':
-            case 'c':
-                if (unpackHexByte(++str, &code)<0)
-                    return -1;
-                str+=2;
-                break;
-            default:
-                return -1;
-            }
-            continue;
+    int i;
+    int maxw = 0;
+    int maxh = 0;
+    do {
+        DEBUG("Str: '%s'\n", str);
+        i = getNumberOfPrintableChars(str, s);
+        DEBUG("Printable chars: %d\n", i);
+        if (i<0) {
+            return -1;
         }
-        // Check if we have room for this char.
-        if (room>0 && room<s->font->w) {
-            int hasspace=0;
-            while (isspace(*str)) {
-                str++;
-                hasspace=1;
-            }
-            if (!hasspace) {
-                // Move back if possible
-                if (spacechar) {
-                    int lentorecover = (str - spacechar-1);
-                    size-=(lentorecover*s->font->w);
-                    room+=(lentorecover*s->font->w);
-                    str = spacechar+1;
-                }
-            }
-            // Does not fit, move to next line.
-            *height += s->font->h;
-            if (size>maxsize)
-                maxsize = size;
-            size = 0;
-            spacechar = NULL;
-        }
-        if (isspace(*str)) {
-            spacechar = str;
-        }
-        str++;
-        size+=s->font->w;
-        if (room>0) {
-            room -= (s->font->w+1); // +1 means spacing between chars
-        }
-        if (size>maxsize)
-            maxsize = size;
-   }
-
-    if (size>maxsize)
-        maxsize = size;
-
-    *width = maxsize;
-
+        maxh++;
+        str+=i;
+        DEBUG("Str now: '%s'\n", str);
+        if (maxw<i)
+            maxw=i;
+    } while (*str);
+    *width = (maxw * s->font->w);// + (maxw-1);  // Spacing between chars
+    *height = (maxh * s->font->h) + (maxh-1); // Spacing between chars
     return 0;
 }
 
@@ -428,6 +491,13 @@ void ICACHE_FLASH_ATTR gfx_drawLine(gfxinfo_t *gfx,
   }
 }
 
-
+void destroyTextFramebuffer(gfxinfo_t *info)
+{
+    if (info) {
+        if (info->fb)
+            os_free(info->fb);
+        os_free(info);
+    }
+}
 
 
