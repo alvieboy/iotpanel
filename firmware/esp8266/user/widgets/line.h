@@ -6,7 +6,7 @@
 #define LINE(w) ((line_t*)((w)->priv))
 
 typedef struct {
-    int dx,dy;
+    uint16_t dx,dy;
     color_t color;
 } line_t;
 

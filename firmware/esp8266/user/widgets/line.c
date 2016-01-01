@@ -42,10 +42,28 @@ LOCAL void ICACHE_FLASH_ATTR line_destroy(void*what)
     os_free(what);
 }
 
+LOCAL void ICACHE_FLASH_ATTR line_get_dx(widget_t *w, int16_t *dest)
+{
+    line_t *l = LINE(w);
+    *dest = l->dx;
+}
+
+LOCAL void ICACHE_FLASH_ATTR line_get_dy(widget_t *w, int16_t *dest)
+{
+    line_t *l = LINE(w);
+    *dest = l->dy;
+}
+
+LOCAL void ICACHE_FLASH_ATTR line_get_color(widget_t *w, const char **dest)
+{
+    line_t *l = LINE(w);
+    *dest = color_name(l->color);
+}
+
 static property_t properties[] = {
-    { 1, T_INT,   "dx",   SETTER(line_set_dx),  NULL },
-    { 2, T_INT,   "dy",   SETTER(line_set_dy), NULL },
-    { 3, T_STRING,"color",SETTER(line_set_color), NULL },
+    { 1, T_INT16,   "dx",   SETTER(line_set_dx),  GETTER(line_get_dx) },
+    { 2, T_INT16,   "dy",   SETTER(line_set_dy),  GETTER(line_get_dy) },
+    { 3, T_STRING,  "color",SETTER(line_set_color), GETTER(line_get_color) },
     END_OF_PROPERTIES
 };
 

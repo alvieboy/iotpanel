@@ -24,7 +24,7 @@ void ICACHE_FLASH_ATTR setupScrollingText(scrollingtext_t *t, const gfxinfo_t *d
     render.w = -1;
     render.h = -1;
     render.wrap = 0;
-
+    render.align = ALIGN_LEFT;
     updateScrollingText(t, str);
 
     t->gfx = allocateTextFramebuffer(str, &render);
@@ -64,6 +64,8 @@ void ICACHE_FLASH_ATTR drawScrollingText(scrollingtext_t *t)
             render.w = -1;
             render.h = -1;
             render.wrap = 0;
+            render.align = ALIGN_LEFT;
+
 
             if (t->gfx) {
                 DEBUG("Need update\n");
@@ -131,6 +133,10 @@ static void *ICACHE_FLASH_ATTR scrollingtext_new(void*what)
 
 static void ICACHE_FLASH_ATTR scrollingtext_destroy(void*what)
 {
+    scrollingtext_t *s = what;
+    if (s->gfx)
+        destroyTextFramebuffer(s->gfx);
+
     os_free(what);
 }
 
@@ -148,13 +154,13 @@ void ICACHE_FLASH_ATTR scrollingtext_redraw(widget_t *w, int x, int y, gfxinfo_t
 STRING_GETTER( scrollingtext_t, str );
 FONT_GETTER( scrollingtext_t, font );
 COLOR_GETTER( scrollingtext_t, fg );
-GENERIC_GETTER( scrollingtext_t, int, max );
+GENERIC_GETTER( scrollingtext_t, uint8, max );
 
 static property_t properties[] = {
     { 1, T_STRING,"text",  SETTER(scrollingtext_set_text),  &scrollingtext_t_get_str },
     { 2, T_STRING,"font",  SETTER(scrollingtext_set_font),  &scrollingtext_t_get_font },
     { 3, T_STRING,"color", SETTER(scrollingtext_set_color), &scrollingtext_t_get_fg },
-    { 4, T_INT,   "speed", SETTER(scrollingtext_set_speed), &scrollingtext_t_get_max },
+    { 4, T_UINT8, "speed", SETTER(scrollingtext_set_speed), &scrollingtext_t_get_max },
     END_OF_PROPERTIES
 };
 

@@ -17,15 +17,19 @@ typedef struct
     uint8 fg,bg;
     const font_t *font;
     uint8 speed;
-    int8_t width, height;
+    int16_t width, height;
     uint8 wrap;
-    uint8 update:1;
+    uint8 update;
+    alignment_t align;
 } text_t;
 
 void setupText(text_t *t, const gfxinfo_t *dest, const font_t*, const char *str);
 void updateText(text_t *t, const char *str);
 void drawTextWidget(text_t *t, int x, int y);
 
+const char *text_get_font(widget_t *w);
+const char *text_get_color(widget_t *w);
+const char *text_get_bgcolor(widget_t *w);
 
 int text_set_font(widget_t *w, const char *name);
 int text_set_color(widget_t *w, const char *name);

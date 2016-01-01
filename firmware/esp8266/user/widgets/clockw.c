@@ -112,10 +112,36 @@ LOCAL int clockw_t_get_font(widget_t *w, void *target)
     }
 #endif
 
+
+LOCAL void ICACHE_FLASH_ATTR clock_get_font(widget_t *w, const char **dest)
+{
+    clockw_t *t= CLOCK(w);
+    widget_t wt;
+    wt.priv = t->text;
+    *dest = text_get_font(&wt);
+}
+
+LOCAL void ICACHE_FLASH_ATTR clock_get_color(widget_t *w, const char **dest)
+{
+    clockw_t *t= CLOCK(w);
+    widget_t wt;
+    wt.priv = t->text;
+    *dest = text_get_color(&wt);
+}
+
+LOCAL void ICACHE_FLASH_ATTR clock_get_bgcolor(widget_t *w, const char **dest)
+{
+    clockw_t *t= CLOCK(w);
+    widget_t wt;
+    wt.priv = t->text;
+    *dest = text_get_bgcolor(&wt);
+}
+
+
 static property_t properties[] = {
-    { 1, T_STRING, "font",    SETTER(clock_set_font),   NULL },
-    { 2, T_STRING, "color",   SETTER(clock_set_color),  NULL },
-    { 3, T_STRING, "bgcolor", SETTER(clock_set_bgcolor),NULL },
+    { 1, T_STRING, "font",    SETTER(clock_set_font),   GETTER(clock_get_font) },
+    { 2, T_STRING, "color",   SETTER(clock_set_color),  GETTER(clock_get_color) },
+    { 3, T_STRING, "bgcolor", SETTER(clock_set_bgcolor), GETTER(clock_get_bgcolor) },
     END_OF_PROPERTIES
 };
 
