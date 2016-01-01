@@ -22,7 +22,7 @@ struct ap_info *ICACHE_FLASH_ATTR wifi_get_ap(const char *ssid)
 
 LOCAL int ICACHE_FLASH_ATTR isAPMode()
 {
-    return 1;
+    return 0;
 }
 
 void ICACHE_FLASH_ATTR wifiConnect()
