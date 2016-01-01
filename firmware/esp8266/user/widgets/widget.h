@@ -4,10 +4,16 @@
 #include "gfx.h"
 
 #define MAX_SCREENS 8
-#define NAMELEN 8
+#define NAMELEN 16
 
 typedef enum {
-    T_INT,
+    T_INT8,
+    T_INT16,
+    T_INT32,
+    T_UINT8,
+    T_UINT16,
+    T_UINT32,
+    T_BOOL,
     T_STRING
 } eType;
 
@@ -88,7 +94,7 @@ typedef struct widget {
 typedef struct widget_entry {
     struct widget_entry *next;
     widget_t *widget;
-    int x, y;
+    int16_t x, y;
 } widget_entry_t;
 
 typedef struct screen {
@@ -112,8 +118,10 @@ widget_t* widget_find(const char *name);
 void widget_ref(widget_t*widget);
 void widget_unref(widget_t*widget);
 
+const property_t *widget_get_property(widget_t*,const char *name);
+
 void screen_serialize(serializer_t *ser, screen_t *screen);
 void screen_serialize_all(serializer_t *ser);
-
+int deserialize(serializer_t *ser);
 
 #endif
