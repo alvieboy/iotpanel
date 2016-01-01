@@ -115,12 +115,14 @@ LOCAL void ICACHE_FLASH_ATTR broadcastIP()
 {
     uint32_t lip = ip.ip.addr;
     if (lip!=0) {
-        unsigned char payload[4];
+        unsigned char payload[10];
         unsigned int size = 0;
         payload[size++] = lip>>24;
         payload[size++] = lip>>16;
         payload[size++] = lip>>8;
         payload[size++] = lip;
+        wifi_get_macaddr(STATION_IF, &payload[size]);
+        size += 6;
         int i = espconn_sent( &conn_udpb, payload, size);
         os_printf("Sending new broadcast: %d\n",i);
     }
@@ -309,6 +311,7 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     widget_t *sc = widget_create("scrollingtext","status");
     widget_set_property(sc, "font", "thumb" );
     widget_set_property(sc, "text", "IoT "
+#if 1
                         ESC "c01"
                         "R"
                         ESC "c02"
@@ -316,21 +319,57 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
                         ESC "c04"
                         "B"
                         ESC "cff"
+#endif
                         " "
                         "Panel - (C) 2015 Alvie");
     widget_set_property(sc, "color", "white");
     widget_set_property(sc, "speed", "2");
 
     screen_add_widget(screen, sc, 0, 0);
-
+#if 0
     widget_t *text = widget_create("text","example");
     widget_set_property(text, "font", "thumb" );
     widget_set_property(text, "wrap", "1" );
     widget_set_property(text, "width", "64" );
-    widget_set_property(text, "text", "Example" );
-    widget_set_property(text, "color", "white" );
+    widget_set_property(text, "text", "Para mais info contactar" );
+    widget_set_property(text, "color", "yellow" );
 
-    screen_add_widget(screen, text, 0, 16);
+    screen_add_widget(screen, text, 0, 8);
+    text = widget_create("text","ger");
+    widget_set_property(text, "font", "thumb" );
+    widget_set_property(text, "wrap", "1" );
+    widget_set_property(text, "width", "64" );
+    widget_set_property(text, "text", "A gerencia" );
+    widget_set_property(text, "color", "green" );
+
+    screen_add_widget(screen, text, 0, 16+8);
+#endif
+
+    sc = widget_create("scrollingtext","info");
+    widget_set_property(sc, "font", "thumb" );
+    widget_set_property(sc, "text", "Para mais informacoes contacte "
+                        "a gerencia deste estabelecimento");
+    widget_set_property(sc, "color", "yellow");
+    widget_set_property(sc, "speed", "3");
+
+    screen_add_widget(screen, sc, 0, 1+32-7);
+
+
+    widget_t *tx = widget_create("text","nome");
+    widget_set_property(tx, "font", "6x10" );
+    widget_set_property(tx, "color", "red");
+    widget_set_property(tx, "text", "Snooker");
+
+    screen_add_widget(screen, tx, 2, 7);
+
+    tx = widget_create("text","bar");
+    widget_set_property(tx, "font", "6x10" );
+    widget_set_property(tx, "color", "white");
+    widget_set_property(tx, "text", "Score");
+
+    screen_add_widget(screen, tx, 33, 16);
+
+
 
     strcpy(currentFw,"default");
 }
