@@ -16,7 +16,7 @@ volatile int fbdone=0;
 static volatile int column=0;
 static int ptr=0;
 static int row=0;
-static int blank=99;
+static int blank=24;
 extern uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
 
 #define CPLDCS 5 /* GPIO4?? */
@@ -111,6 +111,9 @@ LOCAL void tim1_intr_handler()
     if (holdoff>0) {
         // Disable OE
         if (holdoff==((HOLDOFF-1)*(32*HORIZONTAL_PANELS))-1)
+            GPIO_OUTPUT_SET(4, 1);
+
+        if (holdoff==(HOLDOFF * (32*HORIZONTAL_PANELS)-blank))
             GPIO_OUTPUT_SET(4, 1);
 
         holdoff--;
