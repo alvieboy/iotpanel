@@ -602,7 +602,9 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
                 client_senderror(cl,"UNKNONW");
             } else {
                 if (entry->handler(cl)==-2) {
-                    espconn_disconnect(cl->conn);
+                    os_printf("Destroying connection\n");
+                    espconn_delete(cl->conn);
+                    cl->conn = NULL;
                 }
             }
             break;
@@ -648,7 +650,7 @@ LOCAL ICACHE_FLASH_ATTR void client_data(clientInfo_t*cl, char *data, unsigned s
 
 LOCAL void ICACHE_FLASH_ATTR server_recv(void *arg, char *pusrdata, unsigned short length)
 {
-    //struct espconn *pesp_conn = arg;
+    clientInfo.conn = arg;//struct espconn *pesp_conn = arg;
     DEBUG("Server data: %d\n", length);
     client_data( &clientInfo, pusrdata, length);
 }
