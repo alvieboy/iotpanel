@@ -1,6 +1,6 @@
 #include "font.h"
 
-static const unsigned char ICACHE_RODATA_ATTR __font12x16_bitmap__[] = {
+static const unsigned char __font12x16_bitmap__[] = {
 
 /*
 * code=32, hex=0x20, ascii=" "
