@@ -4,6 +4,7 @@
 #include "ets_sys.h"
 #include "osapi.h"
 #include "spi_flash.h"
+#include "flashutils.h"
 
 #define FIRMWARE_MAGIC 0x1efa62db
 #define FIRMWARE_ERROR_NORESOURCES 0xFF000000
@@ -12,8 +13,6 @@
 #define FIRMWARE_ERROR_SPIWRITEERROR 0xFC000000
 #define FIRMWARE_UPGRADE_OK 0x1efa62ff
 
-#define SECTORBITS 12
-#define SECTORSIZE (1<<SECTORBITS)
 
 #define RTC_FIRMWARE_OFFSET 64
 
@@ -41,6 +40,5 @@ int ota_program_chunk(void *data); // Needs to be 512 bytes
 int ota_finalize();
 
 
-#define ALIGN(x, alignment) (((x)+(alignment-1)) & ~(alignment-1))
 
 #endif

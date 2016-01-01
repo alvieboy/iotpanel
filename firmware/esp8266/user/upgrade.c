@@ -5,9 +5,7 @@
 #include "alloc.h"
 #include "driver/uart.h"
 #include "protos.h"
-
-extern char _irom0_text_start;
-extern char _irom0_text_end;
+#include "flashutils.h"
 
 typedef struct {
     unsigned char magic;
@@ -22,14 +20,6 @@ typedef struct {
 } segment_entry_t;
 
 #define OTA_NUM_CHUNKS 2
-
-#define RESERVED_SECTORS (16/4) /* 8KB reserved */
-
-#define CHUNK0_SECTOR_START 0x0
-#define CHUNK0_SIZE  0x40
-#define CHUNK1_SECTOR_START 0x40 /* Sector where ITEXT starts */
-#define CHUNK1_SIZE (0x40 - RESERVED_SECTORS) /* Sector where ITEXT starts */
-
 
 #define BLOCKSIZE 512
 
@@ -118,7 +108,7 @@ LOCAL void dump_block(unsigned char *contents)
 }
 #endif
 
-LOCAL int read_current_irom0_size()
+int read_current_irom0_size()
 {
     const char *start = &_irom0_text_start;
     const char *end = &_irom0_text_end;
