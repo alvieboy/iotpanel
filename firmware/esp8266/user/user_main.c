@@ -19,6 +19,7 @@
 #include "upgrade.h"
 #include "wifi.h"
 #include "clock.h"
+#include "flash_serializer.h"
 
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
@@ -231,7 +232,7 @@ user_procTask(os_event_t *events)
     system_os_post(user_procTaskPrio, 0, 0 );
 }
 #endif
-
+#if 0
 static void setupFramebuffer()
 {
     int x,y,p=0;
@@ -242,7 +243,7 @@ static void setupFramebuffer()
         }
     }
 }
-
+#endif
 #ifndef HOST
 
 #endif
@@ -304,8 +305,14 @@ extern char currentFw[];
 
 LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 {
-    //int i;
+    screen_destroy_all();
 
+    if (deserialize_all(&flash_serializer)==0)
+        return;
+    os_printf("Using default screen\n");
+
+    screen_destroy_all();
+    
     screen_t *screen = screen_create("default");
 
     widget_t *sc = widget_create("scrollingtext","status");
@@ -343,7 +350,6 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     widget_set_property(text, "color", "green" );
 
     screen_add_widget(screen, text, 0, 16+8);
-#endif
 
     sc = widget_create("scrollingtext","info");
     widget_set_property(sc, "font", "thumb" );
@@ -368,10 +374,9 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     widget_set_property(tx, "text", "Score");
 
     screen_add_widget(screen, tx, 33, 16);
+#endif
 
-
-
-    strcpy(currentFw,"default");
+    screen_select(screen);
 }
 
 #ifndef HOST
@@ -428,8 +433,8 @@ void ICACHE_FLASH_ATTR user_init()
         broadcast_setup();
 
 #endif
-        setupFramebuffer();
-        setupDefaultScreen();
+        //setupFramebuffer();
+        //setupDefaultScreen();
 #ifndef HOST
         setupWifiSta("","");
 #endif
@@ -447,7 +452,7 @@ void ICACHE_FLASH_ATTR user_init()
 
         GPIO_OUTPUT_SET(4, 0);
 #endif
-
+        //setupFramebuffer();
         clearFramebuffer(&gfx);
         setupDefaultScreen();
 
