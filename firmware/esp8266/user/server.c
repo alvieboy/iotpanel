@@ -17,6 +17,7 @@
 #include "upgrade.h"
 #include "cdecode.h"
 #include "clock.h"
+#include "flash_serializer.h"
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
@@ -72,6 +73,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandClone(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandLogout(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandBlank(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandSave(clientInfo_t *);
 
 commandEntry_t commandHandlers[] = {
     { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
@@ -90,7 +92,8 @@ commandEntry_t commandHandlers[] = {
     { "SETTIME",  &handleCommandSetTime, 1, "<seconds>" },
     { "CLONE",  &handleCommandClone, 1, "<widgetname> <screenname> <x> <y>" },
     { "BLANK",  &handleCommandBlank, 1, "<blank>" },
-    { "OTA",  &handleCommandOTA, 1, "<blank>" },
+    { "OTA",  &handleCommandOTA, 1, "(opt)" },
+    { "SAVE",  &handleCommandSave, 1, "" },
     { "LOGOUT",   &handleCommandLogout, 0 ,""},
     { 0, 0, 1, NULL }
 };
@@ -500,6 +503,12 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
 }
 
 
+LOCAL ICACHE_FLASH_ATTR int handleCommandSave(clientInfo_t *cl)
+{
+    serialize_all(&flash_serializer);
+    client_sendOK(cl,"SAVE");
+    return 0;
+}
 
 LOCAL ICACHE_FLASH_ATTR void clientInfo_init(clientInfo_t*cl)
 {
