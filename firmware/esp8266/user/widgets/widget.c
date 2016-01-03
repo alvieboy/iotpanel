@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "serdes.h"
 #include "protos.h"
+#include "schedule.h"
 
 LOCAL screen_t screens[MAX_SCREENS] = {{{0}}};
 LOCAL screen_t *current_screen = &screens[0];
@@ -184,6 +185,7 @@ screen_t* ICACHE_FLASH_ATTR screen_create(const char *name)
     int i;
     for (i=0;i<MAX_SCREENS;i++) {
         if (screens[i].name[0] == '\0') {
+            os_printf("Creating new screen at %d '%s'\n", i, name);
             strncpy( screens[i].name, name, sizeof(screens[i].name) );
             screens[i].widgets = NULL;
             return &screens[i];
@@ -372,6 +374,7 @@ int ICACHE_FLASH_ATTR widget_serialize_properties(serializer_t *ser, widget_t*wi
 void ICACHE_FLASH_ATTR screen_serialize(serializer_t *ser, screen_t *screen)
 {
     serialize_string( ser, screen->name );
+    int cnt = 0;
 
     widget_entry_t *w = screen->widgets;
     while (w) {
@@ -382,7 +385,7 @@ void ICACHE_FLASH_ATTR screen_serialize(serializer_t *ser, screen_t *screen)
             /* Normal widget */
             serialize_uint8(ser, WIDGET_NORMAL);
         }
-        os_printf("Serialize widget '%s' class '%s'\n", w->widget->name, w->widget->def->name);
+        os_printf("Serialize widget %d '%s' class '%s'\n", cnt, w->widget->name, w->widget->def->name);
         serialize_string(ser, w->widget->name);
         serialize_int16(ser, w->x);
         serialize_int16(ser, w->y);
@@ -391,13 +394,14 @@ void ICACHE_FLASH_ATTR screen_serialize(serializer_t *ser, screen_t *screen)
             serialize_string(ser, w->widget->def->name);
             widget_serialize_properties(ser, w->widget);
         }
+        cnt++;
         w = w->next;
     }
     /* Last */
     serialize_uint8(ser, 0x00);
 }
 
-void ICACHE_FLASH_ATTR screen_serialize_all(serializer_t *ser)
+void ICACHE_FLASH_ATTR serialize_all(serializer_t *ser)
 {
     int i;
     current_screen = NULL;
@@ -405,14 +409,18 @@ void ICACHE_FLASH_ATTR screen_serialize_all(serializer_t *ser)
     /* Iterate through all screens */
 
     ser->initialize(ser);
+    ser->truncate(ser);
 
     for (i=0;i<MAX_SCREENS;i++) {
         if (screens[i].name[0] != '\0') {
+            os_printf("Serializing screen %d '%s'\n", i, screens[i].name);
             screen_serialize( ser, &screens[i]);
         }
     }
     /* Last one */
     serialize_uint8( ser, 0x00 );
+
+    schedule_serialize(ser);
     ser->finalise(ser);
 }
 
@@ -539,29 +547,47 @@ LOCAL int ICACHE_FLASH_ATTR deserialize_screen(serializer_t *ser, screen_t *scre
     return 0;
 }
 
-int ICACHE_FLASH_ATTR deserialize(serializer_t *ser)
+int ICACHE_FLASH_ATTR deserialize_all(serializer_t *ser)
 {
     char screenname[NAMELEN+1];
-    screen_t *screen;
+    screen_t *screen = NULL;
     unsigned ssize;
 
     ser->initialize(ser);
     ser->rewind(ser);
 
     screen_destroy_all();
+    do {
+        if (deserialize_string(ser, &screenname[0], &ssize, sizeof(screenname))<0) {
+            os_printf("Error deserializing screen name\n");
+            return -1;
+        }
+        if (ssize==0)
+            break; // Last screen
 
+        os_printf("Screen %s\n", screenname);
+
+        screen = screen_create(screenname);
+
+        if (screen==NULL) {
+            os_printf("Could not create screen\n");
+            return -1;
+        }
+
+        if (deserialize_screen(ser,screen)<0)
+            return -1;
+    } while (1);
+
+    // Default screen
     if (deserialize_string(ser, &screenname[0], &ssize, sizeof(screenname))<0) {
-        os_printf("Error deserializing screen name\n");
+        os_printf("Error deserializing default screen name\n");
         return -1;
     }
-    os_printf("Screen %s\n", screenname);
-    screen = screen_create(screenname);
-    if (screen==NULL) {
-        os_printf("Could not create screen\n");
-        return -1;
+    if (ssize) {
+        screen = screen_find( screenname );
     }
-    deserialize_screen( ser,screen);
+    if (screen)
+        screen_select(screen);
 
-    screen_select(screen);
-    return 0;
+    return schedule_deserialize(ser);
 }
