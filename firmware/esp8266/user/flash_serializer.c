@@ -5,7 +5,7 @@
 
 #define FLASH_MAGIC 0xF14E
 
-#define DEBUGFLASH(x...)
+#define DEBUGFLASH(x...) os_printf(x)
 
 typedef struct {
     uint16_t magic;
@@ -52,8 +52,10 @@ LOCAL int ICACHE_FLASH_ATTR flash_validate(flash_serializer_ctx_t *ctx)
 {
     config_header_t header;
     uint16_t crc = 0;
+    unsigned char chunk[64];
+    unsigned offset = flash_get_first_sector() << SECTORBITS;
 
-    spi_flash_read( flash_get_first_sector() << SECTORBITS, (void*)&header, sizeof(config_header_t));
+    spi_flash_read( offset, (void*)&header, sizeof(config_header_t));
     if (header.magic != FLASH_MAGIC) {
         DEBUGFLASH("Invalid flash magic %04x\n", (unsigned)header.magic);
         return -1;
@@ -65,6 +67,23 @@ LOCAL int ICACHE_FLASH_ATTR flash_validate(flash_serializer_ctx_t *ctx)
         DEBUGFLASH("Invalid flash header crc 0x%04x (calculated 0x%04x)\n", (unsigned)header.headercrc,
                   crc);
         return -2;
+    }
+
+    uint16_t len = header.size;
+    offset += sizeof(config_header_t);
+    crc = 0;
+
+    while (len) {
+        unsigned size = len>64 ? 64:len;
+        spi_flash_read( offset, (void*)chunk, size);
+        crc16_update_buffer(&crc, chunk, size);
+        len-=size;
+        offset+=size;
+    }
+    if (crc!=header.datacrc) {
+        DEBUGFLASH("Invalid flash data crc 0x%04x (calculated 0x%04x)\n", (unsigned)header.datacrc,
+                  crc);
+        return -3;
     }
     ctx->validated = 1;
 
@@ -136,7 +155,9 @@ void flash_ser_finalise(struct serializer_t *me)
     header.magic = FLASH_MAGIC;
 
     header.size  = ((ctx->currentsector-ctx->startsector)<<SECTORBITS) +
-        ctx->sectoroffset;
+        ctx->sectoroffset - sizeof(config_header_t);
+    DEBUGFLASH("Data size: %d\n", header.size);
+    header.datacrc = ctx->crc;
 
     header.headercrc = crc16_calc( (uint8_t*)&header, sizeof(config_header_t)-sizeof(uint16_t));
 
