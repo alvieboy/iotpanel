@@ -12,13 +12,9 @@ static inline void crc16_update(uint16_t *crc, uint8_t data)
 
 void ICACHE_FLASH_ATTR crc16_update_buffer(uint16_t *crc, const uint8_t *d, unsigned size)
 {
-    uint8_t data;
     while (size--) {
-        data = *d++;
-        data ^= (*crc)&0xff;
-        data ^= data << 4;
-        (*crc) = ((((uint16_t)data << 8) | (((*crc)>>8)&0xff)) ^ (uint8_t)(data >> 4)
-                  ^ ((uint16_t)data << 3));
+        DEBUGCRC("CRC data: %02x\n", *d);
+        crc16_update(crc, *d++);
     }
 }
 
