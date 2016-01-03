@@ -22,6 +22,7 @@ extern uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
 #define CPLDCS 5 /* GPIO4?? */
 
 #define HOLDOFF 6
+#define PRELOAD (36/HORIZONTAL_PANELS)
 
 void setBlanking(int a)
 {
@@ -32,10 +33,6 @@ LOCAL inline void myspi_master_9bit_write(uint8 spi_no, uint8 high_bit, uint8 lo
 {
     uint32 regvalue;
     uint8 bytetemp;
-
-    if (spi_no > 1) {
-        return;
-    }
 
     if (high_bit) {
         bytetemp = (low_8bit >> 1) | 0x80;
@@ -100,8 +97,6 @@ static inline void strobe()
     strobe_set(0);
 }
 
-
-#define PRELOAD (36/HORIZONTAL_PANELS)
 
 LOCAL void tim1_intr_handler()
 {
