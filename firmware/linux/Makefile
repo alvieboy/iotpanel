@@ -1,7 +1,7 @@
 SDL_CFLAGS=$(shell pkg-config --cflags sdl2)
 SDL_LIBS=$(shell pkg-config --libs sdl2)
 
-CFLAGS=-I. -ffunction-sections -fdata-sections -Wall -O2 -g -I../esp8266/user -I../esp8266/user/widgets -I./drivers $(SDL_CFLAGS) -DHOST
+CFLAGS=-I. -ffunction-sections -fdata-sections -Wall -O0 -g -I../esp8266/user -I../esp8266/user/widgets -I./drivers $(SDL_CFLAGS) -DHOST
 
 
 SOURCES = \
@@ -30,6 +30,8 @@ SOURCES = \
 ../esp8266/user/widgets/line.c 	               \
 ../esp8266/user/widgets/clockw.c 	       \
 ../esp8266/user/widgets/widget_registry.c      \
+../esp8266/user/flash_serializer.c     \
+../esp8266/user/crc.c     \
 iotpanel.c
 
 all: iotpanel iotlogin

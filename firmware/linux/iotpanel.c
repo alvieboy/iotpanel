@@ -13,6 +13,7 @@
 #include "serdes.h"
 #include <sys/time.h>
 #include <fcntl.h>
+#include "flash_serializer.h"
 
 #define LEDSIZE 6
 #define LEDBORDER 1
@@ -125,8 +126,16 @@ void espconn_regist_reconcb(espconn*conn, void (*cb)(void *arg, sint8 err))
 }
 void espconn_disconnect(espconn*conn)
 {
-    if (conn)
+    if (conn) {
         close(conn->sockfd);
+    } else {
+    }
+}
+
+void espconn_delete(espconn*conn)
+{
+    if (conn)
+        close(current_conn);
 }
 void espconn_regist_connectcb(espconn*conn, void (*cb)(void*))
 {
@@ -269,6 +278,7 @@ void user_procTask(void*arg)
 {
     SDL_Event e;
     int quit=0;
+    static int serc = 10;
     while (!quit) {
         redraw();
         time_tick();
@@ -284,7 +294,8 @@ void user_procTask(void*arg)
         // Test
         if (serc==1) {
             printf("Ser\n"),
-            screen_serialize_all(&debug_serializer);
+            screen_serialize_all(&flash_serializer);
+            deserialize(&flash_serializer);
         }
         if (serc>0)
             serc--;
