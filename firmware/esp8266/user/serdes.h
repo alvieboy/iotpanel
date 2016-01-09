@@ -13,6 +13,7 @@ typedef struct serializer_t
     void (*rewind)(struct serializer_t *me);
     void (*truncate)(struct serializer_t *me);
     void (*finalise)(struct serializer_t *me);
+    void (*release)(struct serializer_t *me);
     void *pvt;
 } serializer_t;
 

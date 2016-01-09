@@ -1,6 +1,7 @@
 #include "serdes.h"
 #include "alloc.h"
 #include "protos.h"
+#define     DEBUGSERIALIZE(x...) os_printf(x)
 
 int ICACHE_FLASH_ATTR serialize_string(serializer_t *f, const char *str)
 {
@@ -54,6 +55,7 @@ int ICACHE_FLASH_ATTR serialize_long(serializer_t *f, long i)
         if (need!=0) {
             val|=0x80;
         }
+        DEBUGSERIALIZE("[%02x] ", val);
         f->write( f, &val, sizeof(val) );
     }
     return ret;
@@ -162,6 +164,7 @@ int ICACHE_FLASH_ATTR deserialize_long(serializer_t *f, long *dest)
         val|=v&0x7f;
         first=0;
     } while (v&0x80);
+
     *dest = val;
     return 0;
 }

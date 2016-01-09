@@ -209,6 +209,11 @@ void setBlanking(int x)
 {
 }
 
+int getBlanking()
+{
+    return 0xde;
+}
+
 static void clientData()
 {
     unsigned char buf[8192];
@@ -419,3 +424,21 @@ int spi_flash_read(uint32 src_addr, uint32 *des_addr, uint32 size)
     return 0;
 }
 
+void CreateMutex(void *mutex)
+{
+}
+bool GetMutex(void *mutex)
+{
+    return true;
+}
+void ReleaseMutex(void *mutex)
+{
+}
+void LockMutex(void *mutex)
+{
+}
+
+int os_memcpy(void *dest, const void *src, size_t size)
+{
+    return memcpy(dest,src,size);
+}

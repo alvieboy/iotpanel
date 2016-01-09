@@ -25,6 +25,10 @@ typedef struct {
 
 #define BLOCKS_PER_SECTOR (SECTORSIZE/BLOCKSIZE)
 
+extern void pp_soft_wdt_stop();
+extern void pp_soft_wdt_restart();
+extern void slop_wdt_feed();
+
 struct ota_chunk
 {
     uint8_t start_sector;
@@ -211,6 +215,12 @@ int apply_firmware()
         clear_firmware_info( FIRMWARE_ERROR_NORESOURCES );
         return -1;
     }
+    clear_firmware_info(FIRMWARE_UPGRADE_INPROGRESS);
+
+    pp_soft_wdt_stop();
+    //pp_soft_wdt_restart();
+
+
     // NOTE NOTE : from this point onwards no function in flash can be used.
     uart_putstr("Segments ");
     uart_puthex( fwinfo.chunks );
@@ -220,7 +230,7 @@ int apply_firmware()
         system_rtc_mem_read( rtcoffset, &chunk, sizeof(chunk));
         rtcoffset += sizeof(chunk)/sizeof(uint32_t);
 
-        uart_putstr(" > Block size ");
+        uart_putstr("\n > Block size ");
         uart_puthex( (uint32)chunk.chunksize_blocks );
         uart_putstr(" source ");
         uart_puthex( (uint32)chunk.source_sector );
@@ -230,33 +240,51 @@ int apply_firmware()
 
         for (block=0; block<chunk.chunksize_blocks; block++) {
             /* Read source block */
+#if 1
             uint32_t source = ((uint32_t)chunk.source_sector)<<SECTORBITS;
-
-
+            //uart_putstr("R");
             if (spi_flash_read( source, (uint32*)buf, SECTORSIZE )<0) {
                 clear_firmware_info( FIRMWARE_ERROR_SPIREADERROR | source );
+                uart_puthex(FIRMWARE_ERROR_SPIREADERROR);
                 return -1;
             }
            // uart_putstr("  >> block\n");
            // dump_sector( buf );
             /* Erase sector */
+            //uart_putstr("E");
             if (spi_flash_erase_sector( (uint16)chunk.dest_sector) <0) {
                 clear_firmware_info( FIRMWARE_ERROR_SPIERASEERROR | chunk.dest_sector );
+                uart_puthex(FIRMWARE_ERROR_SPIERASEERROR);
                 return -1;
             }
             /* Program sector */
+            //uart_putstr("W");
+            
             uint32_t dest = ((uint32_t)chunk.dest_sector)<<SECTORBITS;
             if (spi_flash_write( dest, (uint32*)buf, SECTORSIZE)<0) {
+
                 clear_firmware_info( FIRMWARE_ERROR_SPIWRITEERROR | chunk.dest_sector );
+                uart_puthex(FIRMWARE_ERROR_SPIWRITEERROR);
                 return -1;
             }
             chunk.source_sector++;
             chunk.dest_sector++;
+            uart_putstr(".");
+            slop_wdt_feed();
+#else
+            uart_putstr(".");
+            os_delay_us(1000000);
+            slop_wdt_feed();
+#endif
+            system_os_post(0, 0, 0 );
+
         }
     }
     clear_firmware_info( FIRMWARE_UPGRADE_OK );
-    uart_putstr("Done, restarting\n");
+    uart_putstr("\nDone, restarting\n");
+    pp_soft_wdt_restart();
     system_restart();
+    while (1) {}
     return 0;
 }
 

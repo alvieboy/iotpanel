@@ -5,11 +5,26 @@
 #include <inttypes.h>
 #include <QMessageBox>
 #include "PanelLayout.h"
+#include <QFileDialog>
+#include <QErrorMessage>
+#include <QTime>
 
 typedef uint8_t macaddress_t[6];
 
 struct ConnectionError: public std::exception
 {
+    ConnectionError(const char *what): err(what) {}
+    ConnectionError(const std::string &s): err(s) {}
+    ConnectionError(const QString &s): err(s.toStdString()) {}
+
+    virtual ~ConnectionError() throw() {}
+
+
+    virtual const char *what() const throw() {
+        return err.c_str();
+    }
+private:
+    std::string err;
 };
 
 struct ReplyError: public std::exception
@@ -219,20 +234,27 @@ bool MainWindow::Transfer(const QStringList &list, QString &error)
 
 QStringList MainWindow::TransferAndGet(const QString &str, QString &dest)
 {
-    int waitcount = 10000;
     QString msg = "1 " + str + "\n";
     qDebug()<<">>" <<"1 "<<str;
+    QTime timeout = QTime::currentTime().addSecs(10);
+
 
     QByteArray array (msg.toStdString().c_str()) ;
-
-    if (connectionSocket->write(array)<=0)
-        throw ConnectionError();
+    int r = connectionSocket->write(array);
+    if (r<=0) {
+        QString err;
+        err.sprintf("Short write: %d", r);
+        throw ConnectionError(err);
+    }
 
     while ( ! connectionSocket->canReadLine()) {
         m_app.processEvents(0, 10000);
-        waitcount--;
-        if (waitcount==0)
-            throw ConnectionError();
+
+        QTime end = QTime::currentTime();
+
+        if (end>timeout) {
+            throw ConnectionError("Timeout");
+        }
     }
 
     dest = connectionSocket->readLine();
@@ -245,7 +267,7 @@ QStringList MainWindow::TransferAndGet(const QString &str, QString &dest)
         qDebug()<<"<< "<<dest;
         return dest.split(" ");
     } else {
-        throw ConnectionError();
+        throw ConnectionError("Short read");
     }
     return QStringList();
 }
@@ -320,6 +342,10 @@ void MainWindow::SetupDefaults()
     m_ps.schedule = m_settings->value("schedule", getDefaultSchedule()).toString();
     m_firmware = m_settings->value("firmware", "poolfw").toString();
     m_ps.brightness = m_settings->value("brightness",32).toInt();
+
+    QString layoutname = m_settings->value("layoutfile").toString();
+    if (layoutname.length())
+        openDesign(layoutname);
 }
 
 void MainWindow::SaveSettings()
@@ -412,7 +438,7 @@ void MainWindow::onHostConnected()
         m_sentSettings = m_ps;
 
     } catch (ConnectionError &e) {
-        statusLabel->setText("Connection error");
+        statusLabel->setText(QString("Connection error ") +e.what());
     }
 }
 
@@ -498,3 +524,40 @@ void MainWindow::onIncrease2Score()
     ui->score2Spin->setValue( ui->score2Spin->value()+1);
 }
 
+void MainWindow::openDesign(const QString &filename)
+{
+    PanelLayout layout;
+
+    QFile file(filename);
+    if (layout.createFromFile( file )<0) {
+        QErrorMessage *errorMessageDialog = new QErrorMessage(this);
+        errorMessageDialog->showMessage("Erro ao abrir");
+    } else {
+        QStringList l;
+        layout.serialize(l);
+        qDebug()<<l;
+        m_layout = layout;
+        ui->layoutText->setText(l.join("\n"));
+        onLayoutUpdated();
+        m_settings->setValue("layoutfile", file.fileName());
+    }
+}
+
+void MainWindow::onOpenDesign()
+{
+    QString filename = QFileDialog::getOpenFileName(this,
+                                                    tr("Abrir desenho"), "", tr("Ficheiros XML (*.xml)"));
+    //ui->File1Path->setText(file1Name);
+    if (filename.length()) {
+        openDesign(filename);
+    }
+}
+
+void MainWindow::onLayoutUpdated()
+{
+    ui->screenComboBox->clear();
+
+    foreach (LayoutScreen s, m_layout.screens) {
+        ui->screenComboBox->addItem(s.description, QVariant(s.name));
+    }
+}

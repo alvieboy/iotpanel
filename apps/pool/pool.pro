@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network
+QT       += core gui network xml
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -13,8 +13,9 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+        PanelLayout.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h PanelLayout.h
 
 FORMS    += mainwindow.ui

@@ -9,6 +9,7 @@
 #include <QTextStream>
 #include <QMutex>
 #include <QLabel>
+#include "PanelLayout.h"
 
 namespace Ui {
 class MainWindow;
@@ -56,6 +57,7 @@ public slots:
     void onIncrease2Score();
     void onResetScore();
     void onReconfigure();
+    void onOpenDesign();
 protected:
     void SetupBroadcastListener();
     void HandleIPAddress(const QHostAddress &);
@@ -65,7 +67,9 @@ protected:
     void NewIP();
     void handleIncomingData();
     void SaveSettings();
+    void onLayoutUpdated();
 
+    void openDesign(const QString &filename);
 
     bool Transfer(const QStringList &list, QString &error);
     bool Transfer(const QString &str, QString &error);
@@ -87,6 +91,7 @@ private:
     QLabel *statusLabel;
     QApplication &m_app;
     QStringList m_queue;
+    PanelLayout m_layout;
 };
 
 #endif // MAINWINDOW_H

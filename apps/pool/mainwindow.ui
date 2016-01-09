@@ -18,13 +18,44 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
         <string>Jogo</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="label_9">
+            <property name="text">
+             <string>Ecra actual</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="screenComboBox">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_5">
+            <property name="text">
+             <string>Seleccionar</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
         <item>
          <layout class="QGridLayout" name="gridLayout">
           <item row="0" column="0">
@@ -205,7 +236,7 @@
         <item>
          <widget class="QTabWidget" name="tabWidget_2">
           <property name="currentIndex">
-           <number>2</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_4">
            <attribute name="title">
@@ -342,6 +373,7 @@
     </property>
     <addaction name="actionSair"/>
     <addaction name="actionProcurar_painels"/>
+    <addaction name="actionAbrir_desenho"/>
    </widget>
    <addaction name="menuFicheiro"/>
   </widget>
@@ -354,6 +386,11 @@
   <action name="actionProcurar_painels">
    <property name="text">
     <string>Procurar painels</string>
+   </property>
+  </action>
+  <action name="actionAbrir_desenho">
+   <property name="text">
+    <string>Abrir desenho</string>
    </property>
   </action>
  </widget>
@@ -472,6 +509,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionAbrir_desenho</sender>
+   <signal>triggered()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onOpenDesign()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>232</x>
+     <y>222</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>onAutoConnection()</slot>
@@ -481,5 +534,6 @@
   <slot>onResetScore()</slot>
   <slot>onSendUpdate()</slot>
   <slot>onReconfigure()</slot>
+  <slot>onOpenDesign()</slot>
  </slots>
 </ui>

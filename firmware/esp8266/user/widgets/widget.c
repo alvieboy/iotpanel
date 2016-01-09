@@ -11,8 +11,14 @@
 #include "protos.h"
 #include "schedule.h"
 
+#define DEBUGSERIALIZE(x...) /*os_printf*/
+
 LOCAL screen_t screens[MAX_SCREENS] = {{{0}}};
 LOCAL screen_t *current_screen = &screens[0];
+
+extern void setBlanking(int a);
+extern int getBlanking();
+
 
 LOCAL inline bool is_integer_property( eType type )
 {
@@ -43,8 +49,12 @@ LOCAL inline int check_signed_bounds( long value, uint8_t size)
     unsigned bits = 8*size;
     long max = (1<<(bits-1))-1;
     long min = -1 - max;
-    if (value>max || value<min)
+
+    os_printf("Check bounds %ld between %ld and %ld\n", value, min, max);
+
+    if ((value>max) || (value<min))
         return -1;
+    os_printf("Bounds ok\n");
     return 0;
 }
 
@@ -65,7 +75,7 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
     const property_t *prop;
     long li;
     char *end;
-    int valid;
+    int valid = -1;
 
     for (prop = widget->def->properties; prop->name; prop++) {
         if (strcmp(prop->name,name)==0) {
@@ -95,13 +105,15 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
                     valid = check_signed_bounds( li, sizeof(int32_t) );
                     break;
                 case T_BOOL:
-                    valid = (li == 0) || (li==1);
+                    valid = (li != 0) && (li!=1);
                     break;
                 default:
                     valid = -1;
                 }
-                if (valid!=0)
+                if (valid!=0) {
+                    os_printf("Property out of bounds %ld for type %d (valid %d)\n", li, prop->type, valid);
                     return valid;
+                }
             }
 
             switch (prop->type) {
@@ -128,7 +140,7 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
 #undef SETBLOCK
         }
     }
-    return -1;
+    return valid;
 }
 
 void ICACHE_FLASH_ATTR widget_move(widget_entry_t *widget, int x, int y)
@@ -404,9 +416,10 @@ void ICACHE_FLASH_ATTR screen_serialize(serializer_t *ser, screen_t *screen)
 void ICACHE_FLASH_ATTR serialize_all(serializer_t *ser)
 {
     int i;
-    current_screen = NULL;
+    //current_screen = NULL;
 
     /* Iterate through all screens */
+    os_printf("Current screen %p \n", current_screen);
 
     ser->initialize(ser);
     ser->truncate(ser);
@@ -420,11 +433,23 @@ void ICACHE_FLASH_ATTR serialize_all(serializer_t *ser)
     /* Last one */
     serialize_uint8( ser, 0x00 );
 
-    schedule_serialize(ser);
-    ser->finalise(ser);
-}
+    // Serialize current screen
+    if (current_screen) {
+        os_printf("Current screen %p %s\n", current_screen, current_screen->name);
+        serialize_string( ser, current_screen->name );
+    } else {
+        os_printf("NULL current screen\n");
+        serialize_uint8(ser, 0);
+    }
 
-#define DEBUGSERIALIZE os_printf
+    serialize_int32(ser, getBlanking());
+
+    schedule_serialize(ser);
+
+
+    ser->finalise(ser);
+    ser->release(ser);
+}
 
 LOCAL int ICACHE_FLASH_ATTR deserialize_properties(serializer_t *ser, widget_t *w)
 {
@@ -560,10 +585,14 @@ int ICACHE_FLASH_ATTR deserialize_all(serializer_t *ser)
     do {
         if (deserialize_string(ser, &screenname[0], &ssize, sizeof(screenname))<0) {
             os_printf("Error deserializing screen name\n");
+            ser->release(ser);
+
             return -1;
         }
-        if (ssize==0)
+        if (ssize==0) {
+            os_printf("Last screen\n");
             break; // Last screen
+        }
 
         os_printf("Screen %s\n", screenname);
 
@@ -571,23 +600,45 @@ int ICACHE_FLASH_ATTR deserialize_all(serializer_t *ser)
 
         if (screen==NULL) {
             os_printf("Could not create screen\n");
+            ser->release(ser);
+
             return -1;
         }
 
-        if (deserialize_screen(ser,screen)<0)
+        if (deserialize_screen(ser,screen)<0) {
+            ser->release(ser);
+
             return -1;
+        }
     } while (1);
 
     // Default screen
     if (deserialize_string(ser, &screenname[0], &ssize, sizeof(screenname))<0) {
         os_printf("Error deserializing default screen name\n");
+        ser->release(ser);
         return -1;
     }
     if (ssize) {
+        os_printf("Default screen '%s'\n", screenname);
         screen = screen_find( screenname );
+    } else {
+        os_printf("No default screen\n");
     }
     if (screen)
         screen_select(screen);
+    else
+        screen_select( &screens[0] );
 
-    return schedule_deserialize(ser);
+    int32_t blank;
+    if (deserialize_int32(ser, &blank)<0) {
+        os_printf("Error deserializing blank\n");
+        ser->release(ser);
+        return -1;
+    }
+    os_printf("Blanking is %d\n", blank);
+    setBlanking(blank);
+
+    int r = schedule_deserialize(ser);
+    ser->release(ser);
+    return r;
 }

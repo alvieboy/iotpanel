@@ -193,6 +193,18 @@ LOCAL int ICACHE_FLASH_ATTR text_set_align(widget_t *w, const char *val)
     return 0;
 }
 
+LOCAL int ICACHE_FLASH_ATTR text_get_align(widget_t *w, const char **val)
+{
+    text_t *t=TEXT(w);
+    if (t->align == ALIGN_RIGHT)
+        *val = "right";
+    else
+        *val = "left";
+    return 0;
+}
+
+
+
 const char * ICACHE_FLASH_ATTR text_get_font(widget_t *w)
 {
     text_t *t = TEXT(w);
@@ -230,7 +242,7 @@ static property_t properties[] = {
     { 6, T_UINT8,  "speed",  SETTER(text_set_speed),   &text_t_get_speed },
     { 7, T_INT16,  "width",  SETTER(text_set_width),   &text_t_get_width },
     { 8, T_BOOL,   "wrap",   SETTER(text_set_wrap),    &text_t_get_wrap },
-    { 9, T_STRING, "align",  SETTER(text_set_align),   NULL},
+    { 9, T_STRING, "align",  SETTER(text_set_align),   GETTER(text_get_align)},
 
 //    { 8, T_INT,    "height",  SETTER(text_set_speed),   &text_t_get_speed },
     END_OF_PROPERTIES

@@ -3,7 +3,7 @@
 
 #ifdef __linux__
 #include <stdio.h>
-#define DEBUG(x...)   printf(x)
+#define DEBUG(x...)   /*printf(x)*/
 #else
 #define DEBUG(x...) /* os_printf(x)*/
 #endif

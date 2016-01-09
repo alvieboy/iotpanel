@@ -13,19 +13,22 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp \
-        panel.cpp text.cpp \
-        font_10x16.c \
-font_12x16.c          \
-font_16x16.c          \
-font_6x10.c           \
-font_apple4x6.c       \
-font_apple5x7.c       \
-font_apple6x10.c      \
-font.c                \
-font_tom_thumb.c
+    mainwindow.cpp \
+    PanelFramebuffer.cpp \
+    PanelWidgetText.cpp \
+    Panel.cpp \
+    text.cpp \
+    font_10x16.c \
+    font_12x16.c          \
+    font_16x16.c          \
+    font_6x10.c           \
+    font_apple4x6.c       \
+    font_apple5x7.c       \
+    font_apple6x10.c      \
+    font.c                \
+    font_tom_thumb.c
 
 
-HEADERS  += mainwindow.h panel.h font.h text.h
+HEADERS  += mainwindow.h Panel.h font.h text.h PanelFramebuffer.h 
 
 FORMS    += mainwindow.ui

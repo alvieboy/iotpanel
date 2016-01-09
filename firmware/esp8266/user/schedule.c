@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include "serdes.h"
+#include "protos.h"
+#include "mutex.h"
 
 typedef struct schedule_entry {
     schedule_type_t type;
@@ -22,16 +24,28 @@ LOCAL bool schedule_running = false;
 
 LOCAL int current_tick = 0;
 LOCAL int current_delay = 0;
+
 #define SCHEDULE_TICKS 10
+
+LOCAL mutex_t mutex = DEFAULT_MUTEX_INITIALIZER;
+
+#define DEBUGSCHEDULE
+//#define DEBUGSCHEDULE2
 
 
 void ICACHE_FLASH_ATTR schedule_event()
 {
     screen_t *s;
-    if (!schedule_running)
+
+    LockMutex(&mutex);
+
+    if (!schedule_running) {
+        ReleaseMutex(&mutex);
         return;
-#ifdef DEBUG
-    printf("Schedule: current tick %d, delay %d, cptr %p\n",
+    }
+
+#ifdef DEBUGSCHEDULE2
+    os_printf("Schedule: current tick %d, delay %d, cptr %p\n",
            current_tick, current_delay, current);
 #endif
     current_tick++;
@@ -42,8 +56,8 @@ void ICACHE_FLASH_ATTR schedule_event()
         } else {
             // Handle event.
             if (current) {
-#ifdef DEBUG
-                printf("New schedule, type %d\n", current->type);
+#ifdef DEBUGSCHEDULE2
+                os_printf("New schedule, type %d\n", current->type);
 #endif
                 switch (current->type) {
                 case SCHEDULE_SELECT:
@@ -51,9 +65,8 @@ void ICACHE_FLASH_ATTR schedule_event()
                     if (s) {
                         screen_select(s);
                     } else {
-#ifdef DEBUG
-                        printf("Cannot find screen\n");
-                        abort();
+#ifdef DEBUGSCHEDULE2
+                        os_printf("Cannot find screen\n");
 #endif
                     }
                     break;
@@ -68,16 +81,27 @@ void ICACHE_FLASH_ATTR schedule_event()
             }
         }
     }
+    ReleaseMutex(&mutex);
 }
 
 void ICACHE_FLASH_ATTR schedule_reset()
 {
+    LockMutex(&mutex);
+    schedule_running = 0;
+
     current = NULL;
+#ifdef DEBUGSCHEDULE
+    os_printf("Reset schedule %p\n", schedule_root);
+#endif
     while (schedule_root) {
         schedule_entry_t *e = schedule_root;
         schedule_root = schedule_root->next;
         os_free(e);
     }
+#ifdef DEBUGSCHEDULE
+    os_printf("Schedule reset completed.\n");
+#endif
+    ReleaseMutex(&mutex);
 }
 
 void ICACHE_FLASH_ATTR schedule_stop()
@@ -98,6 +122,11 @@ int ICACHE_FLASH_ATTR schedule_append(schedule_type_t type, void *arg)
     schedule_entry_t *s = (schedule_entry_t*)os_malloc(sizeof(schedule_entry_t));
     s->next = NULL;
     s->type = type;
+
+#ifdef DEBUGSCHEDULE
+    os_printf("New schedule type %d %p\n", type, s);
+#endif
+
     switch (type) {
     case SCHEDULE_SELECT:
         strncpy(s->val.string, arg, sizeof(s->val.string));
@@ -131,16 +160,17 @@ int ICACHE_FLASH_ATTR schedule_serialize(serializer_t *ser)
         serialize_uint8( ser, h->type );
         switch (h->type) {
         case SCHEDULE_SELECT:
+            os_printf("Select '%s'\n", h->val.string);
             serialize_string(ser, h->val.string);
             break;
         case SCHEDULE_WAIT:
+            os_printf("Wait %d\n", h->val.intval);
             serialize_uint32(ser, h->val.intval);
             break;
         }
         h = h->next;
     }
     serialize_uint8(ser, 0); //  Last entry
-
     return 0;
 }
 
@@ -155,19 +185,21 @@ int ICACHE_FLASH_ATTR schedule_deserialize(serializer_t *ser)
 
     if (deserialize_uint8(ser, &running)<0)
         return -1;
+    os_printf("Schedule running %d\n",running);
+
+    schedule_entry_t *last = NULL;
 
     do {
-        schedule_entry_t *last = NULL;
 
         if (deserialize_uint8( ser, &type )<0)
             return -1;
-
+        os_printf("Schedule type %d\n", type);
         if (type==0)
             break; // last one
 
         schedule_entry_t *s = (schedule_entry_t*)os_malloc(sizeof(schedule_entry_t));
         // schedule_root is NULL initially
-
+        s->next = NULL;
         s->type = type;
         switch (type) {
         case SCHEDULE_SELECT:
@@ -178,13 +210,20 @@ int ICACHE_FLASH_ATTR schedule_deserialize(serializer_t *ser)
             if (deserialize_uint32(ser, &s->val.intval)<0)
                 r=-1;
             break;
-        }
-        if (r<0)
+        default:
+            r=-1;
             break;
+        }
+        if (r<0) {
+            os_printf("Error deserializing\n");
+            break;
+        }
 
         if (NULL==last) {
+            os_printf("New root schedule is now %p\n", s);
             schedule_root = s;
         } else {
+            os_printf("New schedule is now %p\n", s);
             last->next = s;
         }
         last = s;
@@ -194,7 +233,10 @@ int ICACHE_FLASH_ATTR schedule_deserialize(serializer_t *ser)
     if (r<0) {
         schedule_reset();
     } else {
-        schedule_running  = running;
+        if (running) {
+            os_printf("Starting scheduler\n");
+            schedule_start();
+        }
     }
 
     return r;

@@ -174,6 +174,17 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
                    (ip.ip.addr>>24) & 0xff
                   );
         wifiUpdate(buf);
+        {
+            char buf2[64];
+            system_rtc_mem_read( 0,buf2,64);
+            int i;
+            for (i=0;i<64;i++) {
+                os_printf("%02x ",buf2[i]);
+            }
+            os_printf("\n");
+        }
+
+
         break;
     default:
         break;
@@ -410,7 +421,9 @@ LOCAL void upgrade_procTask(os_event_t *events)
     uart_setup();
     os_printf("Applying OTA upgrade.\n");
     apply_firmware();
-    while (1) {}
+    while (1) {
+        system_os_post(0,0,0);
+    }
 }
 
 
@@ -455,6 +468,18 @@ void ICACHE_FLASH_ATTR user_init()
         //setupFramebuffer();
         clearFramebuffer(&gfx);
         setupDefaultScreen();
+
+        {
+            char buf[64];
+            system_rtc_mem_read( 0,buf,64);
+            int i;
+            for (i=0;i<64;i++) {
+                os_printf("%02x ",buf[i]);
+            }
+            os_printf("\n");
+        }
+
+
 
 #ifdef HOST
         user_procTask(NULL);

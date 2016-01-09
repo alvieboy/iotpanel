@@ -10,6 +10,7 @@
 #include "clock.h"
 #include "gfx.h"
 #include "protos.h"
+#include "driver/gpio_fast.h"
 
 static int holdoff=0;
 volatile int fbdone=0;
@@ -27,6 +28,11 @@ extern uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
 void setBlanking(int a)
 {
     blank = a;
+}
+
+int getBlanking()
+{
+    return blank;
 }
 
 LOCAL inline void myspi_master_9bit_write(uint8 spi_no, uint8 high_bit, uint8 low_8bit)
@@ -52,7 +58,7 @@ LOCAL inline void myspi_master_9bit_write(uint8 spi_no, uint8 high_bit, uint8 lo
 
 LOCAL inline void spi_select(int selected)
 {
-    GPIO_OUTPUT_SET(CPLDCS, selected);
+    GPIO_FAST_OUTPUT_SET(CPLDCS, selected);
 }
 
 LOCAL inline void spi_wait_transmission()
@@ -88,7 +94,7 @@ typedef enum {
 
 static inline void strobe_set(int val)
 {
-    GPIO_OUTPUT_SET(12, val);
+    GPIO_FAST_OUTPUT_SET(12, val);
 }
 
 static inline void strobe()
@@ -106,10 +112,10 @@ LOCAL void tim1_intr_handler()
     if (holdoff>0) {
         // Disable OE
         if (holdoff==((HOLDOFF-1)*(32*HORIZONTAL_PANELS))-1)
-            GPIO_OUTPUT_SET(4, 1);
+            GPIO_FAST_OUTPUT_SET(4, 1);
 
         if (holdoff==(HOLDOFF * (32*HORIZONTAL_PANELS)-blank))
-            GPIO_OUTPUT_SET(4, 1);
+            GPIO_FAST_OUTPUT_SET(4, 1);
 
         holdoff--;
         return;
@@ -128,7 +134,7 @@ LOCAL void tim1_intr_handler()
         myspi_master_9bit_write(HSPI, 1, regval);
         if (column==blank) {
             // Disable OE
-            GPIO_OUTPUT_SET(4, 1);
+            GPIO_FAST_OUTPUT_SET(4, 1);
         }
 
         ptr++;
@@ -143,7 +149,7 @@ LOCAL void tim1_intr_handler()
         // Strobe.
         column=0;
         // Disable OE
-        GPIO_OUTPUT_SET(4, 1);
+        GPIO_FAST_OUTPUT_SET(4, 1);
 
         strobe();
         // We need to wait here.
@@ -151,7 +157,7 @@ LOCAL void tim1_intr_handler()
         // Deselect.
         spi_select(1);
         // Enable OE again
-        GPIO_OUTPUT_SET(4, 0);
+        GPIO_FAST_OUTPUT_SET(4, 0);
 
         column=0;
 

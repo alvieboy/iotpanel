@@ -74,6 +74,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandLogout(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandBlank(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandSave(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandReset(clientInfo_t *);
 
 commandEntry_t commandHandlers[] = {
     { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
@@ -95,6 +96,7 @@ commandEntry_t commandHandlers[] = {
     { "OTA",  &handleCommandOTA, 1, "(opt)" },
     { "SAVE",  &handleCommandSave, 1, "" },
     { "LOGOUT",   &handleCommandLogout, 0 ,""},
+    { "RESET",   &handleCommandReset, 1 ,""},
     { 0, 0, 1, NULL }
 };
 
@@ -169,7 +171,8 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAuth(clientInfo_t *cl)
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandPropset(clientInfo_t *cl)
 {
-    if (cl->argc!=3) {                  client_senderror(cl, "INVALIDARGS");
+    if (cl->argc!=3) {
+        client_senderror(cl, "INVALIDARGS");
         return -1;
     }
 
@@ -507,6 +510,13 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandSave(clientInfo_t *cl)
 {
     serialize_all(&flash_serializer);
     client_sendOK(cl,"SAVE");
+    return 0;
+}
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandReset(clientInfo_t *cl)
+{
+    client_sendOK(cl,"RESET");
+    system_restart();
     return 0;
 }
 
