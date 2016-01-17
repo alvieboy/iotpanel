@@ -219,6 +219,7 @@ user_procTask(os_event_t *events)
 {
     while (!fbdone) {
         system_os_post(user_procTaskPrio, 0, 0 );
+        return;
     }
     fbdone=0;
             /*

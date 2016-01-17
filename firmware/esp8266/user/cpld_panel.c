@@ -22,6 +22,25 @@ extern uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
 static unsigned int ticks = 0;
 
 
+static uint8_t u4_to_gray[16] = {
+    0,
+    1,
+    3,
+    2,
+    6,
+    7,
+    5,
+    4,
+    12,
+    13,
+    15,
+    14,
+    10,
+    11,
+    9,
+    8
+};
+
 #define USENMI
 
 #define CPLDCS 5 /* GPIO4?? */
@@ -115,9 +134,11 @@ static inline void strobe()
     strobe_set(0);
 }
 
+static uint8_t realcol = 0;
 
 LOCAL void tim1_intr_handler()
 {
+
     RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
     RTC_REG_WRITE(FRC1_LOAD_ADDRESS, PRELOAD);
 
@@ -164,27 +185,28 @@ LOCAL void tim1_intr_handler()
         // Disable OE
         GPIO_FAST_OUTPUT_SET(4, 1);
 
-        myspi_master_9bit_write(HSPI, 0, row&0xf);
+        myspi_master_9bit_write(HSPI, 0, realcol&0xf);
         // Strobe.
-        column=0;
+        column++;
 
+    } else if (column==(32*HORIZONTAL_PANELS)+2) {
         strobe();
-        // We need to wait here.
-        while (READ_PERI_REG(SPI_FLASH_CMD(HSPI))&SPI_FLASH_USR);
-        // Deselect.
         spi_select(1);
         // Enable OE again
+        column++;
+    } else if (column==(32*HORIZONTAL_PANELS)+3) {
 
         GPIO_FAST_OUTPUT_SET(4, 0);
 
         column=0;
 
         if ((row&0xf)==0xf) {
-            ptr=0;
             holdoff = HOLDOFF * (32*HORIZONTAL_PANELS);
             fbdone=1;
         }
         row++;
+        realcol = u4_to_gray[ row & 0xf ];
+        ptr = realcol * (32*HORIZONTAL_PANELS);
     } 
 }
 
