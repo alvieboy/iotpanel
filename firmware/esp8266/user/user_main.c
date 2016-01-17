@@ -461,6 +461,7 @@ void ICACHE_FLASH_ATTR user_init_2()
     uart_setup();
     os_printf("Last FW status: 0x%08x\n", get_last_firmware_status());
     broadcast_setup();
+    pp_soft_wdt_stop();
 
 #endif
     //setupFramebuffer();

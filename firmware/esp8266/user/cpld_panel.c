@@ -136,12 +136,14 @@ static inline void strobe()
 
 static uint8_t realcol = 0;
 
+extern void kick_watchdog();
+
 LOCAL void tim1_intr_handler()
 {
 
     RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
     RTC_REG_WRITE(FRC1_LOAD_ADDRESS, PRELOAD);
-
+    kick_watchdog();
     ticks++;
 
     if (holdoff>0) {
