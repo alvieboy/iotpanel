@@ -622,6 +622,7 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
             } else {
                 if (entry->handler(cl)==-2) {
                     os_printf("Destroying connection\n");
+                    espconn_disconnect(cl->conn);
                     espconn_delete(cl->conn);
                     cl->conn = NULL;
                 }

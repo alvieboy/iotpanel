@@ -39,6 +39,12 @@ static volatile os_timer_t some_timer;
 extern void draw_current_screen();
 extern void spi_setup();
 extern void timer_setup();
+extern unsigned getTicks();
+extern void kick_watchdog();
+extern void uart_putstr(const char *str);
+extern void uart_puthexbyte(unsigned char byte);
+extern void uart_puthex(uint32_t val);
+
 
 void user_rf_pre_init(void)
 {
@@ -124,8 +130,14 @@ LOCAL void ICACHE_FLASH_ATTR broadcastIP()
         payload[size++] = lip;
         wifi_get_macaddr(STATION_IF, &payload[size]);
         size += 6;
-        int i = espconn_sent( &conn_udpb, payload, size);
+        espconn_sent( &conn_udpb, payload, size);
+#if 0
         os_printf("Sending new broadcast: %d\n",i);
+
+        unsigned t = getTicks();
+        unsigned now = system_get_time();
+        os_printf("Current time: %u ticks %u\n", now, t);
+#endif
     }
 }
 
@@ -238,8 +250,6 @@ user_procTask(os_event_t *events)
     if ((tickcount&0x3ff)==0) {
         broadcastIP();
     }
-
-
     system_os_post(user_procTaskPrio, 0, 0 );
 }
 #endif
@@ -310,7 +320,7 @@ uart_setup()
 
 extern void user_server_init(uint32 port);
 
-#define ESC "\x1b"
+#define ESC "~"
 
 extern char currentFw[];
 
@@ -405,88 +415,127 @@ LOCAL void ICACHE_FLASH_ATTR broadcast_setup()
     eudp.local_ip[1] = 0;
     eudp.local_ip[2] = 0;
     eudp.local_ip[3] = 0;
-                               //10.8.10.44
-    eudp.remote_ip[0] = 255;//250;
-    eudp.remote_ip[1] = 255;//255;
-    eudp.remote_ip[2] = 255;//255;
-    eudp.remote_ip[3] = 255;//239;
+    //10.8.10.44
+    /*
+    eudp.remote_ip[0] = 250;
+    eudp.remote_ip[1] = 255;
+    eudp.remote_ip[2] = 255;
+    eudp.remote_ip[3] = 239;
+    */
+    eudp.remote_ip[0] = 239;
+    eudp.remote_ip[1] = 255;
+    eudp.remote_ip[2] = 255;
+    eudp.remote_ip[3] = 250;
 
     espconn_create(&conn_udpb);
 }
 #endif
-
+#if 0
 LOCAL void upgrade_procTask(os_event_t *events)
 {
     gpio_init();
     uart_setup();
-    os_printf("Applying OTA upgrade.\n");
+    os_printf("\n\n\n\nApplying OTA upgrade.\n");
     apply_firmware();
     while (1) {
-        system_os_post(0,0,0);
+        uart_putstr("\n\n\nOTA upgrade fail: ");
+        uart_puthex(get_last_firmware_status());
+        uart_putstr("!!!!!\n\n\n");
+        kick_watchdog();
+        //system_os_post(0,0,0);
     }
 }
+#endif
 
-
-void ICACHE_FLASH_ATTR user_init()
+void ICACHE_FLASH_ATTR user_init_2()
 {
-    if (has_new_firmware()) {
-#ifndef HOST
-        system_os_task(upgrade_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);
-        system_os_post(user_procTaskPrio, 0, 0 );
-#endif
-    } else {
-#ifndef HOST
-        gpio_init();
-        gpio16_output_conf();
-        gpio16_output_set(0); // GPIO16 low.
-        spi_setup();
-        timer_setup();
-        uart_setup();
-        os_printf("Last FW status: 0x%08x\n", get_last_firmware_status());
-        broadcast_setup();
-
-#endif
-        //setupFramebuffer();
-        //setupDefaultScreen();
-#ifndef HOST
-        setupWifiSta("","");
-#endif
-        user_server_init(8081);
 
 #ifndef HOST
-        PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U,  FUNC_GPIO15); // GPIO15.
-        PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U,  FUNC_GPIO12);  // DI
+    system_update_cpu_freq(160);
+    gpio_init();
+    gpio16_output_conf();
+    gpio16_output_set(0); // GPIO16 low.
+    spi_setup();
+    timer_setup();
+    uart_setup();
+    os_printf("Last FW status: 0x%08x\n", get_last_firmware_status());
+    broadcast_setup();
 
-        PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3);
-        PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
-
-        PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO4_U, FUNC_GPIO4);
-        PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
-
-        GPIO_OUTPUT_SET(4, 0);
 #endif
-        //setupFramebuffer();
-        clearFramebuffer(&gfx);
-        setupDefaultScreen();
+    //setupFramebuffer();
+    //setupDefaultScreen();
+#ifndef HOST
+    setupWifiSta("","");
+#endif
+    user_server_init(8081);
 
-        {
-            char buf[64];
-            system_rtc_mem_read( 0,buf,64);
-            int i;
-            for (i=0;i<64;i++) {
-                os_printf("%02x ",buf[i]);
-            }
-            os_printf("\n");
+#ifndef HOST
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U,  FUNC_GPIO15); // GPIO15.
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U,  FUNC_GPIO12);  // DI
+
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3); // No RX ability
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
+
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO4_U, FUNC_GPIO4);
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, FUNC_GPIO5);
+
+    GPIO_OUTPUT_SET(4, 0);
+    GPIO_OUTPUT_SET(12, 0);
+    GPIO_OUTPUT_SET(5, 1);
+#endif
+    //setupFramebuffer();
+    clearFramebuffer(&gfx);
+    setupDefaultScreen();
+
+    {
+        char buf[64];
+        system_rtc_mem_read( 0,buf,64);
+        int i;
+        for (i=0;i<64;i++) {
+            os_printf("%02x ",buf[i]);
         }
+        os_printf("\n");
+    }
+
+
 
 
 
 #ifdef HOST
-        user_procTask(NULL);
+    user_procTask(NULL);
 #else
-        system_os_task(user_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);
+    system_os_task(user_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);
 
-        system_os_post(user_procTaskPrio, 0, 0 );
+    system_os_post(user_procTaskPrio, 0, 0 );
 #endif
+}
+
+
+void user_init()
+{
+    if (has_new_firmware()) {
+#ifndef HOST
+        gpio_init();
+        gpio16_output_conf();
+        gpio16_output_set(0); // GPIO16 low.
+        uart_setup();
+        os_printf("Applying OTA upgrade.\n");
+        apply_firmware();
+//        pp_soft_wdt_restart();
+        while (1) {
+            uart_putstr("\n\n\nOTA upgrade fail: ");
+            uart_puthex(get_last_firmware_status());
+            uart_putstr("!!!!!\n\n\n");
+            kick_watchdog();
+            //system_os_post(0,0,0);
+        }
+
+              /*
+        system_os_task(upgrade_procTask, user_procTaskPrio, user_procTaskQueue, user_procTaskQueueLen);
+        system_os_post(user_procTaskPrio, 0, 0 );
+        */
+#endif
+    } else {
+        user_init_2();
     }
 }

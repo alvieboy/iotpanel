@@ -19,7 +19,7 @@ const widgetdef_t *widget_registry[] = {
     0
 };
 
-const widgetdef_t *widgetdef_find(const char *name)
+const widgetdef_t *ICACHE_FLASH_ATTR widgetdef_find(const char *name)
 {
     const widgetdef_t *w;
     int i;

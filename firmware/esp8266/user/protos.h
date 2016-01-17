@@ -15,5 +15,14 @@ void ets_delay_us(uint32);
 void *ets_memcpy(void *,const void*,size_t);
 void ets_isr_attach(int, void(*)(void), void*);
 
+extern void pp_soft_wdt_stop();
+extern void pp_soft_wdt_restart();
+extern void slop_wdt_feed();
+
+extern void ets_intr_lock();
+extern void ets_intr_unlock();
+
+extern void NmiTimSetFunc(void(*)(void));
+
 int abs(int);
 #endif

@@ -42,22 +42,25 @@ LOCAL void ICACHE_FLASH_ATTR line_destroy(void*what)
     os_free(what);
 }
 
-LOCAL void ICACHE_FLASH_ATTR line_get_dx(widget_t *w, int16_t *dest)
+LOCAL int ICACHE_FLASH_ATTR line_get_dx(widget_t *w, int16_t *dest)
 {
     line_t *l = LINE(w);
     *dest = l->dx;
+    return 0;
 }
 
-LOCAL void ICACHE_FLASH_ATTR line_get_dy(widget_t *w, int16_t *dest)
+LOCAL int ICACHE_FLASH_ATTR line_get_dy(widget_t *w, int16_t *dest)
 {
     line_t *l = LINE(w);
     *dest = l->dy;
+    return 0;
 }
 
-LOCAL void ICACHE_FLASH_ATTR line_get_color(widget_t *w, const char **dest)
+LOCAL int ICACHE_FLASH_ATTR line_get_color(widget_t *w, const char **dest)
 {
     line_t *l = LINE(w);
     *dest = color_name(l->color);
+    return 0;
 }
 
 static property_t properties[] = {

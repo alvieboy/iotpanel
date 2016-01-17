@@ -25,9 +25,6 @@ typedef struct {
 
 #define BLOCKS_PER_SECTOR (SECTORSIZE/BLOCKSIZE)
 
-extern void pp_soft_wdt_stop();
-extern void pp_soft_wdt_restart();
-extern void slop_wdt_feed();
 
 struct ota_chunk
 {
@@ -49,7 +46,7 @@ static struct {
 
 extern void uart_write_char(char c);
 
-LOCAL void uart_putstr(const char *str)
+void uart_putstr(const char *str)
 {
     while (*str) {
         uart_write_char(*str);
@@ -67,13 +64,13 @@ LOCAL void uart_putnibble(char nibble)
     }
 }
 
-LOCAL void uart_puthexbyte(unsigned char byte)
+void uart_puthexbyte(unsigned char byte)
 {
     uart_putnibble(byte>>4);
     uart_putnibble(byte);
 }
 
-LOCAL void uart_puthex(uint32_t val)
+void uart_puthex(uint32_t val)
 {
     uart_write_char('0');
     uart_write_char('x');
@@ -192,6 +189,12 @@ int has_new_firmware()
     return 0; // No firmware
 }
 
+inline void kick_watchdog()
+{
+    WRITE_PERI_REG(0x60000000+0x914, 0x73);
+}
+
+
 int apply_firmware()
 {
     firmware_info_t fwinfo;
@@ -219,12 +222,26 @@ int apply_firmware()
 
     pp_soft_wdt_stop();
     //pp_soft_wdt_restart();
+    ets_intr_lock();
+
+    // DISABLE AHB mapping.
+    WRITE_PERI_REG(0x60000208, READ_PERI_REG(0x60000208) & ~(1<<17));
+
+    asm volatile (
+                  "rsil a15, 15\n"    // read and set interrupt level to 15
+                  "rsync\n"
+                  :
+                  :
+                  : "a15", "memory"
+                 );
+
 
 
     // NOTE NOTE : from this point onwards no function in flash can be used.
     uart_putstr("Segments ");
     uart_puthex( fwinfo.chunks );
     uart_write_char('\n');
+
     for (chunkno=0; chunkno<fwinfo.chunks; chunkno++) {
         /* Read current chunk */
         system_rtc_mem_read( rtcoffset, &chunk, sizeof(chunk));
@@ -270,21 +287,24 @@ int apply_firmware()
             chunk.source_sector++;
             chunk.dest_sector++;
             uart_putstr(".");
-            slop_wdt_feed();
+            uart_puthexbyte(chunk.dest_sector);
+            kick_watchdog();
 #else
             uart_putstr(".");
-            os_delay_us(1000000);
-            slop_wdt_feed();
+            kick_watchdog();
+            volatile int i;
+            for (i=0;i<1000000;i++) {
+                asm volatile("nop\n");
+            }
 #endif
-            system_os_post(0, 0, 0 );
+            //system_os_post(0, 0, 0 );
 
         }
     }
     clear_firmware_info( FIRMWARE_UPGRADE_OK );
-    uart_putstr("\nDone, restarting\n");
-    pp_soft_wdt_restart();
-    system_restart();
-    while (1) {}
+    uart_putstr("\nDone, restarting (waiting for HW watchdog)\n");
+    while (1) {
+    }
     return 0;
 }
 
@@ -323,6 +343,42 @@ void ICACHE_FLASH_ATTR ota_initialize()
         }
     }
 }
+
+LOCAL void ICACHE_FLASH_ATTR ota_sort_chunks()
+{
+    firmware_chunk_t c, prev;
+    firmware_info_t fwinfo;
+    int chunk = 1;
+
+    system_rtc_mem_read( RTC_FIRMWARE_OFFSET, &fwinfo, sizeof(fwinfo));
+
+    if (fwinfo.chunks<2)
+        return;
+
+    while (chunk < fwinfo.chunks ) {
+
+        unsigned offset = RTC_FIRMWARE_OFFSET +
+            (sizeof(firmware_info_t)/sizeof(uint32))
+            + (chunk * (sizeof(firmware_chunk_t)/sizeof(uint32)));
+
+        system_rtc_mem_read( offset, &c, sizeof(c));
+        system_rtc_mem_read( offset - (sizeof(firmware_chunk_t)/sizeof(uint32)), &prev, sizeof(prev));
+
+        bool is_this_chunk_backward = c.source_sector > c.dest_sector;
+        bool is_last_chunk_forward = prev.source_sector < prev.dest_sector;
+
+        /* Backward chunks need to be applied first. */
+        if (is_this_chunk_backward && is_last_chunk_forward) {
+            os_printf("Swapping chunks %d and %d\n", chunk, chunk-1);
+            system_rtc_mem_write( offset, &prev, sizeof(prev));
+            system_rtc_mem_write( offset - (sizeof(firmware_chunk_t)/sizeof(uint32)), &c, sizeof(c));
+            continue;
+        } else {
+            chunk++;
+        }
+    };
+}
+
 
 LOCAL void ICACHE_FLASH_ATTR ota_save_chunk()
 {
@@ -464,7 +520,10 @@ int ICACHE_FLASH_ATTR ota_finalize()
 
     system_rtc_mem_write( RTC_FIRMWARE_OFFSET, &fwinfo, sizeof(fwinfo));
 
+    ota_sort_chunks();
+
     system_restart();
+    while (1) {}
     return 0; // Never reached
 }
 

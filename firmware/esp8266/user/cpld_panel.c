@@ -19,18 +19,27 @@ static int ptr=0;
 static int row=0;
 static int blank=24;
 extern uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
+static unsigned int ticks = 0;
+
+
+#define USENMI
 
 #define CPLDCS 5 /* GPIO4?? */
 
 #define HOLDOFF 6
 #define PRELOAD (36/HORIZONTAL_PANELS)
 
-void setBlanking(int a)
+unsigned ICACHE_FLASH_ATTR getTicks()
+{
+    return ticks;
+}
+
+void ICACHE_FLASH_ATTR setBlanking(int a)
 {
     blank = a;
 }
 
-int getBlanking()
+int ICACHE_FLASH_ATTR getBlanking()
 {
     return blank;
 }
@@ -75,10 +84,13 @@ void ICACHE_FLASH_ATTR spi_setup()
 
     // CNT_L = 0x3, CNT_H = 0x01, CNT_N = 0x3, DIV_PRE=0x1
     // 01 000011 000001 000011
-    WRITE_PERI_REG(SPI_FLASH_CLOCK(HSPI), 0x43043); //clear bit 31,set SPI clock div
+
+    WRITE_PERI_REG(SPI_FLASH_CLOCK(HSPI), 0x00003043);
+
+    // WRITE_PERI_REG(SPI_FLASH_CLOCK(HSPI), 0x43043); //clear bit 31,set SPI clock div
 }
 
-#define FRC1_ENABLE_TIMER  BIT7
+
 
 typedef enum {
     DIVDED_BY_1 = 0,
@@ -109,6 +121,8 @@ LOCAL void tim1_intr_handler()
     RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
     RTC_REG_WRITE(FRC1_LOAD_ADDRESS, PRELOAD);
 
+    ticks++;
+
     if (holdoff>0) {
         // Disable OE
         if (holdoff==((HOLDOFF-1)*(32*HORIZONTAL_PANELS))-1)
@@ -135,7 +149,9 @@ LOCAL void tim1_intr_handler()
         if (column==blank) {
             // Disable OE
             GPIO_FAST_OUTPUT_SET(4, 1);
-        }
+        } /*else {
+            GPIO_FAST_OUTPUT_SET(4, 0);
+        } */
 
         ptr++;
         column++;
@@ -145,11 +161,12 @@ LOCAL void tim1_intr_handler()
         column++;
     } else if (column==(32*HORIZONTAL_PANELS)+1) {
         // Send row.
+        // Disable OE
+        GPIO_FAST_OUTPUT_SET(4, 1);
+
         myspi_master_9bit_write(HSPI, 0, row&0xf);
         // Strobe.
         column=0;
-        // Disable OE
-        GPIO_FAST_OUTPUT_SET(4, 1);
 
         strobe();
         // We need to wait here.
@@ -157,6 +174,7 @@ LOCAL void tim1_intr_handler()
         // Deselect.
         spi_select(1);
         // Enable OE again
+
         GPIO_FAST_OUTPUT_SET(4, 0);
 
         column=0;
@@ -174,19 +192,41 @@ LOCAL void tim1_intr_handler()
  FRC1 clock is 5MHz
  Prescaler is 80
 
- Interrupt is called 62500 times per second.
+ PRELOAD is 36/2 == 18
+
+ APB is 80MHz.
+ 80/16 == 5Mhz.
+
+ 277KHz interrupt rate.
+
 */
+
+#define FRC1_ENABLE_TIMER  BIT7
+#define FRC1_ENABLE_AUTOLOAD  BIT6
+#define FRC1_TIMER_NMI BIT15
 
 void ICACHE_FLASH_ATTR timer_setup()
 {
+    // Configure also GPIO.
+#ifdef USENMI
+    ETS_FRC_TIMER1_NMI_INTR_ATTACH(tim1_intr_handler);
+#else
     ETS_FRC_TIMER1_INTR_ATTACH(tim1_intr_handler, NULL);
-    TM1_EDGE_INT_ENABLE();
-    ETS_FRC1_INTR_ENABLE();
+#endif
 
+    RTC_REG_WRITE(FRC1_LOAD_ADDRESS, PRELOAD);
     RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
     RTC_REG_WRITE(FRC1_CTRL_ADDRESS,
                   DIVDED_BY_16
                   | FRC1_ENABLE_TIMER
-                  | TM_EDGE_INT);
-    RTC_REG_WRITE(FRC1_LOAD_ADDRESS, PRELOAD);
+                  | FRC1_ENABLE_AUTOLOAD
+                  | TM_EDGE_INT
+#ifdef USENMI
+                  | FRC1_TIMER_NMI
+#endif
+                 );
+
+    TM1_EDGE_INT_ENABLE();
+    ETS_FRC1_INTR_ENABLE();
+
 }

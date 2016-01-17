@@ -15,6 +15,8 @@
 #define swap(a, b) { int t = a; a = b; b = t; }
 #endif
 
+#define ESCAPE '~'
+
 LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str, const textrendersettings_t *s, int *width, int *height);
 LOCAL int getNumberOfPrintableChars(const char *str, const textrendersettings_t *settings);
 
@@ -95,11 +97,11 @@ void ICACHE_FLASH_ATTR drawChar(const gfxinfo_t *gfx, const font_t *font, int x,
         y++;
     } while (--hc);
 }
-LOCAL int parseUnprintable(const char**str, uint8 *color, uint8 *bg)
+LOCAL int ICACHE_FLASH_ATTR parseUnprintable(const char**str, uint8 *color, uint8 *bg)
 {
     uint8_t code;
 
-    if (**str==0x1b) {
+    if (**str==ESCAPE) {
         (*str)++;
         if (**str=='\0')
             return 0;
@@ -182,7 +184,7 @@ void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t
     uint8_t code;
 
     while (*str) {
-        if (*str==0x1b) {
+        if (*str==ESCAPE) {
             str++;
             if (*str=='\0')
                 return;
@@ -285,10 +287,10 @@ LOCAL int unpackHexByte(const char *str, uint8_t *dest)
     return 0;
 }
 
-LOCAL int skipUnprintable(const char **str)
+LOCAL int ICACHE_FLASH_ATTR skipUnprintable(const char **str)
 {
     uint8_t code;
-    if (*(*str)==0x1b) {
+    if (*(*str)==ESCAPE) {
         (*str)++;
         if (*(*str)=='\0')
             return -1;
@@ -308,7 +310,7 @@ LOCAL int skipUnprintable(const char **str)
     return 0;
 }
 
-LOCAL int getNumberOfPrintableChars(const char *str,
+LOCAL int ICACHE_FLASH_ATTR getNumberOfPrintableChars(const char *str,
                                     const textrendersettings_t *settings)
 {
     int skip;
@@ -491,7 +493,7 @@ void ICACHE_FLASH_ATTR gfx_drawLine(gfxinfo_t *gfx,
   }
 }
 
-void destroyTextFramebuffer(gfxinfo_t *info)
+void ICACHE_FLASH_ATTR destroyTextFramebuffer(gfxinfo_t *info)
 {
     if (info) {
         if (info->fb)

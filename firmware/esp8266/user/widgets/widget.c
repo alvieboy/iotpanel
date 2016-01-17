@@ -11,7 +11,7 @@
 #include "protos.h"
 #include "schedule.h"
 
-#define DEBUGSERIALIZE(x...) /*os_printf*/
+#define DEBUGSERIALIZE(x...) /* os_printf(x) */
 
 LOCAL screen_t screens[MAX_SCREENS] = {{{0}}};
 LOCAL screen_t *current_screen = &screens[0];
@@ -58,7 +58,7 @@ LOCAL inline int check_signed_bounds( long value, uint8_t size)
     return 0;
 }
 
-const property_t *widget_get_property(widget_t*widget,const char *name)
+const property_t * ICACHE_FLASH_ATTR widget_get_property(widget_t*widget,const char *name)
 {
     const property_t *prop;
     for (prop = widget->def->properties; prop->name; prop++) {
@@ -473,6 +473,7 @@ LOCAL int ICACHE_FLASH_ATTR deserialize_properties(serializer_t *ser, widget_t *
             DEBUGSERIALIZE("No such property\n");
             return -1;
         }
+        DEBUGSERIALIZE("Prop type is %d\n", prop->type);
 
         switch (prop->type) {
 #define SETBLOCK(type,des)  { type val; r = des(ser,&val); if (r<0) break; valid = prop->setter( w, &val ); } break
@@ -491,6 +492,7 @@ LOCAL int ICACHE_FLASH_ATTR deserialize_properties(serializer_t *ser, widget_t *
             SETBLOCK(int32_t, deserialize_int32);
         case T_STRING:
             {
+                DEBUGSERIALIZE("Deserialize string with alloc\n");
                 char *value = deserialize_string_alloc(ser);
                 if (value) {
                     os_printf("String prop '%s'\n", value);

@@ -47,7 +47,7 @@ LOCAL void byte_memcpy(uint8_t *dest, const uint8_t *src, unsigned size)
 }
 #endif
 
-void flash_ser_initialize(struct serializer_t *me)
+void ICACHE_FLASH_ATTR flash_ser_initialize(struct serializer_t *me)
 {
     flash_serializer_ctx_t *ctx = &flash_serializer_ctx;
     me->pvt = ctx;
@@ -208,7 +208,7 @@ LOCAL int flash_do_write(flash_serializer_ctx_t *ctx, const uint8_t*data, unsign
     return 0;
 }
 
-int flash_ser_write(struct serializer_t *me, const void *data, unsigned size)
+LOCAL int ICACHE_FLASH_ATTR flash_ser_write(struct serializer_t *me, const void *data, unsigned size)
 {
     flash_serializer_ctx_t *ctx = FLASHCTX(me);
 
@@ -222,7 +222,7 @@ int flash_ser_write(struct serializer_t *me, const void *data, unsigned size)
 
 }
 
-int flash_ser_read(struct serializer_t *me, void *data, unsigned size)
+LOCAL int ICACHE_FLASH_ATTR flash_ser_read(struct serializer_t *me, void *data, unsigned size)
 {
     flash_serializer_ctx_t *ctx = FLASHCTX(me);
 
@@ -240,7 +240,7 @@ int flash_ser_read(struct serializer_t *me, void *data, unsigned size)
     return r;
 }
 
-void flash_ser_finalise(struct serializer_t *me)
+LOCAL void ICACHE_FLASH_ATTR flash_ser_finalise(struct serializer_t *me)
 {
     flash_serializer_ctx_t *ctx = FLASHCTX(me);
     config_header_t header;
@@ -260,7 +260,7 @@ void flash_ser_finalise(struct serializer_t *me)
     spiflash_flush(ctx);
 }
 
-void flash_ser_release(struct serializer_t *me)
+LOCAL void ICACHE_FLASH_ATTR flash_ser_release(struct serializer_t *me)
 {
      flash_serializer_ctx_t *ctx = FLASHCTX(me);
      if (ctx->cached_sector)
@@ -268,14 +268,14 @@ void flash_ser_release(struct serializer_t *me)
 }
 
 
-void flash_ser_rewind(struct serializer_t *me)
+LOCAL void ICACHE_FLASH_ATTR flash_ser_rewind(struct serializer_t *me)
 {
     flash_serializer_ctx_t *ctx = FLASHCTX(me);
     ctx->currentsector = ctx->startsector;
     ctx->sectoroffset = sizeof(config_header_t);
 }
 
-void flash_ser_truncate(struct serializer_t *me)
+LOCAL void ICACHE_FLASH_ATTR flash_ser_truncate(struct serializer_t *me)
 {
     flash_serializer_ctx_t *ctx = FLASHCTX(me);
     ctx->crc = 0;
