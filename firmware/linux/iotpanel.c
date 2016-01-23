@@ -14,6 +14,7 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include "flash_serializer.h"
+#include <unistd.h>
 
 #define LEDSIZE 6
 #define LEDBORDER 1
@@ -105,50 +106,65 @@ int os_sprintf(char *dest, const char *fmt,...)
 }
 
 
+static espconn_recv_callback cb_data;
+static espconn_connect_callback cb_connect;
+static espconn_connect_callback cb_disconn;
 // Espconn stuff.
 
-void espconn_regist_time()
-{
-}
-
-void (*cb_data)(void *, char *, unsigned short length) = NULL;
-void (*cb_connect)(void*) = NULL;
-void (*cb_disconn)(void*) = NULL;
-
-int espconn_regist_recvcb(espconn*conn, void (*cb)(void *, char *, unsigned short length))
+sint8 espconn_regist_recvcb(struct espconn*conn, espconn_recv_callback cb)
 {
     cb_data = cb;
+    return 0;
 }
 
-void espconn_regist_reconcb(espconn*conn, void (*cb)(void *arg, sint8 err))
+sint8 espconn_regist_reconcb(struct espconn*conn, void (*cb)(void *arg, sint8 err))
 {
-
+    return -1;
 }
-void espconn_disconnect(espconn*conn)
+
+sint8 espconn_disconnect(struct espconn*conn)
 {
     if (conn) {
+        printf("Closing connection on fd %d\n", conn->sockfd);
         close(conn->sockfd);
+        conn->sockfd=-1;
+        return 0;
     } else {
+        printf("Invalid CONNECTION!!!!\n");
     }
+    return -1;
 }
 
-void espconn_delete(espconn*conn)
+sint8 espconn_delete(struct espconn*conn)
 {
-    if (conn)
-        close(current_conn);
+#if 0
+    if (conn) {
+        printf("Closing connection on fd %d\n", conn->sockfd);
+        close(conn->sockfd);
+        conn->sockfd=-1;
+    } else {
+        printf("Invalid CONNECTION!!!!\n");
+    }
+#endif
+    return 0;
 }
-void espconn_regist_connectcb(espconn*conn, void (*cb)(void*))
+
+sint8 espconn_regist_connectcb(struct espconn*conn, espconn_connect_callback cb)
 {
     cb_connect=cb;
+    return 0;
 }
 
-void espconn_regist_disconcb(espconn*conn, void (*cb)(void*))
+sint8 espconn_regist_disconcb(struct espconn*conn, void (*cb)(void*))
 {
     cb_disconn=cb;
+    return 0;
 }
 
 SDL_Window *win;
 SDL_Renderer *ren;
+
+extern void user_init();
 
 int main(int argc,char **argv)
 {
@@ -223,7 +239,7 @@ static void clientData()
         current_conn->sockfd=-1;
         cb_disconn(current_conn);
     } else {
-        cb_data(current_conn,buf, r);
+        cb_data(current_conn,(char*)buf, r);
     }
 }
 
@@ -279,11 +295,14 @@ static void netCheck()
     } while (retry);
 }
 
+extern void redraw();
+extern void time_tick();
+
 void user_procTask(void*arg)
 {
     SDL_Event e;
     int quit=0;
-    static int serc = 10;
+    //static int serc = 10;
     while (!quit) {
         redraw();
         time_tick();
@@ -309,9 +328,9 @@ void user_procTask(void*arg)
     }
 }
 
-void espconn_sent(espconn*conn, unsigned char *ptr, uint16_t size)
+sint8 espconn_sent(struct espconn*conn, unsigned char *ptr, uint16_t size)
 {
-    send(conn->sockfd, ptr, size, 0);
+    return send(conn->sockfd, ptr, size, 0);
 }
 
 
@@ -323,7 +342,13 @@ uint32 system_get_time()
     return ((delta.tv_sec*1000000) + (delta.tv_usec));
 }
 
-void espconn_accept(espconn*conn)
+sint8 espconn_regist_time(struct espconn *espconn, uint32 interval, uint8 type_flag)
+{
+    return 0;
+}
+
+
+sint8 espconn_accept(struct espconn*conn)
 {
     int yes=1;
     conn->sockfd=-1;
@@ -346,6 +371,7 @@ void espconn_accept(espconn*conn)
         abort();
     }
     listen(listenfd,1);
+    return 0;
 }
 
 unsigned char rtcmem[ 128*4 ] = {0};
@@ -354,11 +380,13 @@ bool system_rtc_mem_read(uint8 src_addr, void *des_addr, uint16 load_size)
 {
     int s = src_addr*4;
     memcpy(des_addr, &rtcmem[s], load_size);
+    return true;
 }
 bool system_rtc_mem_write(uint8 des_addr, const void *src_addr, uint16 save_size)
 {
     int s = des_addr*4;
     memcpy(&rtcmem[s], src_addr, save_size);
+    return true;
 }
 
 // SPI flash
@@ -406,6 +434,7 @@ int spi_flash_erase_sector(uint16 sec)
     lseek( spiflashfd, off, SEEK_SET);
     memset(sector, 0xff, sizeof(sector));
     write( spiflashfd, sector, sizeof(sector));
+    return 0;
 }
 int spi_flash_write(uint32 des_addr, uint32 *src_addr, uint32 size)
 {
@@ -438,7 +467,7 @@ void LockMutex(void *mutex)
 {
 }
 
-int os_memcpy(void *dest, const void *src, size_t size)
+void *os_memcpy(void *dest, const void *src, size_t size)
 {
     return memcpy(dest,src,size);
 }
