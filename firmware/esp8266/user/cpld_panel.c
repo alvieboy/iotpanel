@@ -12,10 +12,10 @@
 #include "protos.h"
 #include "driver/gpio_fast.h"
 
-static int holdoff=0;
+//static int holdoff=0;
 volatile int fbdone=0;
 static volatile int column=0;
-static int ptr=0;
+//static int ptr=0;
 static int row=0;
 static int blank=24;
 extern uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
@@ -140,7 +140,7 @@ static inline void strobe()
     strobe_set(0);
 }
 
-static uint8_t realcol = 0;
+static uint8_t realrow = 0;
 
 extern void kick_watchdog();
 extern void dump_stack(unsigned);
@@ -154,45 +154,66 @@ LOCAL int my_uart_rx_one_char(uint8 uart_no) {
 }
 #endif
 
+static int iter = 0;
+
+#define BASETIMER 8
+                                                   // 8 16 16
+static uint16_t preloadtimings[] = { 12, 12, 12 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
+static uint8_t  blanking[] = { 5, 12, 32 };
+
+#define PRELOAD (36/HORIZONTAL_PANELS)
+
 LOCAL void tim1_intr_handler()
 {
+    RTC_REG_WRITE(FRC1_LOAD_ADDRESS, preloadtimings[iter]);
 
     RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
-    RTC_REG_WRITE(FRC1_LOAD_ADDRESS, PRELOAD);
     kick_watchdog();
     ticks++;
-
-    if (holdoff>0) {
-        // Disable OE
-        if (holdoff==((HOLDOFF-1)*(32*HORIZONTAL_PANELS))-1)
-            GPIO_FAST_OUTPUT_SET(4, 1);
-
-        if (holdoff==(HOLDOFF * (32*HORIZONTAL_PANELS)-blank))
-            GPIO_FAST_OUTPUT_SET(4, 1);
-
-        holdoff--;
-        return;
-    }
 
     if (column==0)
         spi_select(0);
 
     if (column<=(32*HORIZONTAL_PANELS-1)) {
-        /* get pixel, upper row */
-        uint32 regval = framebuffer[ptr];
-        regval <<= 3;
-        regval |= framebuffer[ptr+(16*32*HORIZONTAL_PANELS)] & 0x7;
+
+        uint8_t riter = iter+1;
+
+        if (riter==3)
+            riter=0;
+
+        uint32_t regval = 0;//(bit&1) ? val: 0x00;
+
+        uint8_t pixelH = framebuffer[column + (realrow*(32*HORIZONTAL_PANELS))];
+        uint8_t pixelL = framebuffer[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
+        //uint8_t pixelH = 0xff;
+        //uint8_t pixelL = 0x07;
+        // Pixel order: BGR
+        uint8_t mask = 1<<iter;
+        regval |= (pixelH & mask)>>iter;
+        mask<<=3;
+        regval |= (pixelH & mask)>>iter+2;
+        mask<<=3;
+        regval |= (pixelH & mask)>>iter+4;
+        regval<<=3;
+
+        mask = 1<<iter;
+        regval |= (pixelL & mask)>>iter;
+        mask<<=3;
+        regval |= (pixelL & mask)>>iter+2;
+        mask<<=3;
+        regval |= (pixelL & mask)>>iter+4;
         regval<<=1;
+
         regval|=0x80;
         myspi_master_9bit_write(HSPI, 1, regval);
-        if (column==blank) {
+#if 1
+        if (column==blanking[iter]) {
             // Disable OE
             GPIO_FAST_OUTPUT_SET(4, 1);
         } /*else {
             GPIO_FAST_OUTPUT_SET(4, 0);
         } */
-
-        ptr++;
+#endif
         column++;
     } else if (column==(32*HORIZONTAL_PANELS)) {
         // force clock high.
@@ -203,7 +224,7 @@ LOCAL void tim1_intr_handler()
         // Disable OE
         GPIO_FAST_OUTPUT_SET(4, 1);
 
-        myspi_master_9bit_write(HSPI, 0, realcol&0xf);
+        myspi_master_9bit_write(HSPI, 0, realrow&0xf);
         // Strobe.
         column++;
 
@@ -217,20 +238,25 @@ LOCAL void tim1_intr_handler()
         GPIO_FAST_OUTPUT_SET(4, 0);
 
         column=0;
-
+#if 1
         if ((row&0xf)==0xf) {
-            holdoff = HOLDOFF * (32*HORIZONTAL_PANELS);
+            //holdoff = HOLDOFF * (32*HORIZONTAL_PANELS);
             fbdone=1;
         }
-        row++;
-        realcol = u4_to_gray[ row & 0xf ];
-        ptr = realcol * (32*HORIZONTAL_PANELS);
-
+#endif
+        iter++;
+        if (iter==3) {
+            row++;
+            realrow = u4_to_gray[ row & 0xf ];
+            iter=0;
+        }
+        //ptr = realrow * (32*HORIZONTAL_PANELS);
+#if 1
         // Debug stuff
         {
             if (lasttickcount == tickcount) {
                 detectcount++;
-                if (detectcount>=10000) {
+                if (detectcount>=1000000) {
                     register unsigned sp asm("a1");
                     dump_stack(sp);
                 }
@@ -239,8 +265,8 @@ LOCAL void tim1_intr_handler()
             }
 
             lasttickcount = tickcount;
-
         }
+#endif
     }
 }
 
@@ -284,5 +310,10 @@ void ICACHE_FLASH_ATTR timer_setup()
 
     TM1_EDGE_INT_ENABLE();
     ETS_FRC1_INTR_ENABLE();
+}
 
+void panel_stop()
+{
+    ETS_FRC1_INTR_DISABLE();
+    GPIO_FAST_OUTPUT_SET(4, 1);
 }

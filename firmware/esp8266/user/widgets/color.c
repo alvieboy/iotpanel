@@ -8,14 +8,14 @@ struct color_entry {
     color_t color;
 };
 struct color_entry color_list[] = {
-    { "white", 0x7 },
-    { "red",   0x1 },
-    { "green", 0x2 },
-    { "blue",  0x4 },
-    { "purple",  0x5 },
-    { "cyan",  0x6 },
+    { "white", 0xff },
+    { "red",   0x7 },
+    { "green", 0x38 },
+    { "blue",  0xC0},
+    { "purple",  0xC7 },
+    { "cyan",  0xF8 },
     { "black",  0x0 },
-    { "yellow",  0x3 },
+    { "yellow",  0x3F },
     { 0,0 }
 };
 

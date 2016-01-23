@@ -7,6 +7,8 @@
 #include "protos.h"
 #include "flashutils.h"
 
+extern void panel_stop();
+
 typedef struct {
     unsigned char magic;
     unsigned char num_segments;
@@ -204,6 +206,8 @@ int apply_firmware()
     uint8_t chunkno;
     uint8_t block;
     uint32_t rtcoffset = RTC_FIRMWARE_OFFSET;
+
+    panel_stop();
 
     system_rtc_mem_read( rtcoffset, &fwinfo, sizeof(fwinfo));
     if ( fwinfo.magic != FIRMWARE_MAGIC )
@@ -523,7 +527,8 @@ int ICACHE_FLASH_ATTR ota_finalize()
     system_rtc_mem_write( RTC_FIRMWARE_OFFSET, &fwinfo, sizeof(fwinfo));
 
     ota_sort_chunks();
-
+    // Stop screen
+    panel_stop();
     system_restart();
     while (1) {}
     return 0; // Never reached

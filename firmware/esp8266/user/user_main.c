@@ -336,7 +336,7 @@ void ICACHE_FLASH_ATTR setupWifiAp(const char *ssid, const char *password)
 }
 #ifndef HOST
 
-LOCAL void ICACHE_FLASH_ATTR uart_setup()
+LOCAL void uart_setup()
 {
     uart_init_single(UART0, BIT_RATE_115200, 1);
     WRITE_PERI_REG(UART_INT_ENA(0), 0);
@@ -545,6 +545,7 @@ void user_init()
         gpio_init();
         gpio16_output_conf();
         gpio16_output_set(0); // GPIO16 low.
+        GPIO_OUTPUT_SET(4, 1);
         uart_setup();
         os_printf("Applying OTA upgrade.\n");
         apply_firmware();
