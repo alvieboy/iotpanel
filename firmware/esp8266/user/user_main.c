@@ -50,6 +50,27 @@ void user_rf_pre_init(void)
 {
 }
 
+void dump_stack(unsigned sp)
+{
+#ifndef HOST
+    ETS_FRC1_INTR_DISABLE();
+    unsigned *spp =(unsigned*)sp;
+
+    uart_putstr("Stack dump:\n");
+    int i;
+    for (i=0; i<512; i++) {
+        uart_putstr("0x");
+        uart_puthex((unsigned)spp);
+        uart_putstr(": 0x");
+        uart_puthex(*spp);
+        uart_putstr("\n");
+
+        spp++;
+    }
+    while (1) {}
+#endif
+}
+
 /* Framebuffer */
 uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
 extern volatile int fbdone;
@@ -210,13 +231,18 @@ void ICACHE_FLASH_ATTR redraw()
     draw_current_screen(&gfx);
 }
 
-#ifndef HOST
+unsigned tickcount = 0;
 
-LOCAL unsigned tickcount = 0;
+#ifdef HOST
+
+extern void user_procTask(os_event_t *events);
+
+#else
 
 static void ICACHE_FLASH_ATTR
 user_procTask(os_event_t *events)
 {
+    pp_soft_wdt_stop();
     while (!fbdone) {
         system_os_post(user_procTaskPrio, 0, 0 );
         return;
@@ -270,9 +296,9 @@ static void setupFramebuffer()
 
 #endif
 
+#ifndef HOST
 LOCAL void ICACHE_FLASH_ATTR setupDHCPServer()
 {
-#ifndef HOST
     struct ip_info info;
     info.ip.addr = 0x0A0A0A0A;
     info.gw.addr = 0x0A0A0A0A;
@@ -280,8 +306,8 @@ LOCAL void ICACHE_FLASH_ATTR setupDHCPServer()
     wifi_softap_dhcps_stop();
     wifi_set_ip_info(SOFTAP_IF, &info);
     wifi_softap_dhcps_start();
-#endif
 }
+#endif
 
 
 void ICACHE_FLASH_ATTR setupWifiAp(const char *ssid, const char *password)
@@ -308,16 +334,14 @@ void ICACHE_FLASH_ATTR setupWifiAp(const char *ssid, const char *password)
     wifi_set_opmode(STATIONAP_MODE);
 #endif
 }
-
-LOCAL void ICACHE_FLASH_ATTR
-uart_setup()
-{
 #ifndef HOST
-    uart_init_single(UART0, BIT_RATE_115200, 1);
 
+LOCAL void ICACHE_FLASH_ATTR uart_setup()
+{
+    uart_init_single(UART0, BIT_RATE_115200, 1);
     WRITE_PERI_REG(UART_INT_ENA(0), 0);
-#endif
 }
+#endif
 
 extern void user_server_init(uint32 port);
 
@@ -461,6 +485,7 @@ void ICACHE_FLASH_ATTR user_init_2()
     uart_setup();
     os_printf("Last FW status: 0x%08x\n", get_last_firmware_status());
     broadcast_setup();
+
     pp_soft_wdt_stop();
 
 #endif

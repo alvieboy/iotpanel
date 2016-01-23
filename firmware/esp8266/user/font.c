@@ -1,6 +1,7 @@
 #include "font.h"
 #include "ets_sys.h"
 #include "osapi.h"
+#include <string.h>
 
 extern const font_t tom_thumb_font;
 extern const font_t apple4x6_font;

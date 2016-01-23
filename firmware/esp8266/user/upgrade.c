@@ -191,7 +191,9 @@ int has_new_firmware()
 
 inline void kick_watchdog()
 {
+#ifndef HOST
     WRITE_PERI_REG(0x60000000+0x914, 0x73);
+#endif
 }
 
 
@@ -225,8 +227,8 @@ int apply_firmware()
     ets_intr_lock();
 
     // DISABLE AHB mapping.
-    WRITE_PERI_REG(0x60000208, READ_PERI_REG(0x60000208) & ~(1<<17));
-
+    //WRITE_PERI_REG(0x60000208, READ_PERI_REG(0x60000208) & ~(1<<17));
+#ifndef HOST
     asm volatile (
                   "rsil a15, 15\n"    // read and set interrupt level to 15
                   "rsync\n"
@@ -234,7 +236,7 @@ int apply_firmware()
                   :
                   : "a15", "memory"
                  );
-
+#endif
 
 
     // NOTE NOTE : from this point onwards no function in flash can be used.

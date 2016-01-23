@@ -1,6 +1,7 @@
 #include "widget.h"
 #include "ets_sys.h"
 #include "osapi.h"
+#include <string.h>
 
 extern const widgetdef_t rectangle_widget;
 extern const widgetdef_t scrollingtext_widget;

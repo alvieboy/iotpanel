@@ -18,6 +18,7 @@
 #include "cdecode.h"
 #include "clock.h"
 #include "flash_serializer.h"
+#include "user_interface.h"
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;

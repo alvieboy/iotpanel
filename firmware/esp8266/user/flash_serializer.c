@@ -3,6 +3,8 @@
 #include "crc.h"
 #include "protos.h"
 #include "alloc.h"
+#include "osapi.h"
+#include "user_interface.h"
 
 #define FLASH_MAGIC 0xF14F
 

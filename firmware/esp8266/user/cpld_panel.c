@@ -21,6 +21,12 @@ static int blank=24;
 extern uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
 static unsigned int ticks = 0;
 
+extern int uart_rx_one_char(uint8_t);
+
+extern int tickcount;
+
+static int lasttickcount;
+static int detectcount = 0;
 
 static uint8_t u4_to_gray[16] = {
     0,
@@ -41,7 +47,7 @@ static uint8_t u4_to_gray[16] = {
     8
 };
 
-#define USENMI
+#undef USENMI
 
 #define CPLDCS 5 /* GPIO4?? */
 
@@ -137,6 +143,16 @@ static inline void strobe()
 static uint8_t realcol = 0;
 
 extern void kick_watchdog();
+extern void dump_stack(unsigned);
+
+#if 0
+LOCAL int my_uart_rx_one_char(uint8 uart_no) {
+    if (READ_PERI_REG(UART_STATUS(uart_no)) & (UART_RXFIFO_CNT << UART_RXFIFO_CNT_S)) {
+        return READ_PERI_REG(UART_FIFO(uart_no)) & 0xff;
+    }
+    return -1;
+}
+#endif
 
 LOCAL void tim1_intr_handler()
 {
@@ -209,7 +225,23 @@ LOCAL void tim1_intr_handler()
         row++;
         realcol = u4_to_gray[ row & 0xf ];
         ptr = realcol * (32*HORIZONTAL_PANELS);
-    } 
+
+        // Debug stuff
+        {
+            if (lasttickcount == tickcount) {
+                detectcount++;
+                if (detectcount>=10000) {
+                    register unsigned sp asm("a1");
+                    dump_stack(sp);
+                }
+            } else {
+                detectcount =0;
+            }
+
+            lasttickcount = tickcount;
+
+        }
+    }
 }
 
 /*
