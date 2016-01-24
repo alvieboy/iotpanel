@@ -11,15 +11,16 @@
 #include "gfx.h"
 #include "protos.h"
 #include "driver/gpio_fast.h"
+#include "framebuffer.h"
 
 //static int holdoff=0;
 volatile int fbdone=0;
-static volatile int column=0;
+static uint8_t column=0;
 //static int ptr=0;
 static int row=0;
 static int blank=24;
-extern uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
-static unsigned int ticks = 0;
+
+unsigned int ticks = 0;
 
 extern int uart_rx_one_char(uint8_t);
 
@@ -27,6 +28,13 @@ extern int tickcount;
 
 static int lasttickcount;
 static int detectcount = 0;
+static uint8_t realrow = 0;
+
+extern void kick_watchdog();
+extern void dump_stack(unsigned);
+
+unsigned char *currentBuffer = NULL;
+uint8_t currentBufferId=1;
 
 static uint8_t u4_to_gray[16] = {
     0,
@@ -54,11 +62,15 @@ static uint8_t u4_to_gray[16] = {
 #define HOLDOFF 6
 #define PRELOAD (36/HORIZONTAL_PANELS)
 
+#define TICKS_PER_BUFFER 1
+
+#if 0
 unsigned ICACHE_FLASH_ATTR getTicks()
 {
     return ticks;
 }
 
+#endif
 void ICACHE_FLASH_ATTR setBlanking(int a)
 {
     blank = a;
@@ -140,26 +152,29 @@ static inline void strobe()
     strobe_set(0);
 }
 
-static uint8_t realrow = 0;
+static inline void switchToNextBuffer()
+{
+    uint8_t nextBufferId = (currentBufferId+1)&1;
 
-extern void kick_watchdog();
-extern void dump_stack(unsigned);
-
-#if 0
-LOCAL int my_uart_rx_one_char(uint8 uart_no) {
-    if (READ_PERI_REG(UART_STATUS(uart_no)) & (UART_RXFIFO_CNT << UART_RXFIFO_CNT_S)) {
-        return READ_PERI_REG(UART_FIFO(uart_no)) & 0xff;
+    if ((bufferStatus[nextBufferId] == BUFFER_READY) && (ticks==TICKS_PER_BUFFER)) {
+        bufferStatus[currentBufferId] = BUFFER_FREE;
+        currentBufferId = nextBufferId;
+        bufferStatus[currentBufferId] = BUFFER_DISPLAYING;
+        currentBuffer = &framebuffers[currentBufferId][0];
+        ticks = 0;
+    } else {
+        if (ticks<TICKS_PER_BUFFER) {
+            ticks++;
+        }
     }
-    return -1;
 }
-#endif
 
 static int iter = 0;
 
 #define BASETIMER 8
                                                    // 8 16 16
 static uint16_t preloadtimings[] = { 12, 12, 12 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
-static uint8_t  blanking[] = { 5, 12, 32 };
+static uint8_t  blanking[] = { 8, 16, 32 };
 
 #define PRELOAD (36/HORIZONTAL_PANELS)
 
@@ -169,7 +184,7 @@ LOCAL void tim1_intr_handler()
 
     RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
     kick_watchdog();
-    ticks++;
+    //ticks++;
 
     if (column==0)
         spi_select(0);
@@ -183,26 +198,52 @@ LOCAL void tim1_intr_handler()
 
         uint32_t regval = 0;//(bit&1) ? val: 0x00;
 
-        uint8_t pixelH = framebuffer[column + (realrow*(32*HORIZONTAL_PANELS))];
-        uint8_t pixelL = framebuffer[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
+        if (currentBuffer==NULL) {
+            column++;
+            return;
+        }
+
+        uint8_t pixelH = currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS))];
+        uint8_t pixelL = currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
         //uint8_t pixelH = 0xff;
         //uint8_t pixelL = 0x07;
         // Pixel order: BGR
-        uint8_t mask = 1<<iter;
-        regval |= (pixelH & mask)>>iter;
+#if 1
+        uint8_t mask = 1<<riter;
+        regval |= (pixelH & mask)>>riter;
         mask<<=3;
-        regval |= (pixelH & mask)>>iter+2;
+        regval |= (pixelH & mask)>>riter+2;
         mask<<=3;
-        regval |= (pixelH & mask)>>iter+4;
+        regval |= (pixelH & mask)>>riter+4;
         regval<<=3;
 
-        mask = 1<<iter;
-        regval |= (pixelL & mask)>>iter;
+        mask = 1<<riter;
+        regval |= (pixelL & mask)>>riter;
         mask<<=3;
-        regval |= (pixelL & mask)>>iter+2;
+        regval |= (pixelL & mask)>>riter+2;
         mask<<=3;
-        regval |= (pixelL & mask)>>iter+4;
+        regval |= (pixelL & mask)>>riter+4;
+
         regval<<=1;
+#else
+        uint8_t mask = 1<<riter;
+        regval |= (pixelH & mask)<<(3-riter);
+        mask<<=3;
+        regval |= (pixelH & mask)<<(riter+2)-3;
+        mask<<=3;
+        regval |= (pixelH & mask)>>riter+4;
+        regval<<=3;
+
+        mask = 1<<riter;
+        regval |= (pixelL & mask)>>riter;
+        mask<<=3;
+        regval |= (pixelL & mask)>>riter+2;
+        mask<<=3;
+        regval |= (pixelL & mask)>>riter+4;
+
+        regval<<=1;
+
+#endif
 
         regval|=0x80;
         myspi_master_9bit_write(HSPI, 1, regval);
@@ -241,7 +282,8 @@ LOCAL void tim1_intr_handler()
 #if 1
         if ((row&0xf)==0xf) {
             //holdoff = HOLDOFF * (32*HORIZONTAL_PANELS);
-            fbdone=1;
+            switchToNextBuffer();
+            //fbdone=1;
         }
 #endif
         iter++;

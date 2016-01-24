@@ -159,9 +159,9 @@ void ICACHE_FLASH_ATTR screen_draw(screen_t *screen, gfxinfo_t *gfx)
 {
     widget_entry_t *w;
     gfx_clear(gfx);
+    
     for (w=screen->widgets;w;w=w->next) {
         widget_redraw(w,gfx);
-        //drawScrollingText(&scr);
     }
 }
 

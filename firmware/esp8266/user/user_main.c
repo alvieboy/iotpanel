@@ -20,6 +20,7 @@
 #include "wifi.h"
 #include "clock.h"
 #include "flash_serializer.h"
+#include "framebuffer.h"
 
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
@@ -71,16 +72,12 @@ void dump_stack(unsigned sp)
 #endif
 }
 
-/* Framebuffer */
-uint8_t framebuffer[32*32*HORIZONTAL_PANELS];
-extern volatile int fbdone;
-
 struct gfxinfo gfx =
 {
     32*HORIZONTAL_PANELS, //stride
     32*HORIZONTAL_PANELS, //width
     32, //height
-    &framebuffer[0]//fb
+    NULL//fb
 };
 
 char *os_strdup(const char *c)
@@ -93,11 +90,12 @@ char *os_strdup(const char *c)
 
 static const char digits[]="0123456789";
 
-
-static void clearFramebuffer()
+#if 0
+static void clearFramebuffer(struct gfxinfo *info)
 {
-    memset(framebuffer,0,sizeof(framebuffer));
+    memset(info->fb,0, FRAMEBUFFER_SIZE);
 }
+#endif
 
 void simpleitoa(int val, char *dest)
 {
@@ -225,6 +223,8 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
 }
 #endif
 
+
+
 void ICACHE_FLASH_ATTR redraw()
 {
     schedule_event();
@@ -239,21 +239,19 @@ extern void user_procTask(os_event_t *events);
 
 #else
 
+
+extern unsigned char *currentBuffer;
+extern uint8_t currentBufferId;
+extern unsigned int ticks;
+
+
+static uint8_t currentDrawBuffer = 0;
+
 static void ICACHE_FLASH_ATTR
 user_procTask(os_event_t *events)
 {
     pp_soft_wdt_stop();
-    while (!fbdone) {
-        system_os_post(user_procTaskPrio, 0, 0 );
-        return;
-    }
-    fbdone=0;
-            /*
-    while (!fbdone) {
-        system_os_post(user_procTaskPrio, 0, 0 );
-    }
-    fbdone=0;
-              */
+
 #if 1
     wifiConnect();
 
@@ -270,10 +268,31 @@ user_procTask(os_event_t *events)
 
 #endif
 
+    while (bufferStatus[currentDrawBuffer] != BUFFER_FREE) {
+#if 0
+        os_printf("Buf %d status %d (drawing %d)\n", currentDrawBuffer, (int)bufferStatus[currentDrawBuffer],
+                 (int)currentBufferId
+                 );
+        os_printf("B0: %d\n", bufferStatus[0]);
+        os_printf("B1: %d\n", bufferStatus[1]);
+        os_printf("T: %d\n", ticks);
+#endif
+        system_os_post(user_procTaskPrio, 0, 0 );
+        return;
+    }
+
+    gfx.fb = &framebuffers[currentDrawBuffer][0];
+
     redraw();
-    os_delay_us(5000);
+    //os_printf("Buf %d ready\n", currentDrawBuffer);
+    bufferStatus[currentDrawBuffer] = BUFFER_READY;
+    currentDrawBuffer ++;
+    currentDrawBuffer&=1;
+
     time_tick();
+
     tickcount++;
+
     if ((tickcount&0x3ff)==0) {
         broadcastIP();
     }
@@ -483,6 +502,7 @@ void ICACHE_FLASH_ATTR user_init_2()
     spi_setup();
     timer_setup();
     uart_setup();
+    init_framebuffers();
     os_printf("Last FW status: 0x%08x\n", get_last_firmware_status());
     broadcast_setup();
 
@@ -511,7 +531,7 @@ void ICACHE_FLASH_ATTR user_init_2()
     GPIO_OUTPUT_SET(5, 1);
 #endif
     //setupFramebuffer();
-    clearFramebuffer(&gfx);
+    //clearFramebuffer(&gfx);
     setupDefaultScreen();
 
     {
