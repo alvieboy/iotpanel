@@ -35,14 +35,13 @@ entity iotpanel is
 end iotpanel;
 
 architecture Behavioral of iotpanel is
-  signal shifter: std_logic_vector(9 downto 0);
+  signal  shifter: std_logic_vector(6 downto 0);
   alias   irx: std_logic is usr(5);
   alias   idtr:std_logic is usr(4);
-  signal internal_reset_q: std_logic;
-  signal hclock: std_logic;
-  signal data_queued: std_logic;
-  signal internalcs:  std_logic;
-  alias di: std_logic is gpio13;
+  signal  internal_cs: std_logic;
+  signal  hclock: std_logic;
+  signal  external_cs:  std_logic;
+  alias   di: std_logic is gpio13;
 begin
 
   -- CH_PD          Pull-up
@@ -62,7 +61,7 @@ begin
 
   cs <= '0' when gpio16='1' else 'Z';  -- Startup/Working CS mode.
   -- CS is now gpio4
-  internalcs <= gpio4 when gpio16='0' else '1'; -- Ignore commands when SW not running.
+  external_cs <= gpio4 when gpio16='0' else '1'; -- Ignore commands when SW not running.
 
   --usr(3) <= gpio4;--'Z';
 
@@ -83,55 +82,34 @@ begin
   --clko <= gpio14;
 
 
-  process(clk,internalcs)
+  process(clk)
   begin
-    if internalcs='1' then
-      shifter <= (others => '0');
-    elsif rising_edge(clk) then
-      if internal_reset_q='1' then
-        shifter(8 downto 2) <= (others => '0');
-        shifter(1) <= shifter(0);
-        shifter(0) <= di;
-      else
-        shifter <= shifter(shifter'HIGH-1 downto 0) & di;
-      end if;
+    if falling_edge(clk) then
+      internal_cs<=shifter(6);
     end if;
   end process;
 
-  --clko <= shifter(8);
+  process(clk,external_cs,internal_cs)
+  begin
+    if external_cs='1' or internal_cs='1' then
+      shifter <= "0000001";
+    elsif falling_edge(clk) then
+      shifter <= shifter(shifter'HIGH-1 downto 0) & di;
+    end if;
+  end process;
+
   clko <= hclock;
 
-  process(clk,internalcs)
+  process(clk,external_cs)
   begin
-    if internalcs='1' then
-      internal_reset_q<='0';
-      data_queued<='0';
-    elsif rising_edge(clk) then
-      if internal_reset_q='1' then
-        internal_reset_q<='0';
-      else
-        internal_reset_q <= shifter(8);
-        if shifter(8)='1' then
-          data_queued<='1';
-        end if;
-      end if;
-      if hclock='1' then
-        data_queued<='0';
-      end if;
-    end if;
-  end process;
-
-  process(clk,internalcs)
-  begin
-    if internalcs='1' then
+    if external_cs='1' then
       hclock<='0';
-    elsif rising_edge(clk) then
-      if shifter(8 downto 6)="001" then
+    elsif falling_edge(clk) then
+      if internal_cs='1' then
         hclock<='0';
       else
-        --if internal_reset_q='1' then
-        if data_queued='1' and shifter(3)='1' and internal_reset_q='0' then
-          hclock <= '1';
+        if shifter(3 downto 2)="11" then
+          hclock<='1';
         end if;
       end if;
     end if;
@@ -139,18 +117,12 @@ begin
 
   process(clk)
   begin
-    if rising_edge(clk) then
-      if shifter(8 downto 6)="001" then
+    if falling_edge(clk) then
+      if shifter(6 downto 5)="11" then
         rgb <= shifter(4 downto 0) & di;
       end if;
-    end if;
-  end process;
-
-  process(gpio4)
-  begin
-    if rising_edge(gpio4) then
-      if shifter(8)='0' then
-        col <= shifter(3 downto 0);
+      if shifter(6 downto 5)="10" then
+        col <= shifter(2 downto 0) & di;
       end if;
     end if;
   end process;

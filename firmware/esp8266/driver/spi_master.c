@@ -15,8 +15,6 @@
 void ICACHE_FLASH_ATTR
 spi_master_init(uint8 spi_no)
 {
-    uint32 regvalue;
-
     if (spi_no > 1) {
     	return;
     }
@@ -35,16 +33,30 @@ spi_master_init(uint8 spi_no)
         PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, 2);//configure io to spi mode
     }
 
-    regvalue = READ_PERI_REG(SPI_FLASH_USER(spi_no));
-    regvalue = regvalue | SPI_CS_SETUP | SPI_CS_HOLD | SPI_USR_COMMAND/*|BIT27*/; //set bit 4 bit 5 bit 27 bit31
-    regvalue = regvalue & (~ (BIT2|SPI_CS_SETUP|SPI_CS_HOLD)); //clear bit 2
-    WRITE_PERI_REG(SPI_FLASH_USER(spi_no), regvalue);
-    // disable div0, ie, 80MHz clock
-    WRITE_PERI_REG(SPI_FLASH_CLOCK(spi_no), 0x43043); //clear bit 31,set SPI clock div
-}
+    //regvalue = READ_PERI_REG(SPI_FLASH_USER(spi_no));
 
+    //regvalue = regvalue | SPI_CS_SETUP | SPI_CS_HOLD | SPI_USR_COMMAND/*|BIT27*/; //set bit 4 bit 5 bit 27 bit31
+    //regvalue = regvalue & (~ (BIT2|SPI_CS_SETUP|SPI_CS_HOLD)); //clear bit 2
+    //WRITE_PERI_REG(SPI_FLASH_USER(spi_no), regvalue);
+    // disable div0, ie, 80MHz clock
+
+    WRITE_PERI_REG(SPI_FLASH_CTRL(spi_no), 0), // SPI1C = 0;
+    //setFrequency(1000000); ///< 1MHz
+
+    // Not setting SPI_DOUT_DIN nor SPI_CK_I_EDGE below.
+
+    WRITE_PERI_REG(SPI_FLASH_USER(spi_no), SPI_FLASH_DOUT ); //SPI1U = SPIUMOSI | SPIUDUPLEX | SPIUSSE;
+    //SPI1U1 = (7 << SPILMOSI) | (7 << SPILMISO);
+    WRITE_PERI_REG(SPI_FLASH_USER1(spi_no), (31<<SPI_USR_OUT_BITLEN_S) | (31<<SPI_USR_DIN_BITLEN_S) );
+    WRITE_PERI_REG(SPI_FLASH_CTRL1(spi_no), 0); //SPI1C1 = 0;
+
+
+
+    WRITE_PERI_REG(SPI_FLASH_CLOCK(spi_no), 0x3043); //clear bit 31,set SPI clock div
+}
+#if 0
 void 
-spi_master_9bit_write(uint8 spi_no, uint8 high_bit, uint8 low_8bit)
+spi_master_32bit_write(uint8 spi_no, uint8 high_bit, uint8 low_8bit)
 {
     uint32 regvalue;
     uint8 bytetemp;
@@ -70,3 +82,4 @@ spi_master_9bit_write(uint8 spi_no, uint8 high_bit, uint8 low_8bit)
     WRITE_PERI_REG(SPI_FLASH_USER2(spi_no), regvalue);				//write  command and command length into spi reg
     SET_PERI_REG_MASK(SPI_FLASH_CMD(spi_no), SPI_FLASH_USR);		//transmission start
 }
+#endif

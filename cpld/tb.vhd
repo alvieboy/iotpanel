@@ -92,7 +92,7 @@ BEGIN
           stb => stb,
           clko => clko,
           --idtr => idtr,
-          gpio13 => gpio13,
+          gpio13 => di,
           gpio14 => gpio14,
           espreset => espreset,
           espen => espen,
@@ -104,7 +104,7 @@ BEGIN
           gpio4 => gpio4,
           --espchpd => espchpd,
           gpio16 => gpio16,
-          gpio12 => di,--gpio12,
+          gpio12 => gpio13,--gpio12,
           oe => oe,
           panelen => panelen,
           usr => usr,
@@ -125,10 +125,10 @@ BEGIN
       l1: for i in 0 to w-1 loop
         -- Setup data.
         di <= d(data'high);
-        wait for clk_period/2;
         clk <= '1';
         wait for clk_period/2;
         clk <= '0';
+        wait for clk_period/2;
         d := d(data'high-1 downto 0) & 'X';
       end loop;
       wait for clk_period/2;
@@ -137,14 +137,18 @@ BEGIN
    begin		
       -- hold reset state for 100 ns.
       cs <= '1';
-      wait for 100 ns;	
+      wait for 100 ns;
+      gpio4 <= '0';
 
-      transfer("11" & "010"&"010"&'X', false);
-      transfer("11" & "111"&"111"&'X', false);
-      transfer("11" & "000"&"000"&'X', false);
-      transfer("10" & "XXX"&"XXX"&'X', true);
+      transfer("1" & "010"&"010" & '0', false);
+      transfer("1" & "111"&"111" & '0', false);
+      transfer("1" & "000"&"000" & '0', false);
+      transfer("1" & "XXX"&"XXX" & '0', true);
 
-      transfer("00" & "0001111", true);
+      transfer("0" & "001110" & '0', true);
+      gpio4 <= '1';
+      wait for clk_period/2;
+      gpio4 <= '0';
 
       wait for 100 ns;
       wait;

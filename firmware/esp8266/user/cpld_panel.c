@@ -81,24 +81,18 @@ int ICACHE_FLASH_ATTR getBlanking()
     return blank;
 }
 
-LOCAL inline void myspi_master_9bit_write(uint8 spi_no, uint8 high_bit, uint8 low_8bit)
+LOCAL inline void myspi_master_32bit_write(uint8 spi_no, uint32 data)
 {
-    uint32 regvalue;
-    uint8 bytetemp;
+    WRITE_PERI_REG(SPI_FLASH_USER1(spi_no), (31<<SPI_USR_OUT_BITLEN_S) | (31<<SPI_USR_DIN_BITLEN_S) );
+    WRITE_PERI_REG(SPI_FLASH_C0(spi_no), data);
+    SET_PERI_REG_MASK(SPI_FLASH_CMD(spi_no), SPI_FLASH_USR);
+}
 
-    if (high_bit) {
-        bytetemp = (low_8bit >> 1) | 0x80;
-    } else {
-        bytetemp = (low_8bit >> 1) & 0x7f;
-    }
-
-    regvalue = 0x80000000 | ((uint32)bytetemp);		//configure transmission variable,9bit transmission length and first 8 command bit
-
-    if (low_8bit & 0x01) {
-        regvalue |= BIT15;    //write the 9th bit
-    }
-    WRITE_PERI_REG(SPI_FLASH_USER2(spi_no), regvalue);				//write  command and command length into spi reg
-    SET_PERI_REG_MASK(SPI_FLASH_CMD(spi_no), SPI_FLASH_USR);		//transmission start
+LOCAL inline void myspi_master_8bit_write(uint8 spi_no, uint32 data)
+{
+    WRITE_PERI_REG(SPI_FLASH_USER1(spi_no), (7<<SPI_USR_OUT_BITLEN_S) | (7<<SPI_USR_DIN_BITLEN_S) );
+    WRITE_PERI_REG(SPI_FLASH_C0(spi_no), data);
+    SET_PERI_REG_MASK(SPI_FLASH_CMD(spi_no), SPI_FLASH_USR);
 }
 
 
@@ -115,19 +109,7 @@ LOCAL inline void spi_wait_transmission()
 void ICACHE_FLASH_ATTR spi_setup()
 {
     spi_master_init(HSPI);
-    uint32 regvalue = READ_PERI_REG(SPI_FLASH_CTRL2(HSPI));
-
-    WRITE_PERI_REG(SPI_FLASH_CTRL2(HSPI),regvalue);
-
-    // CNT_L = 0x3, CNT_H = 0x01, CNT_N = 0x3, DIV_PRE=0x1
-    // 01 000011 000001 000011
-
-    WRITE_PERI_REG(SPI_FLASH_CLOCK(HSPI), 0x00003043);
-
-    // WRITE_PERI_REG(SPI_FLASH_CLOCK(HSPI), 0x43043); //clear bit 31,set SPI clock div
 }
-
-
 
 typedef enum {
     DIVDED_BY_1 = 0,
@@ -205,10 +187,22 @@ LOCAL void tim1_intr_handler()
 
         uint8_t pixelH = currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS))];
         uint8_t pixelL = currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
-        //uint8_t pixelH = 0xff;
-        //uint8_t pixelL = 0x07;
         // Pixel order: BGR
-#if 1
+#if 0
+        pixelH>>=riter;
+        pixelL>>=riter;
+
+        uint8_t mask = 1;
+        regval |= (pixelL & mask);
+        regval |= (pixelH & mask)<<3;
+        mask<<=3;
+        regval |= (pixelL & mask)>>2;
+        regval |= (pixelH & mask)<<1;
+        mask<<=3;
+        regval |= (pixelL & mask)>>4;
+        regval |= (pixelH & mask)>>1;
+        regval >>= iter;
+#else
         uint8_t mask = 1<<riter;
         regval |= (pixelH & mask)>>riter;
         mask<<=3;
@@ -225,28 +219,11 @@ LOCAL void tim1_intr_handler()
         regval |= (pixelL & mask)>>riter+4;
 
         regval<<=1;
-#else
-        uint8_t mask = 1<<riter;
-        regval |= (pixelH & mask)<<(3-riter);
-        mask<<=3;
-        regval |= (pixelH & mask)<<(riter+2)-3;
-        mask<<=3;
-        regval |= (pixelH & mask)>>riter+4;
-        regval<<=3;
-
-        mask = 1<<riter;
-        regval |= (pixelL & mask)>>riter;
-        mask<<=3;
-        regval |= (pixelL & mask)>>riter+2;
-        mask<<=3;
-        regval |= (pixelL & mask)>>riter+4;
-
-        regval<<=1;
 
 #endif
-
+        //regval <<=1;
         regval|=0x80;
-        myspi_master_9bit_write(HSPI, 1, regval);
+        myspi_master_8bit_write(HSPI, regval);
 #if 1
         if (column==blanking[iter]) {
             // Disable OE
@@ -258,14 +235,14 @@ LOCAL void tim1_intr_handler()
         column++;
     } else if (column==(32*HORIZONTAL_PANELS)) {
         // force clock high.
-        myspi_master_9bit_write(HSPI, 1, 0x00);
+        myspi_master_8bit_write(HSPI, 0x80);
         column++;
     } else if (column==(32*HORIZONTAL_PANELS)+1) {
         // Send row.
         // Disable OE
         GPIO_FAST_OUTPUT_SET(4, 1);
 
-        myspi_master_9bit_write(HSPI, 0, realrow&0xf);
+        myspi_master_8bit_write(HSPI, (realrow&0xf)<<1);
         // Strobe.
         column++;
 
