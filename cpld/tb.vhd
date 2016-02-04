@@ -124,11 +124,11 @@ BEGIN
       wait for clk_period/2;
       l1: for i in 0 to w-1 loop
         -- Setup data.
+        wait for clk_period/2;
         di <= d(data'high);
         clk <= '1';
         wait for clk_period/2;
         clk <= '0';
-        wait for clk_period/2;
         d := d(data'high-1 downto 0) & 'X';
       end loop;
       wait for clk_period/2;
@@ -140,12 +140,26 @@ BEGIN
       wait for 100 ns;
       gpio4 <= '0';
 
-      transfer("1" & "010"&"010" & '0', false);
-      transfer("1" & "111"&"111" & '0', false);
-      transfer("1" & "000"&"000" & '0', false);
-      transfer("1" & "XXX"&"XXX" & '0', true);
-
-      transfer("0" & "001110" & '0', true);
+      transfer("10" & "010"&"010" , false);
+      wait for 100 ns;
+      transfer("10" & "111"&"111" , false);
+      wait for 100 ns;
+      transfer("10" & "000"&"000" , false);
+      wait for 100 ns;
+      transfer("10" & "000"&"000" , false);
+      wait for 100 ns;
+      transfer("00" & "011110" , true);
+      wait for 100 ns;
+      transfer("10" & "010"&"010" , false);
+      wait for 100 ns;
+      transfer("10" & "111"&"111" , false);
+      wait for 100 ns;
+      transfer("10" & "000"&"000" , false);
+      wait for 100 ns;
+      transfer("10" & "000"&"000" , false);
+      wait for 100 ns;
+      transfer("00" & "011110" , true);
+      wait for 100 ns;
       gpio4 <= '1';
       wait for clk_period/2;
       gpio4 <= '0';

@@ -282,12 +282,13 @@ user_procTask(os_event_t *events)
     }
 
     gfx.fb = &framebuffers[currentDrawBuffer][0];
-
-    redraw();
-    //os_printf("Buf %d ready\n", currentDrawBuffer);
-    bufferStatus[currentDrawBuffer] = BUFFER_READY;
-    currentDrawBuffer ++;
-    currentDrawBuffer&=1;
+    if ((tickcount&0xf)==0xf) {
+        redraw();
+        //os_printf("Buf %d ready\n", currentDrawBuffer);
+        bufferStatus[currentDrawBuffer] = BUFFER_READY;
+        currentDrawBuffer ++;
+        currentDrawBuffer&=1;
+    }
 
     time_tick();
 

@@ -35,7 +35,7 @@ entity iotpanel is
 end iotpanel;
 
 architecture Behavioral of iotpanel is
-  signal  shifter: std_logic_vector(6 downto 0);
+  signal  shifter: std_logic_vector(7 downto 0);
   alias   irx: std_logic is usr(5);
   alias   idtr:std_logic is usr(4);
   signal  internal_cs: std_logic;
@@ -85,16 +85,21 @@ begin
   process(clk)
   begin
     if falling_edge(clk) then
-      internal_cs<=shifter(6);
+      internal_cs<=shifter(7);
     end if;
   end process;
 
-  process(clk,external_cs,internal_cs)
+  process(clk,external_cs)
   begin
-    if external_cs='1' or internal_cs='1' then
-      shifter <= "0000001";
+    if external_cs='1' then
+      shifter <= "00000001";
     elsif falling_edge(clk) then
-      shifter <= shifter(shifter'HIGH-1 downto 0) & di;
+      if shifter( shifter'HIGH )='1' then
+        shifter <= "00000001";
+      else
+        shifter <= shifter(shifter'HIGH-1 downto 0) & di;
+      end if;
+
     end if;
   end process;
 
@@ -108,7 +113,7 @@ begin
       if internal_cs='1' then
         hclock<='0';
       else
-        if shifter(3 downto 2)="11" then
+        if shifter(4 downto 3)="11" then
           hclock<='1';
         end if;
       end if;
@@ -118,11 +123,11 @@ begin
   process(clk)
   begin
     if falling_edge(clk) then
-      if shifter(6 downto 5)="11" then
+      if shifter(7 downto 6)="11" then
         rgb <= shifter(4 downto 0) & di;
       end if;
-      if shifter(6 downto 5)="10" then
-        col <= shifter(2 downto 0) & di;
+      if shifter(7 downto 6)="10" then
+        col <= shifter(3 downto 0);--// & di;
       end if;
     end if;
   end process;
