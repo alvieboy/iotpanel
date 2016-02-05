@@ -14,11 +14,11 @@
 #include "framebuffer.h"
 
 #define USEDATA
-#define TESTIMAGE
+#undef TESTIMAGE
 #undef USEGRAY
 
 //static int holdoff=0;
-volatile int fbdone=0;
+static int frames = 0;
 static uint8_t column=0;
 //static int ptr=0;
 static int row=0;
@@ -115,8 +115,15 @@ unsigned ICACHE_FLASH_ATTR getTicks()
 {
     return ticks;
 }
-
 #endif
+
+unsigned ICACHE_FLASH_ATTR getFrames()
+{
+    return frames;
+}
+
+
+
 void ICACHE_FLASH_ATTR setBlanking(int a)
 {
     blank = a;
@@ -208,13 +215,13 @@ static int iter = 0;
 
 #define BASETIMER 8
                                                    // 8 16 16
-static uint16_t preloadtimings[] = { 12, 12, 12 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
+//static uint16_t preloadtimings[] = { 12, 12, 12 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
+static uint16_t preloadtimings[] = { 48, 48, 48 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
 static uint8_t  blanking[] = { 8, 16, 32 };
 
 #define PRELOAD (36/HORIZONTAL_PANELS)
 
-//static int frames = 0;
-
+#if 0
 static uint8_t unpackPixel(uint8_t val)
 {
     uint8_t red = val & 1;
@@ -222,7 +229,7 @@ static uint8_t unpackPixel(uint8_t val)
     uint8_t blue = !!(val & 0x40);
     return red | (green<<1) | (blue<<2);
 }
-
+#endif
 
 LOCAL void tim1_intr_handler()
 {
@@ -248,29 +255,34 @@ LOCAL void tim1_intr_handler()
         uint8_t pixelH = image[column + (realrow*(32*HORIZONTAL_PANELS))];
         uint8_t pixelL = image[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
 #else
-        uint8_t pixelH = currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS))];
-        uint8_t pixelL = currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
-        // Pixel order: BGR
         if (currentBuffer==NULL) {
-            column++;
+            column+=4;
             return;
         }
+        uint8_t *pixelHp = &currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS))];
+        uint8_t *pixelLp = &currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
+        // Pixel order: BGR
+        uint32_t pixelH = *(uint32*)pixelHp;
+        uint32_t pixelL = *(uint32*)pixelLp;
 #endif
 
-
+           /*
         pixelH = unpackPixel(pixelH);
         pixelL = unpackPixel(pixelL);
         regval = pixelH << 3;
         regval |= pixelL;
         regval |= 0x80;
+        */
 
-#if 0
+#if 1
 
-#if 0
+#if 1
         pixelH>>=riter;
         pixelL>>=riter;
 
-        uint8_t mask = 1;
+        int notfirst = riter==0? 0:1;
+
+        uint32_t mask = 0x01010101;
         /* Red */
         regval |= (pixelL & mask);
         regval |= (pixelH & mask)<<3;
@@ -278,13 +290,13 @@ LOCAL void tim1_intr_handler()
         /* Green */
         regval |= (pixelL & mask)>>2;
         regval |= (pixelH & mask)<<1;
-        mask<<=3;
+        mask<<= notfirst ? 2:3;
         /* Blue */
-        regval |= (pixelL & mask)>>4;
-        regval |= (pixelH & mask)>>1;
-        regval <<=1;
+        regval |= (pixelL & mask)>>(4-notfirst);
+        regval |= (pixelH & mask)>>(1-notfirst);
+        //regval <<=1;
         //regval >>= iter;
-        regval |= 0x80;
+        regval |= 0x80808080;
 #else
         uint8_t mask = 1<<riter;
         regval |= (pixelH & mask)>>riter;
@@ -313,7 +325,8 @@ LOCAL void tim1_intr_handler()
         regval|=0x80;
 #endif
 
-        myspi_master_8bit_write(HSPI, regval);
+        myspi_master_32bit_write(HSPI, regval);
+
 #if 1
         if (column==blanking[iter]) {
             // Disable OE
@@ -322,7 +335,7 @@ LOCAL void tim1_intr_handler()
             GPIO_FAST_OUTPUT_SET(4, 0);
         } */
 #endif
-        column++;
+        column+=4;
     } else if (column==(32*HORIZONTAL_PANELS)) {
         // force clock high.
         myspi_master_8bit_write(HSPI, 0x80);
@@ -346,16 +359,20 @@ LOCAL void tim1_intr_handler()
         GPIO_FAST_OUTPUT_SET(4, 0);
 
         column=0;
-#if 0
-        if ((row&0xf)==0xf) {
-            //holdoff = HOLDOFF * (32*HORIZONTAL_PANELS);
-            switchToNextBuffer();
-            //fbdone=1;
-            frames++;
-        }
-#endif
         iter++;
         if (iter==3) {
+
+#if 1
+            if ((row&0xf)==0xf) {
+                //holdoff = HOLDOFF * (32*HORIZONTAL_PANELS);
+                switchToNextBuffer();
+                //fbdone=1;
+                frames++;
+            }
+#endif
+
+
+
             row++;
             row&=0xf;
 #ifdef USEGRAY

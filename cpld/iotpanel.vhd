@@ -110,7 +110,7 @@ begin
     if external_cs='1' then
       hclock<='0';
     elsif falling_edge(clk) then
-      if internal_cs='1' then
+      if shifter(7)='1' then--internal_cs='1' then
         hclock<='0';
       else
         if shifter(4 downto 3)="11" then

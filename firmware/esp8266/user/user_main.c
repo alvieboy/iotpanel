@@ -41,6 +41,7 @@ extern void draw_current_screen();
 extern void spi_setup();
 extern void timer_setup();
 extern unsigned getTicks();
+extern unsigned getFrames();
 extern void kick_watchdog();
 extern void uart_putstr(const char *str);
 extern void uart_puthexbyte(unsigned char byte);
@@ -137,6 +138,9 @@ static struct ip_info ip;
 
 struct espconn conn_udpb;
 
+unsigned lastFrame = 0;
+unsigned lastFrameTime = 0;
+
 LOCAL void ICACHE_FLASH_ATTR broadcastIP()
 {
     uint32_t lip = ip.ip.addr;
@@ -150,12 +154,18 @@ LOCAL void ICACHE_FLASH_ATTR broadcastIP()
         wifi_get_macaddr(STATION_IF, &payload[size]);
         size += 6;
         espconn_sent( &conn_udpb, payload, size);
-#if 0
-        os_printf("Sending new broadcast: %d\n",i);
+#if 1
+        os_printf("Sending new broadcast\n");
 
-        unsigned t = getTicks();
-        unsigned now = system_get_time();
-        os_printf("Current time: %u ticks %u\n", now, t);
+        unsigned t = getFrames();
+        unsigned now_millis = system_get_time()/1000;
+        if (lastFrameTime!=0) {
+            unsigned delta = now_millis - lastFrameTime;
+            delta = (1000*(t-lastFrame))/delta;
+            os_printf("Current time: %u ticks %u fps %d\n", now_millis, t, delta);
+        }
+        lastFrameTime = now_millis;
+        lastFrame = t;
 #endif
     }
 }
@@ -282,19 +292,19 @@ user_procTask(os_event_t *events)
     }
 
     gfx.fb = &framebuffers[currentDrawBuffer][0];
-    if ((tickcount&0xf)==0xf) {
+//    if ((tickcount&0x4)==0x4) {
         redraw();
         //os_printf("Buf %d ready\n", currentDrawBuffer);
         bufferStatus[currentDrawBuffer] = BUFFER_READY;
         currentDrawBuffer ++;
         currentDrawBuffer&=1;
-    }
+   // }
 
     time_tick();
 
     tickcount++;
 
-    if ((tickcount&0x3ff)==0) {
+    if ((tickcount&0xfff)==0) {
         broadcastIP();
     }
     system_os_post(user_procTaskPrio, 0, 0 );
@@ -385,11 +395,11 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     widget_set_property(sc, "font", "thumb" );
     widget_set_property(sc, "text", "IoT "
 #if 1
-                        ESC "c01"
+                        ESC "c07"
                         "R"
-                        ESC "c02"
+                        ESC "c38"
                         "G"
-                        ESC "c04"
+                        ESC "cc0"
                         "B"
                         ESC "cff"
 #endif
