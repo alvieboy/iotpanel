@@ -51,7 +51,7 @@ spi_master_init(uint8 spi_no)
 #endif
 
 
-    WRITE_PERI_REG(SPI_FLASH_CLOCK(spi_no), 0x43043); //clear bit 31,set SPI clock div
+    WRITE_PERI_REG(SPI_FLASH_CLOCK(spi_no), 0x3043); //clear bit 31,set SPI clock div
 }
 #if 0
 void 

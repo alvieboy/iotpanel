@@ -292,19 +292,21 @@ user_procTask(os_event_t *events)
     }
 
     gfx.fb = &framebuffers[currentDrawBuffer][0];
-//    if ((tickcount&0x4)==0x4) {
-        redraw();
-        //os_printf("Buf %d ready\n", currentDrawBuffer);
-        bufferStatus[currentDrawBuffer] = BUFFER_READY;
-        currentDrawBuffer ++;
-        currentDrawBuffer&=1;
-   // }
+
+//    if ((tickcount&0xf)==0) {
+    redraw();
+    //os_printf(".%u",tickcount);
+    //os_printf("Buf %d ready\n", currentDrawBuffer);
+    bufferStatus[currentDrawBuffer] = BUFFER_READY;
+    currentDrawBuffer ++;
+    currentDrawBuffer&=1;
+
 
     time_tick();
-
+//    }
     tickcount++;
 
-    if ((tickcount&0xfff)==0) {
+    if ((tickcount&0x3ff)==0) {
         broadcastIP();
     }
     system_os_post(user_procTaskPrio, 0, 0 );
@@ -406,7 +408,7 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
                         " "
                         "Panel - (C) 2015 Alvie");
     widget_set_property(sc, "color", "white");
-    widget_set_property(sc, "speed", "2");
+    widget_set_property(sc, "speed", "0");
 
     screen_add_widget(screen, sc, 0, 0);
 #if 0
