@@ -8,7 +8,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include "espconn.h"
-#include <SDL2/SDL.h>
 #include "gfx.h"
 #include "serdes.h"
 #include <sys/time.h>
@@ -16,9 +15,14 @@
 #include "flash_serializer.h"
 #include <unistd.h>
 #include "framebuffer.h"
+#include <string.h>
 
 #define LEDSIZE 6
 #define LEDBORDER 1
+
+#ifdef USESDL
+#include <SDL2/SDL.h>
+#endif
 
 espconn *current_conn = NULL;
 static int listenfd = -1;
@@ -163,42 +167,23 @@ sint8 espconn_regist_disconcb(struct espconn*conn, void (*cb)(void*))
     return 0;
 }
 
+#ifdef USESDL
 SDL_Window *win;
 SDL_Renderer *ren;
+SDL_Thread *thread;
+#endif
 
 extern void user_init();
 
-SDL_Thread *thread;
-
-int main(int argc,char **argv)
-{
-    if (SDL_Init(SDL_INIT_VIDEO) != 0){
-        return 1;
-    }
-    win = SDL_CreateWindow("IoT Panel", 100, 100, 32*HORIZONTAL_PANELS*LEDSIZE, 32*LEDSIZE, SDL_WINDOW_SHOWN);
-    if (win == NULL){
-        SDL_Quit();
-        return 1;
-    }
-
-    ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (ren == NULL){
-	SDL_DestroyWindow(win);
-	SDL_Quit();
-	return 1;
-    }
-    gettimeofday(&start,NULL);
-    thread = SDL_CreateThread( &displayThread, "display", NULL);
-    user_init();
-}
-
+#ifdef USESDL
 
 extern struct gfxinfo gfx;
-
 static uint8_t currentBufferId=1;
-static uint8_t *currentBuffer=NULL;
+static pixel_t *currentBuffer=NULL;
 static unsigned int ticks = 0;
 #define TICKS_PER_BUFFER 2
+
+
 
 static inline void switchToNextBuffer()
 {
@@ -214,57 +199,14 @@ static inline void switchToNextBuffer()
             ticks++;
         }
     }
+#if 0
     printf("Ticks: %d, currentBuffer %d\n", ticks, currentBufferId);
     printf("Buffer0 status: %d\n", bufferStatus[0]);
     printf("Buffer1 status: %d\n", bufferStatus[1]);
-}
-
-void updateImage()
-{
-    SDL_Rect r;
-    int x,y;
-
-
-    if (currentBuffer) {
-        SDL_SetRenderDrawColor(ren,0x0,0,0,0xff);
-        SDL_RenderClear(ren);
-
-        r.w=LEDSIZE-(LEDBORDER*2);
-        r.h=LEDSIZE-(LEDBORDER*2);
-
-        for (y=0;y<32;y++) {
-            for (x=0;x<32*HORIZONTAL_PANELS;x++) {
-                r.x=LEDBORDER + (x*LEDSIZE);
-                r.y=LEDBORDER + (y*LEDSIZE);
-                uint8_t color = currentBuffer[x+(y*32*HORIZONTAL_PANELS)];
-                int cr,cg,cb;
-                cr = color&0x07;
-                cg = color&0x31 >> 3;
-                cb = color&0xc0 >> 6;
-                cr<<=5;
-                cg<<=5;
-                cb<<=6;
-
-#if 0
-                cr = color&1 ? 0xff:0x00;
-                cg = color&2 ? 0xff:0x00;
-                cb = color&4 ? 0xff:0x00;
 #endif
-                SDL_SetRenderDrawColor(ren,cr,cg,cb,0xff);
-                SDL_RenderFillRect(ren,&r);
-            }
-        }
-
-        //Draw the texture
-        //SDL_RenderCopy(ren, tex, NULL, NULL);
-        //Update the screen
-        SDL_RenderPresent(ren);
-        bufferStatus[currentBufferId]=BUFFER_FREE;
-
-    }
-    switchToNextBuffer();
 }
 
+#endif
 void setBlanking(int x)
 {
 }
@@ -296,7 +238,7 @@ static void newConnection()
 }
 
 
-static void netCheck()
+void netCheck()
 {
     struct timeval tv;
     fd_set rfs;
@@ -342,6 +284,7 @@ static void netCheck()
 extern void redraw();
 extern void time_tick();
 
+#ifdef USESDL
 volatile int quit=0;
 
 int displayThread(void*arg)
@@ -364,7 +307,7 @@ void user_procTask(void*arg)
         }
 
         gfx.fb = &framebuffers[currentDrawBuffer][0];
-        printf("Redrawing screen %d\n", currentDrawBuffer);
+        //printf("Redrawing screen %d\n", currentDrawBuffer);
         redraw();
 
         bufferStatus[currentDrawBuffer] = BUFFER_READY;
@@ -394,6 +337,7 @@ void user_procTask(void*arg)
     int tstatus;
     SDL_WaitThread(thread,&tstatus);
 }
+#endif
 
 sint8 espconn_sent(struct espconn*conn, unsigned char *ptr, uint16_t size)
 {
@@ -541,4 +485,16 @@ void panel_stop()
 void *os_memcpy(void *dest, const void *src, size_t size)
 {
     return memcpy(dest,src,size);
+}
+unsigned system_get_free_heap_size()
+{
+    return 16384;
+}
+
+void pp_soft_wdt_stop()
+{
+}
+
+void ets_intr_lock()
+{
 }

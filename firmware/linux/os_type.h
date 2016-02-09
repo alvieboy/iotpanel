@@ -15,8 +15,9 @@ typedef int16_t sint16;
 typedef uint32_t uint32;
 
 typedef void os_event_t;
-
+#ifndef __cplusplus
 typedef int bool;
+#endif
 
 #define true 1
 #define false 0

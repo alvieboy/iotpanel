@@ -1,7 +1,10 @@
 #include "Panel.h"
 #include "PanelItemModel.h"
+#include "PanelItemPropertyModel.h"
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+
+PanelItemPropertyModel *pmodel;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -13,11 +16,19 @@ MainWindow::MainWindow(QWidget *parent) :
     model->setList( ui->panel->getItemList() );
     ui->tableView->setModel(model);
 
+    pmodel = new PanelItemPropertyModel(this);
+    pmodel->setList( ui->panel->getItemPropertyList() );
+    ui->propertyTable->setModel(pmodel);
+
     connect( ui->panel, SIGNAL(itemGrabbed(int)), this, SLOT(onItemGrabbed(int)));
 
     QHeaderView *verticalHeader = ui->tableView->verticalHeader();
     verticalHeader->sectionResizeMode(QHeaderView::Fixed);
-    verticalHeader->setDefaultSectionSize(12);
+    verticalHeader->setDefaultSectionSize(14);
+
+    verticalHeader = ui->propertyTable->verticalHeader();
+    verticalHeader->sectionResizeMode(QHeaderView::Fixed);
+    verticalHeader->setDefaultSectionSize(14);
 }
 
 MainWindow::~MainWindow()
