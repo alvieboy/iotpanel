@@ -164,6 +164,7 @@ LOCAL void ICACHE_FLASH_ATTR broadcastIP()
             delta = (1000*(t-lastFrame))/delta;
             os_printf("Current time: %u ticks %u fps %d\n", now_millis, t, delta);
         }
+        os_printf("Mem free: %u\n", system_get_free_heap_size());
         lastFrameTime = now_millis;
         lastFrame = t;
 #endif
@@ -515,13 +516,14 @@ void ICACHE_FLASH_ATTR user_init_2()
     spi_setup();
     timer_setup();
     uart_setup();
-    init_framebuffers();
     os_printf("Last FW status: 0x%08x\n", get_last_firmware_status());
     broadcast_setup();
 
     pp_soft_wdt_stop();
 
 #endif
+    init_framebuffers();
+
     //setupFramebuffer();
     //setupDefaultScreen();
 #ifndef HOST

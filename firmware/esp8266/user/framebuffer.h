@@ -1,11 +1,15 @@
 #ifndef __FRAMEBUFFER_H__
 #define __FRAMEBUFFER_H__
 
-#include "gfx.h"
+#include <os_type.h>
+
+#define HORIZONTAL_PANELS 2
 
 #define FRAMEBUFFER_SIZE (32*32*HORIZONTAL_PANELS)
 
-typedef uint8_t framebuffer_t[FRAMEBUFFER_SIZE];
+typedef uint8_t pixel_t;
+
+typedef pixel_t framebuffer_t[FRAMEBUFFER_SIZE];
 
 extern framebuffer_t framebuffers[2];
 

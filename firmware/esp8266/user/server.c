@@ -76,6 +76,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandBlank(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandSave(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandReset(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandInfo(clientInfo_t *);
 
 commandEntry_t commandHandlers[] = {
     { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
@@ -98,6 +99,7 @@ commandEntry_t commandHandlers[] = {
     { "SAVE",  &handleCommandSave, 1, "" },
     { "LOGOUT",   &handleCommandLogout, 0 ,""},
     { "RESET",   &handleCommandReset, 1 ,""},
+    { "INFO",   &handleCommandInfo, 1 ,""},
     { 0, 0, 1, NULL }
 };
 
@@ -518,6 +520,15 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandReset(clientInfo_t *cl)
 {
     client_sendOK(cl,"RESET");
     system_restart();
+    return 0;
+}
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandInfo(clientInfo_t *cl)
+{
+    char info[64];
+    uint32 memfree = system_get_free_heap_size();
+    os_sprintf(info,"%u", memfree);
+    client_sendOK(cl,info);
     return 0;
 }
 

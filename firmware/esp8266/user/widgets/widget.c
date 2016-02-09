@@ -13,11 +13,15 @@
 
 #define DEBUGSERIALIZE(x...) /* os_printf(x) */
 
-LOCAL screen_t screens[MAX_SCREENS] = {{{0}}};
+LOCAL screen_t screens[MAX_SCREENS];
 LOCAL screen_t *current_screen = &screens[0];
 
 extern void setBlanking(int a);
 extern int getBlanking();
+
+void screens_init()
+{
+}
 
 
 LOCAL inline bool is_integer_property( eType type )

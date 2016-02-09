@@ -117,7 +117,7 @@ int ICACHE_FLASH_ATTR scrollingtext_set_color(widget_t *w, const char *name)
 int ICACHE_FLASH_ATTR scrollingtext_set_speed(widget_t *w, int *value)
 {
     scrollingtext_t *t= SCROLLINGTEXT(w);
-    if (value<0)
+    if ((*value)<0)
         return -1;
     t->max = *value;
     return 0;

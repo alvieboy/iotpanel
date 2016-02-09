@@ -30,4 +30,6 @@ int abs(int);
 
 void system_restart();
 
+unsigned system_get_free_heap_size();
+
 #endif

@@ -14,7 +14,7 @@ typedef struct
     char str[512];
     int update;
     int x,y;
-    uint8 fg,bg;
+    color_t fg,bg;
     uint8 count, max;
     const font_t *font;
 } scrollingtext_t;

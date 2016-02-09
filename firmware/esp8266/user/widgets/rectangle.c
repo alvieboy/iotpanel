@@ -30,7 +30,7 @@ LOCAL void ICACHE_FLASH_ATTR rectangle_redraw(widget_t *w, int x, int y, gfxinfo
         r->alt = 0;
     }
 
-    uint8_t *pix = &gfx->fb[x];
+    pixel_t *pix = &gfx->fb[x];
     pix += y * gfx->stride;
 
     int cx,cy;

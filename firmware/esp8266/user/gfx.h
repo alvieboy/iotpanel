@@ -1,21 +1,21 @@
 #ifndef __GFX_H__
 #define __GFX_H__
 
+
 #include "ets_sys.h"
 #include "osapi.h"
 #include "gpio.h"
 #include "os_type.h"
 #include "font.h"
 #include "color.h"
-
-#define HORIZONTAL_PANELS 2
+#include "framebuffer.h"
 
 typedef struct gfxinfo
 {
     int stride;
     int width;
     int height;
-    uint8_t *fb;
+    pixel_t *fb;
 } gfxinfo_t;
 
 typedef enum {

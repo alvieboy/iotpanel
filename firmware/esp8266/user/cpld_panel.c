@@ -14,7 +14,7 @@
 #include "framebuffer.h"
 
 #define USEDATA
-#define TESTIMAGE
+#undef TESTIMAGE
 #undef USEGRAY
 
 //static int holdoff=0;
@@ -37,8 +37,8 @@ static uint8_t realrow = 0;
 extern void kick_watchdog();
 extern void dump_stack(unsigned);
 
-unsigned char *currentBuffer = NULL;
-uint8_t currentBufferId=1;
+static pixel_t *currentBuffer = NULL;
+static uint8_t currentBufferId=1;
 
 #ifdef TESTIMAGE
 const unsigned char image[32*32*HORIZONTAL_PANELS] = {
@@ -216,7 +216,7 @@ static int iter = 0;
 #define BASETIMER 8
                                                    // 8 16 16
 //static uint16_t preloadtimings[] = { 12, 12, 12 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
-static uint16_t preloadtimings[] = { 18, 18, 18 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
+static uint16_t preloadtimings[] = { 40,40,40 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
 static uint8_t  blanking[] = { 8, 16, 32 };
 
 #define PRELOAD (36/HORIZONTAL_PANELS)
@@ -252,16 +252,16 @@ LOCAL void tim1_intr_handler()
         uint32_t regval = 0;
 
 #ifdef TESTIMAGE
-        const uint8_t *pixelHp = &image[column + (realrow*(32*HORIZONTAL_PANELS))];
-        const uint8_t *pixelLp = &image[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
+        const pixel_t *pixelHp = &image[column + (realrow*(32*HORIZONTAL_PANELS))];
+        const pixel_t *pixelLp = &image[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
 
 #else
         if (currentBuffer==NULL) {
             column+=4;
             return;
         }
-        const uint8_t *pixelHp = &currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS))];
-        const uint8_t *pixelLp = &currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
+        const pixel_t *pixelHp = &currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS))];
+        const pixel_t *pixelLp = &currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
         // Pixel order: BGR
 #endif
         uint32_t pixelH = *(uint32*)pixelHp;

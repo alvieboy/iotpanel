@@ -1,4 +1,5 @@
 #include "os_type.h"
+#include "ets_sys.h"
 #include "framebuffer.h"
 
 volatile uint8_t bufferStatus[2];

@@ -14,7 +14,7 @@ typedef struct
     const gfxinfo_t *dest;
     char *pstr;
     char *paltstr;
-    uint8 fg,bg;
+    color_t fg,bg;
     const font_t *font;
     uint8 speed;
     int16_t width, height;

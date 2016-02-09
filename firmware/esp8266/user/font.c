@@ -21,7 +21,7 @@ LOCAL const font_t *fonts[] = {
 
 const font_t * ICACHE_FLASH_ATTR font_find(const char *name)
 {
-    int i;
+    unsigned i;
     for (i=0; i<sizeof(fonts)/sizeof(fonts[0]); i++) {
         if (strcmp(name,fonts[i]->name)==0)
             return fonts[i];
