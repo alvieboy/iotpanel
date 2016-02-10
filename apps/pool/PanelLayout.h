@@ -40,12 +40,14 @@ public:
 
 class LayoutScheduleEntry
 {
+public:
     enum { SELECT, WAIT } command;
     QVariant arg;
 };
 
 class LayoutSchedule
 {
+public:
     QString name;
     QString description;
     QList<LayoutScheduleEntry> commands;
@@ -62,7 +64,14 @@ public:
     int processScreenItem(LayoutScreen &screen, QDomElement e);
     int processItemProperties(LayoutItemInstance *inst, QDomElement e);
     void clear();
+    int serializeSchedule(const LayoutSchedule&, QStringList&);
+    bool isSchedule(const QString&);
+    bool isScreen(const QString &name);
 
+    int processScheduleSelect(LayoutSchedule&, QDomElement);
+    int processScheduleWait(LayoutSchedule&, QDomElement);
+    int processSchedule(QDomElement);
+    const LayoutSchedule& getSchedule(const QString&);
     QList<LayoutScreen> screens;
     QList<LayoutSchedule> schedules;
 };

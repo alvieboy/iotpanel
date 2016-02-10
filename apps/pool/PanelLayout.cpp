@@ -225,7 +225,7 @@ int PanelLayout::serializeSchedule(const LayoutSchedule &s, QStringList &out)
             out.append(QString("ADDSCHEDULE SELECT ")+e.arg.toString());
             break;
         case LayoutScheduleEntry::WAIT:
-            out.append(QString("ADDSCHEDULE WAIT ")+QString::number(e.arg.toInt());
+            out.append(QString("ADDSCHEDULE WAIT ")+QString::number(e.arg.toInt()));
             break;
         default:
             break;
