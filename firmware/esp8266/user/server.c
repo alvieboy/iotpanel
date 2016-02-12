@@ -19,10 +19,12 @@
 #include "clock.h"
 #include "flash_serializer.h"
 #include "user_interface.h"
+#include "alloc.h"
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
 char currentFw[32] = {0};
+static unsigned char *otachunk;
 
 extern void setBlanking(int);
 
@@ -30,7 +32,7 @@ extern void setBlanking(int);
 
 typedef struct {
     char rline[MAX_LINE_LEN+1];
-    char tline[MAX_LINE_LEN+1];
+    char tline[128+1];
     unsigned  rlinepos;
     // Command placeholders.
     char *cmd;
@@ -422,8 +424,6 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandLogout(clientInfo_t *cl)
     return -2;
 }
 
-static unsigned char otachunk[512];
-
 LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
 {
     char otainfo[128];
@@ -479,9 +479,14 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
         }
         base64_init_decodestate(&b64state);
         // Attempt to parse it
+
+        if (otachunk==NULL) {
+            otachunk = (unsigned char *)os_malloc(512);
+        }
+
         int r = base64_decode_block((char*)cl->argv[1],
-                                strlen(cl->argv[1]),
-                                (char*)otachunk,
+                                    strlen(cl->argv[1]),
+                                    (char*)otachunk,
                                     &b64state);
         if (r!= 512) {
             os_printf("Invalid len of %d\n", r);
