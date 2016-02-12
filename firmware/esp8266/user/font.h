@@ -9,10 +9,16 @@
 typedef struct {
     uint8_t w;
     uint8_t h;
-    const uint8_t *bitmap;
     uint8_t start;
     uint8_t end;
-    const char *name;
+} fonthdr_t;
+
+typedef struct font {
+    fonthdr_t hdr;
+    char name[10];
+    uint8_t *bitmap;
+    uint8_t ref;
+    struct font *next;
 } font_t;
 
 

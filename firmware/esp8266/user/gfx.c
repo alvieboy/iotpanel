@@ -27,20 +27,20 @@ LOCAL void ICACHE_FLASH_ATTR drawChar16(const gfxinfo_t *gfx, const font_t *font
 {
     const uint8 *cptr;
     //printf("Draw 16 %d %d \n", font->w, font->h);
-    uint8 hc = font->h;
+    uint8 hc = font->hdr.h;
     uint16 mask = 0x8000;//(1<<(font->w-1));
 
-    if ( (c<font->start) || (c>font->end)) {
-        c = font->start;
+    if ( (c<font->hdr.start) || (c>font->hdr.end)) {
+        c = font->hdr.start;
     }
-    cptr = (uint8*) ( &font->bitmap[(c - font->start)*(font->h)*2] );
+    cptr = (uint8*) ( &font->bitmap[(c - font->hdr.start)*(font->hdr.h)*2] );
     //printf("Start char %d, index is %d\n", c,  (c - font->start)*(font->h)*2 );
     // Draw.
     do {
         uint16 line = (uint16)(*cptr++)<<8;
         line += (uint16)*cptr++;
         //printf("Line: 0x%04x mask 0x%04x\n",line,mask);
-        uint8 wc = font->w;
+        uint8 wc = font->hdr.w;
         int sx=x;
         do {
             int pixel = line & mask;
@@ -66,22 +66,22 @@ void ICACHE_FLASH_ATTR drawChar(const gfxinfo_t *gfx, const font_t *font, int x,
     if ((NULL==font) || (NULL==gfx))
         return;
 
-    if (font->w > 8) {
+    if (font->hdr.w > 8) {
         drawChar16(gfx, font, x, y, c, color, bg);
         return;
     }
 
-    uint8 hc = font->h;
+    uint8 hc = font->hdr.h;
 
-    if ( (c<font->start) || (c>font->end)) {
-        c = font->start;
+    if ( (c<font->hdr.start) || (c>font->hdr.end)) {
+        c = font->hdr.start;
     }
-    cptr = &font->bitmap[(c - font->start)*(font->h)];
+    cptr = &font->bitmap[(c - font->hdr.start)*(font->hdr.h)];
 
     // Draw.
     do {
         uint8 line = *cptr++;
-        uint8 wc = font->w;
+        uint8 wc = font->hdr.w;
         int sx=x;
         do {
             int pixel = line & 0x80;
@@ -154,7 +154,7 @@ void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t
             if (s->align == ALIGN_RIGHT ) {
                 // Check excess
 
-                int used = (s->font->w * i);
+                int used = (s->font->hdr.w * i);
                 //printf("Align right: used %d, avail %d\n", used, gfx->width);
                 used = gfx->width - used;
                 //if (used<0)
@@ -170,10 +170,10 @@ void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t
             if (parseUnprintable(&str,&color,&bg)<0)
                 return;
             drawChar(gfx, s->font,x,y,*str,color,bg);
-            x += s->font->w;
+            x += s->font->hdr.w;
             str++;
         }
-        y += s->font->h+1;
+        y += s->font->hdr.h+1;
 
     } while (*str);
 }
@@ -325,7 +325,7 @@ LOCAL int ICACHE_FLASH_ATTR getNumberOfPrintableChars(const char *str,
             return -1;
         }
         if (maxwidth>=0) {
-            if (maxwidth < settings->font->w) {
+            if (maxwidth < settings->font->hdr.w) {
 
                 if (settings->wrap && lastspace) {
                     //printf("lastspace\n");
@@ -341,7 +341,7 @@ LOCAL int ICACHE_FLASH_ATTR getNumberOfPrintableChars(const char *str,
         count++;
         str++;
         if (maxwidth>0) {
-            maxwidth-=settings->font->w;
+            maxwidth-=settings->font->hdr.w;
         }
     } while (*str);
 
@@ -367,8 +367,8 @@ LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str, const textrenders
         if (maxw<i)
             maxw=i;
     } while (*str);
-    *width = (maxw * s->font->w);// + (maxw-1);  // Spacing between chars
-    *height = (maxh * s->font->h) + (maxh-1); // Spacing between chars
+    *width = (maxw * s->font->hdr.w);// + (maxw-1);  // Spacing between chars
+    *height = (maxh * s->font->hdr.h) + (maxh-1); // Spacing between chars
     return 0;
 }
 

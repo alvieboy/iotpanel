@@ -6,7 +6,7 @@
 // original public domain font source:
 // http://www.opensource.apple.com/source/X11fonts/X11fonts-14/font-misc-misc/font-misc-misc-1.1.2/4x6.bdf
 
-static const unsigned char __apple3x5_bitmap__[] = {
+static unsigned char __apple3x5_bitmap__[] = {
 
  0x00,
  0x00,
@@ -1734,10 +1734,40 @@ static const unsigned short __apple3x5_index__[] = {
 };
 
 const font_t apple4x6_font = {
-    .w = 4,
-    .h = 6,
+    .hdr = {
+        .w = 4,
+        .h = 6,
+        .start = 32,
+        .end = 255,
+    },
     .bitmap = __apple3x5_bitmap__,
-    .start = 32,
-    .end = 255,
     .name = "4x6"
 };
+
+
+#ifdef FONTGEN
+#include <stdio.h>
+#include <inttypes.h>
+
+#define ALIGN(x, alignment) (((x)+(alignment-1)) & ~(alignment-1))
+
+int main(int argc, char **argv)
+{
+    const font_t *font = &apple4x6_font;
+    if (argc<2)
+        return -1;
+    FILE *out;
+    out = fopen(argv[1], "w");
+    if (out==NULL) {
+        perror("open");
+        return -1;
+    }
+    fwrite( &font->hdr, sizeof(font->hdr),1, out );
+    unsigned bpp = ALIGN((font->hdr.w-1),8) / 8;
+    bpp *= ((font->hdr.end - font->hdr.start)+1);
+    bpp *= font->hdr.h;
+    fwrite( font->bitmap, bpp, 1, out);
+    fclose( out );
+}
+
+#endif

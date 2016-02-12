@@ -1,6 +1,6 @@
 #include "font.h"
 
-static const unsigned char  __font16x16_bitmap__[] = {
+static unsigned char  __font16x16_bitmap__[] = {
 
     0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //  <Space>
     0x00,0x00,0x00,0x00,0x07,0x00,0x0F,0x80,0x0F,0x80,0x0F,0x80,0x0F,0x80,0x0F,0x80,0x07,0x00,0x07,0x00,0x00,0x00,0x00,0x00,0x07,0x00,0x07,0x00,0x07,0x00,0x00,0x00, // !
@@ -106,11 +106,39 @@ static const unsigned char  __font16x16_bitmap__[] = {
 
 
 const font_t font16x16_font = {
-    .w = 16,
-    .h = 16,
+    .hdr = {
+        .w = 16,
+        .h = 16,
+        .start = 32,
+        .end = 32+96,
+    },
     .bitmap = __font16x16_bitmap__,
-    .start = 32,
-    .end = 32+96,
     .name = "16x16"
 };
 
+#ifdef FONTGEN
+#include <stdio.h>
+#include <inttypes.h>
+
+#define ALIGN(x, alignment) (((x)+(alignment-1)) & ~(alignment-1))
+
+int main(int argc, char **argv)
+{
+    const font_t *font = &font16x16_font;
+    if (argc<2)
+        return -1;
+    FILE *out;
+    out = fopen(argv[1], "w");
+    if (out==NULL) {
+        perror("open");
+        return -1;
+    }
+    fwrite( &font->hdr, sizeof(font->hdr),1, out );
+    unsigned bpp = ALIGN((font->hdr.w-1),8) / 8;
+    bpp *= ((font->hdr.end - font->hdr.start)+1);
+    bpp *= font->hdr.h;
+    fwrite( font->bitmap, bpp, 1, out);
+    fclose( out );
+}
+
+#endif

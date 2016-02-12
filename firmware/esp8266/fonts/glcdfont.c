@@ -2,7 +2,7 @@
 
 // Standard ASCII 5x7 font
 
-const unsigned char __glcdfont_bitmap__[]= {
+unsigned char __glcdfont_bitmap__[]= {
         0x00, 0x00, 0x00, 0x00, 0x00,
 	0x3E, 0x5B, 0x4F, 0x5B, 0x3E,
 	0x3E, 0x6B, 0x4F, 0x6B, 0x3E,
@@ -261,9 +261,39 @@ const unsigned char __glcdfont_bitmap__[]= {
 };
 
 font_t glcd_font = {
-    .w = 5,
-    .h = 7,
+    .hdr = {
+        .w = 5,
+        .h = 7,
+        .start = 0,
+        .end = 255,
+    },
     .bitmap = __glcdfont_bitmap__,
-    .start = 0,
-    .end = 255
+    .name = "glcd"
 };
+
+#ifdef FONTGEN
+#include <stdio.h>
+#include <inttypes.h>
+
+#define ALIGN(x, alignment) (((x)+(alignment-1)) & ~(alignment-1))
+
+int main(int argc, char **argv)
+{
+    const font_t *font = &glcd_font;
+    if (argc<2)
+        return -1;
+    FILE *out;
+    out = fopen(argv[1], "w");
+    if (out==NULL) {
+        perror("open");
+        return -1;
+    }
+    fwrite( &font->hdr, sizeof(font->hdr),1, out );
+    unsigned bpp = ALIGN((font->hdr.w-1),8) / 8;
+    bpp *= ((font->hdr.end - font->hdr.start)+1);
+    bpp *= font->hdr.h;
+    fwrite( font->bitmap, bpp, 1, out);
+    fclose( out );
+}
+
+#endif

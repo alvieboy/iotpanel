@@ -6,7 +6,7 @@
 // original public domain font source:
 // http://www.opensource.apple.com/source/X11fonts/X11fonts-14/font-misc-misc/font-misc-misc-1.1.2/5x7.bdf
 
-static const unsigned char __apple5x7_bitmap__[] = {
+static unsigned char __apple5x7_bitmap__[] = {
 
  0x00,
  0x00,
@@ -1925,10 +1925,39 @@ static const unsigned short __apple5x7_index__[] = {
 };
 
 const font_t apple5x7_font = {
-    .w = 5,
-    .h = 7,
+    .hdr = {
+        .w = 5,
+        .h = 7,
+        .start = 32,
+        .end = 255,
+    },
     .bitmap = __apple5x7_bitmap__,
-    .start = 32,
-    .end = 255,
     .name = "5x7"
 };
+
+#ifdef FONTGEN
+#include <stdio.h>
+#include <inttypes.h>
+
+#define ALIGN(x, alignment) (((x)+(alignment-1)) & ~(alignment-1))
+
+int main(int argc, char **argv)
+{
+    const font_t *font = &apple5x7_font;
+    if (argc<2)
+        return -1;
+    FILE *out;
+    out = fopen(argv[1], "w");
+    if (out==NULL) {
+        perror("open");
+        return -1;
+    }
+    fwrite( &font->hdr, sizeof(font->hdr),1, out );
+    unsigned bpp = ALIGN((font->hdr.w-1),8) / 8;
+    bpp *= ((font->hdr.end - font->hdr.start)+1);
+    bpp *= font->hdr.h;
+    fwrite( font->bitmap, bpp, 1, out);
+    fclose( out );
+}
+
+#endif

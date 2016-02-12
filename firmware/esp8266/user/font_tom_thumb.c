@@ -1,6 +1,6 @@
 #include "font.h"
 
-static const unsigned char __tomthumb_bitmap__[] = {
+static unsigned char __tomthumb_bitmap__[] = {
 
  0x00,
  0x00,
@@ -762,11 +762,15 @@ static const unsigned char __tomthumb_bitmap__[] = {
  0x00,
 };
 
-const font_t tom_thumb_font = {
-    .w = 4,
-    .h = 6,
+font_t tom_thumb_font = {
+    .hdr = {
+        .w = 4,
+        .h = 6,
+        .start = 32,
+        .end = 126,
+    },
     .bitmap = __tomthumb_bitmap__,
-    .start = 32,
-    .end = 126,
-    .name = "thumb"
+    .name = "thumb",
+    .next = (void*)0,
+    .ref  = 1,
 };
