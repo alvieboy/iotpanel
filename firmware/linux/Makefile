@@ -54,19 +54,12 @@ SOURCES       = main.cpp \
 		../../paneleditor/Panel.cpp \
 		iotpanel.c \
 		../esp8266/user/font.c \
-		../esp8266/user/font_apple6x10.c \
-		../esp8266/user/glcdfont.c \
 		../esp8266/user/server.c \
 		../esp8266/user/schedule.c \
 		../esp8266/user/clock.c \
-		../esp8266/user/font_apple4x6.c \
-		../esp8266/user/font_apple5x7.c \
 		../esp8266/user/user_main.c \
 		../esp8266/user/gfx.c \
-		../esp8266/user/font_6x10.c \
 		../esp8266/user/font_tom_thumb.c \
-		../esp8266/user/font_16x16.c \
-		../esp8266/user/font_12x16.c \
 		../esp8266/user/upgrade.c \
 		../esp8266/user/cdecode.c \
 		../esp8266/user/serdes.c \
@@ -80,7 +73,9 @@ SOURCES       = main.cpp \
 		../esp8266/user/widgets/widget_registry.c \
 		../esp8266/user/flash_serializer.c \
 		../esp8266/user/crc.c \
-		../esp8266/user/framebuffer.c moc_Panel.cpp \
+		../esp8266/user/framebuffer.c \
+		../esp8266/user/flash.c \
+		../esp8266/user/smallfs.c moc_Panel.cpp \
 		moc_mainwindow.cpp
 OBJECTS       = main.o \
 		mainwindow.o \
@@ -88,19 +83,12 @@ OBJECTS       = main.o \
 		Panel.o \
 		iotpanel.o \
 		font.o \
-		font_apple6x10.o \
-		glcdfont.o \
 		server.o \
 		schedule.o \
 		clock.o \
-		font_apple4x6.o \
-		font_apple5x7.o \
 		user_main.o \
 		gfx.o \
-		font_6x10.o \
 		font_tom_thumb.o \
-		font_16x16.o \
-		font_12x16.o \
 		upgrade.o \
 		cdecode.o \
 		serdes.o \
@@ -115,6 +103,8 @@ OBJECTS       = main.o \
 		flash_serializer.o \
 		crc.o \
 		framebuffer.o \
+		flash.o \
+		smallfs.o \
 		moc_Panel.o \
 		moc_mainwindow.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
@@ -182,19 +172,12 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		../../paneleditor/Panel.cpp \
 		iotpanel.c \
 		../esp8266/user/font.c \
-		../esp8266/user/font_apple6x10.c \
-		../esp8266/user/glcdfont.c \
 		../esp8266/user/server.c \
 		../esp8266/user/schedule.c \
 		../esp8266/user/clock.c \
-		../esp8266/user/font_apple4x6.c \
-		../esp8266/user/font_apple5x7.c \
 		../esp8266/user/user_main.c \
 		../esp8266/user/gfx.c \
-		../esp8266/user/font_6x10.c \
 		../esp8266/user/font_tom_thumb.c \
-		../esp8266/user/font_16x16.c \
-		../esp8266/user/font_12x16.c \
 		../esp8266/user/upgrade.c \
 		../esp8266/user/cdecode.c \
 		../esp8266/user/serdes.c \
@@ -208,7 +191,9 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		../esp8266/user/widgets/widget_registry.c \
 		../esp8266/user/flash_serializer.c \
 		../esp8266/user/crc.c \
-		../esp8266/user/framebuffer.c
+		../esp8266/user/framebuffer.c \
+		../esp8266/user/flash.c \
+		../esp8266/user/smallfs.c
 QMAKE_TARGET  = iotpanel
 DESTDIR       = #avoid trailing-slash linebreak
 TARGET        = iotpanel
@@ -381,7 +366,7 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents ../../paneleditor/Panel.h ../../paneleditor/PanelFramebuffer.h mainwindow.h $(DISTDIR)/
-	$(COPY_FILE) --parents main.cpp mainwindow.cpp ../../paneleditor/PanelFramebuffer.cpp ../../paneleditor/Panel.cpp iotpanel.c ../esp8266/user/font.c ../esp8266/user/font_apple6x10.c ../esp8266/user/glcdfont.c ../esp8266/user/server.c ../esp8266/user/schedule.c ../esp8266/user/clock.c ../esp8266/user/font_apple4x6.c ../esp8266/user/font_apple5x7.c ../esp8266/user/user_main.c ../esp8266/user/gfx.c ../esp8266/user/font_6x10.c ../esp8266/user/font_tom_thumb.c ../esp8266/user/font_16x16.c ../esp8266/user/font_12x16.c ../esp8266/user/upgrade.c ../esp8266/user/cdecode.c ../esp8266/user/serdes.c ../esp8266/user/widgets/color.c ../esp8266/user/widgets/scrollingtext.c ../esp8266/user/widgets/widget.c ../esp8266/user/widgets/rectangle.c ../esp8266/user/widgets/text.c ../esp8266/user/widgets/line.c ../esp8266/user/widgets/clockw.c ../esp8266/user/widgets/widget_registry.c ../esp8266/user/flash_serializer.c ../esp8266/user/crc.c ../esp8266/user/framebuffer.c $(DISTDIR)/
+	$(COPY_FILE) --parents main.cpp mainwindow.cpp ../../paneleditor/PanelFramebuffer.cpp ../../paneleditor/Panel.cpp iotpanel.c ../esp8266/user/font.c ../esp8266/user/server.c ../esp8266/user/schedule.c ../esp8266/user/clock.c ../esp8266/user/user_main.c ../esp8266/user/gfx.c ../esp8266/user/font_tom_thumb.c ../esp8266/user/upgrade.c ../esp8266/user/cdecode.c ../esp8266/user/serdes.c ../esp8266/user/widgets/color.c ../esp8266/user/widgets/scrollingtext.c ../esp8266/user/widgets/widget.c ../esp8266/user/widgets/rectangle.c ../esp8266/user/widgets/text.c ../esp8266/user/widgets/line.c ../esp8266/user/widgets/clockw.c ../esp8266/user/widgets/widget_registry.c ../esp8266/user/flash_serializer.c ../esp8266/user/crc.c ../esp8266/user/framebuffer.c ../esp8266/user/flash.c ../esp8266/user/smallfs.c $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -457,14 +442,14 @@ iotpanel.o: iotpanel.c espconn.h \
 font.o: ../esp8266/user/font.c ../../paneleditor/font.h \
 		ets_sys.h \
 		os_type.h \
-		osapi.h
+		osapi.h \
+		../esp8266/user/smallfs.h \
+		../esp8266/user/flash.h \
+		../esp8266/user/flashutils.h \
+		spi_flash.h \
+		../esp8266/user/protos.h \
+		../esp8266/user/alloc.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o font.o ../esp8266/user/font.c
-
-font_apple6x10.o: ../esp8266/user/font_apple6x10.c 
-	$(CC) -c $(CFLAGS) $(INCPATH) -o font_apple6x10.o ../esp8266/user/font_apple6x10.c
-
-glcdfont.o: ../esp8266/user/glcdfont.c ../../paneleditor/font.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o glcdfont.o ../esp8266/user/glcdfont.c
 
 server.o: ../esp8266/user/server.c ets_sys.h \
 		os_type.h \
@@ -501,12 +486,6 @@ clock.o: ../esp8266/user/clock.c ets_sys.h \
 		user_interface.h \
 		../esp8266/user/protos.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o clock.o ../esp8266/user/clock.c
-
-font_apple4x6.o: ../esp8266/user/font_apple4x6.c ../../paneleditor/font.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o font_apple4x6.o ../esp8266/user/font_apple4x6.c
-
-font_apple5x7.o: ../esp8266/user/font_apple5x7.c ../../paneleditor/font.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o font_apple5x7.o ../esp8266/user/font_apple5x7.c
 
 user_main.o: ../esp8266/user/user_main.c ets_sys.h \
 		os_type.h \
@@ -546,17 +525,8 @@ gfx.o: ../esp8266/user/gfx.c ets_sys.h \
 		../esp8266/user/protos.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o gfx.o ../esp8266/user/gfx.c
 
-font_6x10.o: ../esp8266/user/font_6x10.c ../../paneleditor/font.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o font_6x10.o ../esp8266/user/font_6x10.c
-
 font_tom_thumb.o: ../esp8266/user/font_tom_thumb.c ../../paneleditor/font.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o font_tom_thumb.o ../esp8266/user/font_tom_thumb.c
-
-font_16x16.o: ../esp8266/user/font_16x16.c ../../paneleditor/font.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o font_16x16.o ../esp8266/user/font_16x16.c
-
-font_12x16.o: ../esp8266/user/font_12x16.c ../../paneleditor/font.h
-	$(CC) -c $(CFLAGS) $(INCPATH) -o font_12x16.o ../esp8266/user/font_12x16.c
 
 upgrade.o: ../esp8266/user/upgrade.c ../esp8266/user/upgrade.h \
 		ets_sys.h \
@@ -705,7 +675,8 @@ flash_serializer.o: ../esp8266/user/flash_serializer.c ../esp8266/user/serdes.h 
 		../esp8266/user/crc.h \
 		../esp8266/user/protos.h \
 		../esp8266/user/alloc.h \
-		user_interface.h
+		user_interface.h \
+		../esp8266/user/flash.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o flash_serializer.o ../esp8266/user/flash_serializer.c
 
 crc.o: ../esp8266/user/crc.c ../esp8266/user/crc.h \
@@ -717,6 +688,24 @@ framebuffer.o: ../esp8266/user/framebuffer.c os_type.h \
 		ets_sys.h \
 		../esp8266/user/framebuffer.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o framebuffer.o ../esp8266/user/framebuffer.c
+
+flash.o: ../esp8266/user/flash.c ../esp8266/user/flash.h \
+		os_type.h \
+		../esp8266/user/flashutils.h \
+		spi_flash.h \
+		ets_sys.h \
+		osapi.h \
+		../esp8266/user/protos.h \
+		../esp8266/user/alloc.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o flash.o ../esp8266/user/flash.c
+
+smallfs.o: ../esp8266/user/smallfs.c ../esp8266/user/smallfs.h \
+		os_type.h \
+		../esp8266/user/flash.h \
+		../esp8266/user/flashutils.h \
+		spi_flash.h \
+		ets_sys.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o smallfs.o ../esp8266/user/smallfs.c
 
 moc_Panel.o: moc_Panel.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_Panel.o moc_Panel.cpp
