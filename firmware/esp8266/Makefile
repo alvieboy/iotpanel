@@ -54,6 +54,7 @@ FW_FILE_1	= 0x00000
 FW_FILE_1_ARGS	= -bo $@ -bs .text -bs .data -bs .rodata -bc -ec
 FW_FILE_2	= 0x40000
 FW_FILE_2_ARGS	= -es .irom0.text $@ -ec
+FW_SMALLFS	= 0x10000
 
 # select which tools to use as compiler, librarian and linker
 CC		:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
@@ -66,6 +67,7 @@ LD		:= $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 #### no user configurable options below here
 ####
 FW_TOOL		?= /usr/bin/esptool
+SMALLFS_TOOL    ?= mksmallfs
 SRC_DIR		:= $(MODULES)
 BUILD_DIR	:= $(addprefix $(BUILD_BASE)/,$(MODULES))
 
@@ -86,6 +88,7 @@ MODULE_INCDIR	:= $(addsuffix /include,$(INCDIR))
 
 FW_FILE_1	:= $(addprefix $(FW_BASE)/,$(FW_FILE_1).bin)
 FW_FILE_2	:= $(addprefix $(FW_BASE)/,$(FW_FILE_2).bin)
+FW_SMALLFS 	:= $(addprefix $(FW_BASE)/,$(FW_SMALLFS).bin)
 
 V ?= $(VERBOSE)
 ifeq ("$(V)","1")
@@ -106,11 +109,15 @@ endef
 
 .PHONY: all checkdirs flash clean
 
-all: checkdirs $(TARGET_OUT) $(FW_FILE_1) $(FW_FILE_2)
+all: checkdirs $(TARGET_OUT) $(FW_FILE_1) $(FW_FILE_2) $(FW_SMALLFS)
 
 $(FW_FILE_1): $(TARGET_OUT)
 	$(vecho) "FW $@"
 	$(Q) $(FW_TOOL) -eo $(TARGET_OUT) $(FW_FILE_1_ARGS)
+
+$(FW_SMALLFS): $(TARGET_OUT)
+	$(vecho) "SMALLFS $@"
+	$(Q) $(SMALLFS_TOOL) $@ smallfs
 
 $(FW_FILE_2): $(TARGET_OUT)
 	$(vecho) "FW $@"
