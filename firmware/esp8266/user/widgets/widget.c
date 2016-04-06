@@ -82,12 +82,14 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
     int valid = -1;
 
     for (prop = widget->def->properties; prop->name; prop++) {
+        os_printf("find prop %s %s\n", prop->name, name);
         if (strcmp(prop->name,name)==0) {
 
             if (is_integer_property( prop->type )) {
                 li = (long)strtol(value,&end,10);
-                if (*end !='\0')
+                if (*end !='\0') {
                     return -1;
+                }
                 // Check bounds
                 switch (prop->type) {
                 case T_UINT8:
@@ -112,6 +114,7 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
                     valid = (li != 0) && (li!=1);
                     break;
                 default:
+                    os_printf("Invalid property\n");
                     valid = -1;
                 }
                 if (valid!=0) {
@@ -139,6 +142,7 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
                 return prop->setter( widget, (void*)value );
                 break;
             default:
+                //os_printf("Unknonw prop type\n");
                 return -1;
             }
 #undef SETBLOCK
@@ -169,12 +173,14 @@ void ICACHE_FLASH_ATTR screen_draw(screen_t *screen, gfxinfo_t *gfx)
     }
 }
 
-void ICACHE_FLASH_ATTR screen_add_widget(screen_t *screen, widget_t *widget, int x, int y)
+
+LOCAL void ICACHE_FLASH_ATTR screen_add_widget_impl(screen_t *screen, widget_t *widget, int x, int y, int cloned)
 {
     widget_entry_t *e = os_malloc(sizeof(widget_entry_t));
     widget_ref(widget);
     e->widget = widget;
-    widget->parent = screen;
+    if (!cloned)
+        widget->parent = screen;
 
     e->next = NULL;
     if (screen->widgets==NULL)
@@ -188,6 +194,18 @@ void ICACHE_FLASH_ATTR screen_add_widget(screen_t *screen, widget_t *widget, int
     e->x = x;
     e->y = y;
 }
+
+void ICACHE_FLASH_ATTR screen_add_widget(screen_t *screen, widget_t *widget, int x, int y)
+{
+    screen_add_widget_impl(screen,widget,x,y,0);
+}
+
+void ICACHE_FLASH_ATTR screen_add_cloned_widget(screen_t *screen, widget_t *widget, int x, int y)
+{
+    screen_add_widget_impl(screen,widget,x,y,1);
+}
+
+
 
 void ICACHE_FLASH_ATTR draw_current_screen(gfxinfo_t *gfx)
 {
@@ -389,6 +407,7 @@ int ICACHE_FLASH_ATTR widget_serialize_properties(serializer_t *ser, widget_t*wi
 
 void ICACHE_FLASH_ATTR screen_serialize(serializer_t *ser, screen_t *screen)
 {
+    os_printf("Serializing screen %s\n", screen->name);
     serialize_string( ser, screen->name );
     int cnt = 0;
 
@@ -396,6 +415,7 @@ void ICACHE_FLASH_ATTR screen_serialize(serializer_t *ser, screen_t *screen)
     while (w) {
         if (screen != w->widget->parent) {
             /* Cloned widget */
+            os_printf("Cloning widget from screen '%s'", w->widget->parent);
             serialize_uint8(ser, WIDGET_CLONED);
         } else {
             /* Normal widget */
@@ -548,11 +568,14 @@ LOCAL int ICACHE_FLASH_ATTR deserialize_screen(serializer_t *ser, screen_t *scre
             return -1;
         }
 
-        DEBUGSERIALIZE("Widget type %d '%s' at %dx%d\n", type, widgetname,x,y);
+        DEBUGSERIALIZE("Widget type %d '%s' at xy %d %d\n", type, widgetname,x,y);
 
         switch(type) {
         case WIDGET_CLONED:
             w = widget_find(widgetname);
+            if (w==NULL) {
+                DEBUGSERIALIZE("Cannot find widget with name '%s'\n", widgetname);
+            }
             break;
         case WIDGET_NORMAL:
             if (deserialize_string(ser, &classname[0], &namesize, sizeof(classname))<0) {
@@ -569,8 +592,12 @@ LOCAL int ICACHE_FLASH_ATTR deserialize_screen(serializer_t *ser, screen_t *scre
                 return -1;
             }
             break;
+        default:
+            DEBUGSERIALIZE("Unknown widget type %d\n", type);
+            break;
         }
         if (w==NULL) {
+            DEBUGSERIALIZE("No Widget!\n");
             return -1;
         }
         screen_add_widget(screen,w,x,y);
@@ -613,7 +640,7 @@ int ICACHE_FLASH_ATTR deserialize_all(serializer_t *ser)
 
         if (deserialize_screen(ser,screen)<0) {
             ser->release(ser);
-
+            os_printf("Error deserializing screen\n");
             return -1;
         }
     } while (1);
