@@ -3,7 +3,7 @@
 #include "protos.h"
 #include <string.h>
 
-#define     DEBUGSERIALIZE(x...) os_printf(x)
+#define     DEBUGSERIALIZE(x...) /* os_printf(x) */
 
 int ICACHE_FLASH_ATTR serialize_string(serializer_t *f, const char *str)
 {
