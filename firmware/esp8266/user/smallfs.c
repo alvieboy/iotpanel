@@ -1,4 +1,5 @@
 #include "smallfs.h"
+#include "protos.h"
 #include <string.h>
 #ifdef __linux__
 
@@ -22,6 +23,26 @@
 #undef SMALLFSDEBUG
 
 extern int smallfs_start;
+static struct smallfs fs;
+static uint8_t smallfs_initialized = 0;
+
+int ICACHE_FLASH_ATTR smallfs__start()
+{
+    int r = -1;
+    if (!smallfs_initialized) {
+        r = smallfs__begin(&fs, 0x10000);
+        smallfs_initialized=1;
+    } else {
+        flash_control_init(&fs.fc);
+        r = 0;
+    }
+    return r;
+}
+
+struct smallfs *ICACHE_FLASH_ATTR smallfs__getfs()
+{
+    return &fs;
+}
 
 int ICACHE_FLASH_ATTR smallfs__begin(struct smallfs *f, unsigned offset)
 {
@@ -34,6 +55,8 @@ int ICACHE_FLASH_ATTR smallfs__begin(struct smallfs *f, unsigned offset)
     } else {
         flash_control_release(&f->fc);
     }
+    os_printf("Invalid magic %08x\n", BE32(f->hdr.magic));
+
     return -1;
 }
 
@@ -167,7 +190,9 @@ int ICACHE_FLASH_ATTR smallfs__open(struct smallfs *fs, struct smallfsfile *file
     struct smallfs_entry he;
 
     int c;
-
+#ifdef SMALLFSDEBUG
+    os_printf("Num files: %d\n",BE32(fs->hdr.numfiles));
+#endif
     for (c=BE32(fs->hdr.numfiles); c; c--) {
 
         smallfs__read(fs, o, &he,sizeof(struct smallfs_entry));

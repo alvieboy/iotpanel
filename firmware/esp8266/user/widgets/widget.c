@@ -205,7 +205,21 @@ void ICACHE_FLASH_ATTR screen_add_cloned_widget(screen_t *screen, widget_t *widg
     screen_add_widget_impl(screen,widget,x,y,1);
 }
 
-
+int ICACHE_FLASH_ATTR screen_move_widget(screen_t *screen, widget_t *widget, int x, int y)
+{
+    int r = -1;
+    widget_entry_t *it = screen->widgets;
+    while (it) {
+        if (it->widget == widget) {
+            it->x = x;
+            it->y = y;
+            r=0;
+            break;
+        }
+        it = it->next;
+    }
+    return r;
+}
 
 void ICACHE_FLASH_ATTR draw_current_screen(gfxinfo_t *gfx)
 {

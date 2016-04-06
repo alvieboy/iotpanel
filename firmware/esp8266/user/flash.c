@@ -3,7 +3,7 @@
 #include "protos.h"
 #include "alloc.h"
 
-#define DEBUGFLASH(x...) /* os_printf(x) */
+#define DEBUGFLASH(x...)  /* os_printf(x) */
 
 void ICACHE_FLASH_ATTR flash_control_init(flash_control_t *ctrl)
 {
@@ -16,6 +16,7 @@ void ICACHE_FLASH_ATTR flash_control_release(flash_control_t *ctrl)
 {
     if (ctrl->cached_sector)
         os_free(ctrl->cached_sector);
+    ctrl->cached_sector = NULL;
 }
 
 LOCAL int spiflash_read_cached_single(flash_control_t *ctrl, unsigned address, uint8_t *target, unsigned size)

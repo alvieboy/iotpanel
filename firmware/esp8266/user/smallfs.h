@@ -138,5 +138,7 @@ static inline void smallfs__seek(struct smallfs *fs, unsigned address) {
     smallfs__seek_if_needed(fs,address);
 }
 
+struct smallfs *smallfs__getfs();
+int smallfs__start();
 
 #endif

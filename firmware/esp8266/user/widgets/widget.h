@@ -116,6 +116,7 @@ int widget_set_property(widget_t*widget, const char *name, const char *value);
 screen_t* screen_create(const char *name);
 widget_t *widget_create(const char *class, const char *name);
 widget_t* widget_find(const char *name);
+int screen_move_widget(screen_t *screen, widget_t *widget, int x, int y);
 void widget_ref(widget_t*widget);
 void widget_unref(widget_t*widget);
 

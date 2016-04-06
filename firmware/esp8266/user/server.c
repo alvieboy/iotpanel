@@ -79,7 +79,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandSave(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandReset(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandInfo(clientInfo_t *);
-
+LOCAL ICACHE_FLASH_ATTR int handleCommandMove(clientInfo_t *);
 commandEntry_t commandHandlers[] = {
     { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
     { "LOGIN",   &handleCommandLogin, 0 ,"<username>"},
@@ -102,6 +102,7 @@ commandEntry_t commandHandlers[] = {
     { "LOGOUT",   &handleCommandLogout, 0 ,""},
     { "RESET",   &handleCommandReset, 1 ,""},
     { "INFO",   &handleCommandInfo, 1 ,""},
+    { "MOVE",    &handleCommandMove, 1,"<screenname> <widgetname> <x> <y>" },
     { 0, 0, 1, NULL }
 };
 
@@ -276,6 +277,50 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAdd(clientInfo_t *cl)
 
     screen_add_widget(s, w, x, y);
     client_sendOK(cl,"ADD");
+    return 0;
+}
+
+
+
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandMove(clientInfo_t *cl)
+{
+    int x, y;
+    char *end;
+
+    if (cl->argc<4) {
+        client_senderror(cl,"INVALIDARGS");
+    }
+    screen_t *s = screen_find(cl->argv[0]);
+    if (!s) {
+        client_senderror(cl,"NOTFOUND");
+        return -1;
+    }
+
+    widget_t *w = widget_find(cl->argv[1]);
+    if (!w) {
+        client_senderror(cl,"NOTFOUND");
+        return -1;
+    }
+
+    x = (int)strtol(cl->argv[2],&end,10);
+    if (*end !='\0') {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+
+    y = (int)strtol(cl->argv[3],&end,10);
+    if (*end !='\0') {
+        client_senderror(cl,"INVALID");
+        return -1;
+    }
+
+    if (screen_move_widget(s, w, x, y)<0) {
+        client_senderror(cl,"NOTFOUND");
+        return -1;
+    }
+
+    client_sendOK(cl,"MOVE");
     return 0;
 }
 
