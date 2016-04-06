@@ -10,7 +10,7 @@
 typedef struct
 {
     gfxinfo_t *gfx;
-    const gfxinfo_t *dest;
+//    const gfxinfo_t *dest;
     char str[512];
     int update;
     int x,y;
@@ -21,6 +21,6 @@ typedef struct
 
 void setupScrollingText(scrollingtext_t *t, const gfxinfo_t *dest, const font_t*,int y, const char *str);
 void updateScrollingText(scrollingtext_t *t, const char *str);
-void drawScrollingText(scrollingtext_t *t);
+void drawScrollingText(scrollingtext_t *t, gfxinfo_t*destgfx);
 
 #endif
