@@ -18,7 +18,7 @@
 #define ESCAPE '~'
 
 LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str, const textrendersettings_t *s, int *width, int *height);
-LOCAL int getNumberOfPrintableChars(const char *str, const textrendersettings_t *settings);
+LOCAL int getNumberOfPrintableChars(const char *str, const textrendersettings_t *settings, int*offset);
 
 LOCAL int unpackHexByte(const char *str, uint8_t *dest);
 
@@ -141,9 +141,10 @@ void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t
 {
     int i,j;
     int sx = x;
+    int offset;
     DEBUG("Draw text bg %d fg %d, maxwidth %d, wrap %d\n", (int)bg, (int)color, (int)s->w, (int)s->wrap);
     do {
-        i = getNumberOfPrintableChars(str, s);
+        i = getNumberOfPrintableChars(str, s, &offset);
         if (i<0) {
             return;
         }
@@ -169,6 +170,7 @@ void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t
 
             if (parseUnprintable(&str,&color,&bg)<0)
                 return;
+            DEBUG("Draw char '%c' at pos %d\n", *str, x);
             drawChar(gfx, s->font,x,y,*str,color,bg);
             x += s->font->hdr.w;
             str++;
@@ -212,7 +214,7 @@ void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t
             }
             continue;
         }
-
+        DEBUG("Draw char '%c' at pos x\n", *str, x);
         drawChar(gfx, s->font,x,y,*str,color,bg);
         x+=s->font->w;
         str++;
@@ -236,7 +238,7 @@ gfxinfo_t * ICACHE_FLASH_ATTR allocateTextFramebuffer(const char *str, const tex
     int size_x, size_y;
     if (textComputeLength(str,s,&size_x,&size_y)<0)
         return NULL;
-
+    DEBUG("Computed len for '%s': %d %d\n", str,size_x,size_y);
     gfxinfo_t *info = os_calloc(sizeof(gfxinfo_t),1);
     DEBUG("New info @ %p\n", info);
 
@@ -311,19 +313,26 @@ LOCAL int ICACHE_FLASH_ATTR skipUnprintable(const char **str)
 }
 
 LOCAL int ICACHE_FLASH_ATTR getNumberOfPrintableChars(const char *str,
-                                    const textrendersettings_t *settings)
+                                    const textrendersettings_t *settings, int *offset)
 {
     int skip;
     int count = 0;
     const char *lastspace = NULL;
     int maxwidth = settings->w;
     /* Skip spaces first? */
+    *offset = 0;
+    DEBUG("Maxw %d\n", maxwidth);
+    if (*str==0)
+        return 0;
 
     do {
+        const char *save = str;
         skip = skipUnprintable(&str);
         if (skip<0) {
             return -1;
         }
+        *offset += (str-save);
+
         if (maxwidth>=0) {
             if (maxwidth < settings->font->hdr.w) {
 
@@ -344,7 +353,7 @@ LOCAL int ICACHE_FLASH_ATTR getNumberOfPrintableChars(const char *str,
             maxwidth-=settings->font->hdr.w;
         }
     } while (*str);
-
+    *offset+=count;
     return count;
 }
 
@@ -354,15 +363,17 @@ LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str, const textrenders
     int i;
     int maxw = 0;
     int maxh = 0;
+    int offset;
+    DEBUG("Computing length");
     do {
-        DEBUG("Str: '%s'\n", str);
-        i = getNumberOfPrintableChars(str, s);
-        DEBUG("Printable chars: %d\n", i);
+        DEBUG("Str: '%s' start 0x%02x\n", str, str[0]);
+        i = getNumberOfPrintableChars(str, s, &offset);
+        DEBUG("Printable chars: %d, offset %d\n", i, offset);
         if (i<0) {
             return -1;
         }
         maxh++;
-        str+=i;
+        str+=offset;
         DEBUG("Str now: '%s'\n", str);
         if (maxw<i)
             maxw=i;
@@ -411,10 +422,11 @@ int ICACHE_FLASH_ATTR overlayFramebuffer( const gfxinfo_t *source, const gfxinfo
         src = -x;
         w = dest->width;
     }
-
+    DEBUG("W 1 %d\n", w);
     if (w > (source->width-src)) {
         w = source->width-src;
     }
+    DEBUG("W 2 %d\n", w);
 
     if (w<=0) {
         if (x>0) {
@@ -426,15 +438,18 @@ int ICACHE_FLASH_ATTR overlayFramebuffer( const gfxinfo_t *source, const gfxinfo
     /* draw */
     int cw,ch;
     y = dest->height - y;
-    //DEBUG("Source height: %d\n", source->height);
+    DEBUG("Source height: %d\n", source->height);
+    DEBUG("Trans %d\n", transparent);
+
     for (ch=0; ch<source->height; ch++) {
 
         if (y<=0)
             break;
 
         for (cw=0; cw<w; cw++) {
-            if (transparent<0 || (transparent != source->fb[src + cw]))
+            if (transparent<0 || (transparent != source->fb[src + cw])) {
                 dest->fb[ptr + cw] = source->fb[src + cw];
+            }
         }
         ptr+=dest->stride;
         src+=source->stride;
