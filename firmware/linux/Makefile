@@ -70,6 +70,7 @@ SOURCES       = main.cpp \
 		../esp8266/user/widgets/text.c \
 		../esp8266/user/widgets/line.c \
 		../esp8266/user/widgets/clockw.c \
+		../esp8266/user/widgets/romimage.c \
 		../esp8266/user/widgets/widget_registry.c \
 		../esp8266/user/flash_serializer.c \
 		../esp8266/user/crc.c \
@@ -99,6 +100,7 @@ OBJECTS       = main.o \
 		text.o \
 		line.o \
 		clockw.o \
+		romimage.o \
 		widget_registry.o \
 		flash_serializer.o \
 		crc.o \
@@ -188,6 +190,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		../esp8266/user/widgets/text.c \
 		../esp8266/user/widgets/line.c \
 		../esp8266/user/widgets/clockw.c \
+		../esp8266/user/widgets/romimage.c \
 		../esp8266/user/widgets/widget_registry.c \
 		../esp8266/user/flash_serializer.c \
 		../esp8266/user/crc.c \
@@ -366,7 +369,7 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents ../../paneleditor/Panel.h ../../paneleditor/PanelFramebuffer.h mainwindow.h $(DISTDIR)/
-	$(COPY_FILE) --parents main.cpp mainwindow.cpp ../../paneleditor/PanelFramebuffer.cpp ../../paneleditor/Panel.cpp iotpanel.c ../esp8266/user/font.c ../esp8266/user/server.c ../esp8266/user/schedule.c ../esp8266/user/clock.c ../esp8266/user/user_main.c ../esp8266/user/gfx.c ../esp8266/user/font_tom_thumb.c ../esp8266/user/upgrade.c ../esp8266/user/cdecode.c ../esp8266/user/serdes.c ../esp8266/user/widgets/color.c ../esp8266/user/widgets/scrollingtext.c ../esp8266/user/widgets/widget.c ../esp8266/user/widgets/rectangle.c ../esp8266/user/widgets/text.c ../esp8266/user/widgets/line.c ../esp8266/user/widgets/clockw.c ../esp8266/user/widgets/widget_registry.c ../esp8266/user/flash_serializer.c ../esp8266/user/crc.c ../esp8266/user/framebuffer.c ../esp8266/user/flash.c ../esp8266/user/smallfs.c $(DISTDIR)/
+	$(COPY_FILE) --parents main.cpp mainwindow.cpp ../../paneleditor/PanelFramebuffer.cpp ../../paneleditor/Panel.cpp iotpanel.c ../esp8266/user/font.c ../esp8266/user/server.c ../esp8266/user/schedule.c ../esp8266/user/clock.c ../esp8266/user/user_main.c ../esp8266/user/gfx.c ../esp8266/user/font_tom_thumb.c ../esp8266/user/upgrade.c ../esp8266/user/cdecode.c ../esp8266/user/serdes.c ../esp8266/user/widgets/color.c ../esp8266/user/widgets/scrollingtext.c ../esp8266/user/widgets/widget.c ../esp8266/user/widgets/rectangle.c ../esp8266/user/widgets/text.c ../esp8266/user/widgets/line.c ../esp8266/user/widgets/clockw.c ../esp8266/user/widgets/romimage.c ../esp8266/user/widgets/widget_registry.c ../esp8266/user/flash_serializer.c ../esp8266/user/crc.c ../esp8266/user/framebuffer.c ../esp8266/user/flash.c ../esp8266/user/smallfs.c $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -467,7 +470,8 @@ server.o: ../esp8266/user/server.c ets_sys.h \
 		../esp8266/user/flashutils.h \
 		../esp8266/user/cdecode.h \
 		../esp8266/user/clock.h \
-		../esp8266/user/flash_serializer.h
+		../esp8266/user/flash_serializer.h \
+		../esp8266/user/alloc.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o server.o ../esp8266/user/server.c
 
 schedule.o: ../esp8266/user/schedule.c ../esp8266/user/schedule.h \
@@ -655,6 +659,22 @@ clockw.o: ../esp8266/user/widgets/clockw.c ../esp8266/user/clock.h \
 		../esp8266/user/widgets/widget_registry.h \
 		../esp8266/user/protos.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o clockw.o ../esp8266/user/widgets/clockw.c
+
+romimage.o: ../esp8266/user/widgets/romimage.c ../esp8266/user/widgets/widget.h \
+		../esp8266/user/gfx.h \
+		ets_sys.h \
+		os_type.h \
+		osapi.h \
+		gpio.h \
+		../../paneleditor/font.h \
+		../esp8266/user/framebuffer.h \
+		../esp8266/user/widgets/romimage.h \
+		../esp8266/user/smallfs.h \
+		../esp8266/user/flash.h \
+		../esp8266/user/flashutils.h \
+		spi_flash.h \
+		../esp8266/user/alloc.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o romimage.o ../esp8266/user/widgets/romimage.c
 
 widget_registry.o: ../esp8266/user/widgets/widget_registry.c ../esp8266/user/widgets/widget.h \
 		../esp8266/user/gfx.h \

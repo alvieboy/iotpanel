@@ -28,6 +28,7 @@ mainwindow.cpp \
 ../esp8266/user/widgets/text.c 	               \
 ../esp8266/user/widgets/line.c 	               \
 ../esp8266/user/widgets/clockw.c 	       \
+../esp8266/user/widgets/romimage.c 	       \
 ../esp8266/user/widgets/widget_registry.c      \
 ../esp8266/user/flash_serializer.c     \
 ../esp8266/user/crc.c     \
