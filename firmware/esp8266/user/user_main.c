@@ -527,7 +527,7 @@ void ICACHE_FLASH_ATTR user_init_2()
     //setupFramebuffer();
     //setupDefaultScreen();
 #ifndef HOST
-    setupWifiSta("","");
+    setupWifiSta("","",NULL);
 #endif
     user_server_init(8081);
 

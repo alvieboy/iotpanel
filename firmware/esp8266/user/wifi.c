@@ -56,25 +56,34 @@ void ICACHE_FLASH_ATTR wifiConnect()
     }
 
 }
-void ICACHE_FLASH_ATTR setupWifiSta(const char *ssid, const char *pwd)
+void ICACHE_FLASH_ATTR setupWifiSta(const char *ssid, const char *pwd, const uint8_t *bssid)
 {
     memset(&sta_conf,0,sizeof(sta_conf));
     memcpy(&sta_conf.ssid, ssid, strlen(ssid));
     memcpy(&sta_conf.password, pwd, strlen(pwd));
+    if (bssid) {
+        sta_conf.bssid_set = 1;
+        memcpy(&sta_conf.bssid, bssid, 6);
+    } else {
+        sta_conf.bssid_set = 0;
+    }
     wifi_do_reconnect=1;
 }
 
 
-LOCAL void ICACHE_FLASH_ATTR wifi_ap_found_callback(struct ap_info *ap)
+LOCAL void ICACHE_FLASH_ATTR wifi_ap_found_callback(struct ap_info *ap, const uint8_t *bssid)
 {
     os_printf("Connecting to AP: %s\n", ap->ssid);
-    setupWifiSta( ap->ssid, ap->pwd );
+    setupWifiSta( ap->ssid, ap->pwd, bssid );
 }
 
 void ICACHE_FLASH_ATTR scan_done_cb(void *arg, STATUS status)
 {
     struct bss_info *bss_link = arg;
     int rescan = 1;
+    struct ap_info *best = NULL;
+    sint8 bestrssi;
+    const uint8_t *bssid;
 
     if (status == OK) {
 
@@ -84,14 +93,26 @@ void ICACHE_FLASH_ATTR scan_done_cb(void *arg, STATUS status)
             struct ap_info *ap = wifi_get_ap((const char*)inf->ssid);
             if (ap) {
                 rescan=0;
-                wifi_ap_found_callback(ap);
-                break;
+                if (best == NULL) {
+                    bssid = inf->bssid;
+                    best = ap;
+                    bestrssi = inf->rssi;
+                } else {
+                    if (inf->rssi > bestrssi) {
+                        bssid = inf->bssid;
+                        best = ap;
+                        bestrssi = inf->rssi;
+                    }
+                }
             }
             inf = inf->next.stqe_next;
         }
     } else {
         os_printf("Error scanning\n");
     }
+
+    if (best)
+        wifi_ap_found_callback(best, bssid);
 
     // Schedule a new scan, if we found nothing.
     if (rescan)
