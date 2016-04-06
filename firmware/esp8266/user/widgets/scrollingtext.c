@@ -11,7 +11,7 @@ void ICACHE_FLASH_ATTR setupScrollingText(scrollingtext_t *t, const gfxinfo_t *d
     if (t==NULL)
         return;
 
-    t->dest = dest;
+//    t->dest = dest;
     t->x = dest->width-1;
     t->y = y;
     t->font = font;
@@ -26,37 +26,43 @@ void ICACHE_FLASH_ATTR setupScrollingText(scrollingtext_t *t, const gfxinfo_t *d
     render.wrap = 0;
     render.align = ALIGN_LEFT;
     updateScrollingText(t, str);
-
+    DEBUG("Allocating framebuffer for scrolling text '%s'\n",str);
     t->gfx = allocateTextFramebuffer(str, &render);
 
     drawText( t->gfx, &render, 0, 0, str,  t->fg, t->bg);
 
 }
 
-LOCAL void ICACHE_FLASH_ATTR scrollingtext_set_text(widget_t *w, const char *str)
+LOCAL int ICACHE_FLASH_ATTR scrollingtext_set_text(widget_t *w, const char *str)
 {
-     scrollingtext_t *t= SCROLLINGTEXT(w);
+    scrollingtext_t *t= SCROLLINGTEXT(w);
+    DEBUG("USER request, setup text '%s'\n", str);
     updateScrollingText(t, str);
+    return 0;
 }
 
 void ICACHE_FLASH_ATTR updateScrollingText(scrollingtext_t *t, const char *str)
 {
     if (t==NULL)
         return;
+    DEBUG("Setting up scrolling text '%s'\n", str);
     if (str!=t->str)
         strcpy(t->str, str);
     t->update = 1;
 }
 
-void ICACHE_FLASH_ATTR drawScrollingText(scrollingtext_t *t)
+void ICACHE_FLASH_ATTR drawScrollingText(scrollingtext_t *t, gfxinfo_t*destgfx)
 {
     if (t==NULL || t->gfx==NULL || t->font==NULL)
         return;
-    DEBUG("Drawing x %d, y %d t=%p gfx=%p\n", t->x, t->y, t, t->gfx);
+    DEBUG("Drawing x %d, y %d t=%p fb=%p\n", t->x, t->y, t, destgfx->fb);
 
-    switch (overlayFramebuffer(t->gfx, t->dest, t->x, t->y, -1)) {
+
+    DEBUG("Dest width %d\n", destgfx->width);
+
+    switch (overlayFramebuffer(t->gfx, destgfx, t->x, t->y, -1)) {
     case -1:
-        t->x = t->dest->width-1;
+        t->x = destgfx->width-1;
         if (t->update) {
 
             textrendersettings_t render;
@@ -114,11 +120,9 @@ int ICACHE_FLASH_ATTR scrollingtext_set_color(widget_t *w, const char *name)
     return 0;
 }
 
-int ICACHE_FLASH_ATTR scrollingtext_set_speed(widget_t *w, int *value)
+int ICACHE_FLASH_ATTR scrollingtext_set_speed(widget_t *w, uint8_t *value)
 {
     scrollingtext_t *t= SCROLLINGTEXT(w);
-    if ((*value)<0)
-        return -1;
     t->max = *value;
     return 0;
 }
@@ -146,9 +150,10 @@ void ICACHE_FLASH_ATTR scrollingtext_redraw(widget_t *w, int x, int y, gfxinfo_t
     t->y = y;
 
     if (!t->gfx) {
+        DEBUG("No fb yet, allocating for '%s'\n", t->str);
         setupScrollingText(t, gfx, t->font, t->y, t->str);
     }
-    drawScrollingText(t);
+    drawScrollingText(t,gfx);
 }
 
 STRING_GETTER( scrollingtext_t, str );
