@@ -27,10 +27,11 @@ void ICACHE_FLASH_ATTR setupText(text_t *t, const gfxinfo_t *dest,
     drawText( t->gfx, &render, 0, 0, str,  t->fg, t->bg);
 }
 
-LOCAL void ICACHE_FLASH_ATTR text_set_text(widget_t *w, const char *str)
+LOCAL int ICACHE_FLASH_ATTR text_set_text(widget_t *w, const char *str)
 {
     text_t *t= TEXT(w);
     updateText(t, str);
+    return 0;
 }
 
 void ICACHE_FLASH_ATTR updateText(text_t *t, const char *str)
