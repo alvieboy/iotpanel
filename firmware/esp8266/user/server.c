@@ -330,7 +330,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandClone(clientInfo_t *cl)
     }
 
     /* Ok, create it. */
-    screen_add_widget(s, w, x, y);
+    screen_add_cloned_widget(s, w, x, y);
     client_sendOK(cl,"CLONE");
     return 0;
 }
@@ -642,6 +642,7 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
                     espconn_disconnect(cl->conn);
                     espconn_delete(cl->conn);
                     cl->conn = NULL;
+                    return;
                 }
             }
             break;
