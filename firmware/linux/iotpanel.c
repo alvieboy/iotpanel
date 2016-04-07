@@ -78,6 +78,11 @@ void *pvPortCalloc(size_t size, int n)
     return calloc(size,n);
 }
 
+void *pvPortRealloc(void *ptr, size_t size)
+{
+    return realloc(ptr,size);
+}
+
 void vPortFree(void *ptr)
 {
     free(ptr);

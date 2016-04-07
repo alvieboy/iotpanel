@@ -13,7 +13,7 @@ MAKEFILE      = Makefile
 CC            = gcc
 CXX           = g++
 DEFINES       = -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_NETWORK_LIB -DQT_XML_LIB -DQT_CORE_LIB
-CFLAGS        = -Wall -Werror -Wno-unused -O2 -g -I../esp8266/user -I../esp8266/user/widgets -I../../paneleditor/ -I./drivers $(SDL_CFLAGS) -DHOST -O2 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
+CFLAGS        = -Wall -Werror -Wno-unused -O2 -g -I../esp8266/user -I../esp8266/user/gif -I../esp8266/user/widgets -I../../paneleditor/ -I./drivers $(SDL_CFLAGS) -DHOST -O2 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
 CXXFLAGS      = -m64 -pipe -DPANELDISPLAYNOEDIT -I. -I../../paneleditor/ -I../esp8266/user -I../esp8266/user/widgets -DHOST -O2 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
 INCPATH       = -I. -isystem /usr/include/x86_64-linux-gnu/qt5 -isystem /usr/include/x86_64-linux-gnu/qt5/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt5/QtGui -isystem /usr/include/x86_64-linux-gnu/qt5/QtNetwork -isystem /usr/include/x86_64-linux-gnu/qt5/QtXml -isystem /usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++-64
 QMAKE         = /usr/lib/x86_64-linux-gnu/qt5/bin/qmake
@@ -71,7 +71,9 @@ SOURCES       = main.cpp \
 		../esp8266/user/widgets/line.c \
 		../esp8266/user/widgets/clockw.c \
 		../esp8266/user/widgets/romimage.c \
+		../esp8266/user/widgets/gif.c \
 		../esp8266/user/widgets/widget_registry.c \
+		../esp8266/user/gif/libnsgif.c \
 		../esp8266/user/flash_serializer.c \
 		../esp8266/user/crc.c \
 		../esp8266/user/framebuffer.c \
@@ -101,7 +103,9 @@ OBJECTS       = main.o \
 		line.o \
 		clockw.o \
 		romimage.o \
+		gif.o \
 		widget_registry.o \
+		libnsgif.o \
 		flash_serializer.o \
 		crc.o \
 		framebuffer.o \
@@ -191,7 +195,9 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		../esp8266/user/widgets/line.c \
 		../esp8266/user/widgets/clockw.c \
 		../esp8266/user/widgets/romimage.c \
+		../esp8266/user/widgets/gif.c \
 		../esp8266/user/widgets/widget_registry.c \
+		../esp8266/user/gif/libnsgif.c \
 		../esp8266/user/flash_serializer.c \
 		../esp8266/user/crc.c \
 		../esp8266/user/framebuffer.c \
@@ -369,7 +375,7 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents ../../paneleditor/Panel.h ../../paneleditor/PanelFramebuffer.h mainwindow.h $(DISTDIR)/
-	$(COPY_FILE) --parents main.cpp mainwindow.cpp ../../paneleditor/PanelFramebuffer.cpp ../../paneleditor/Panel.cpp iotpanel.c ../esp8266/user/font.c ../esp8266/user/server.c ../esp8266/user/schedule.c ../esp8266/user/clock.c ../esp8266/user/user_main.c ../esp8266/user/gfx.c ../esp8266/user/font_tom_thumb.c ../esp8266/user/upgrade.c ../esp8266/user/cdecode.c ../esp8266/user/serdes.c ../esp8266/user/widgets/color.c ../esp8266/user/widgets/scrollingtext.c ../esp8266/user/widgets/widget.c ../esp8266/user/widgets/rectangle.c ../esp8266/user/widgets/text.c ../esp8266/user/widgets/line.c ../esp8266/user/widgets/clockw.c ../esp8266/user/widgets/romimage.c ../esp8266/user/widgets/widget_registry.c ../esp8266/user/flash_serializer.c ../esp8266/user/crc.c ../esp8266/user/framebuffer.c ../esp8266/user/flash.c ../esp8266/user/smallfs.c $(DISTDIR)/
+	$(COPY_FILE) --parents main.cpp mainwindow.cpp ../../paneleditor/PanelFramebuffer.cpp ../../paneleditor/Panel.cpp iotpanel.c ../esp8266/user/font.c ../esp8266/user/server.c ../esp8266/user/schedule.c ../esp8266/user/clock.c ../esp8266/user/user_main.c ../esp8266/user/gfx.c ../esp8266/user/font_tom_thumb.c ../esp8266/user/upgrade.c ../esp8266/user/cdecode.c ../esp8266/user/serdes.c ../esp8266/user/widgets/color.c ../esp8266/user/widgets/scrollingtext.c ../esp8266/user/widgets/widget.c ../esp8266/user/widgets/rectangle.c ../esp8266/user/widgets/text.c ../esp8266/user/widgets/line.c ../esp8266/user/widgets/clockw.c ../esp8266/user/widgets/romimage.c ../esp8266/user/widgets/gif.c ../esp8266/user/widgets/widget_registry.c ../esp8266/user/gif/libnsgif.c ../esp8266/user/flash_serializer.c ../esp8266/user/crc.c ../esp8266/user/framebuffer.c ../esp8266/user/flash.c ../esp8266/user/smallfs.c $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -673,8 +679,26 @@ romimage.o: ../esp8266/user/widgets/romimage.c ../esp8266/user/widgets/widget.h 
 		../esp8266/user/flash.h \
 		../esp8266/user/flashutils.h \
 		spi_flash.h \
-		../esp8266/user/alloc.h
+		../esp8266/user/alloc.h \
+		../esp8266/user/protos.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o romimage.o ../esp8266/user/widgets/romimage.c
+
+gif.o: ../esp8266/user/widgets/gif.c ../esp8266/user/widgets/widget.h \
+		../esp8266/user/gfx.h \
+		ets_sys.h \
+		os_type.h \
+		osapi.h \
+		gpio.h \
+		../../paneleditor/font.h \
+		../esp8266/user/framebuffer.h \
+		../esp8266/user/widgets/gif.h \
+		../esp8266/user/smallfs.h \
+		../esp8266/user/flash.h \
+		../esp8266/user/flashutils.h \
+		spi_flash.h \
+		../esp8266/user/alloc.h \
+		../esp8266/user/protos.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o gif.o ../esp8266/user/widgets/gif.c
 
 widget_registry.o: ../esp8266/user/widgets/widget_registry.c ../esp8266/user/widgets/widget.h \
 		../esp8266/user/gfx.h \
@@ -685,6 +709,13 @@ widget_registry.o: ../esp8266/user/widgets/widget_registry.c ../esp8266/user/wid
 		../../paneleditor/font.h \
 		../esp8266/user/framebuffer.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o widget_registry.o ../esp8266/user/widgets/widget_registry.c
+
+libnsgif.o: ../esp8266/user/gif/libnsgif.c ../esp8266/user/gif/libnsgif.h \
+		ets_sys.h \
+		os_type.h \
+		osapi.h \
+		../esp8266/user/alloc.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o libnsgif.o ../esp8266/user/gif/libnsgif.c
 
 flash_serializer.o: ../esp8266/user/flash_serializer.c ../esp8266/user/serdes.h \
 		ets_sys.h \
@@ -724,7 +755,9 @@ smallfs.o: ../esp8266/user/smallfs.c ../esp8266/user/smallfs.h \
 		../esp8266/user/flash.h \
 		../esp8266/user/flashutils.h \
 		spi_flash.h \
-		ets_sys.h
+		ets_sys.h \
+		../esp8266/user/protos.h \
+		osapi.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o smallfs.o ../esp8266/user/smallfs.c
 
 moc_Panel.o: moc_Panel.cpp 

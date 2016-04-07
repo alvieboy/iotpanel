@@ -48,7 +48,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="pushButton_5">
+           <widget class="QPushButton" name="selectButton">
             <property name="text">
              <string>Seleccionar</string>
             </property>
@@ -525,6 +525,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>selectButton</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>onSelectScreen()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>404</x>
+     <y>74</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>232</x>
+     <y>222</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>onAutoConnection()</slot>
@@ -535,5 +551,6 @@
   <slot>onSendUpdate()</slot>
   <slot>onReconfigure()</slot>
   <slot>onOpenDesign()</slot>
+  <slot>onSelectScreen()</slot>
  </slots>
 </ui>

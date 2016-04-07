@@ -25,7 +25,7 @@ ESPPORT		?= /dev/ttyUSB0
 TARGET		= app
 
 # which modules (subdirectories) of the project to include in compiling
-MODULES		= driver user user/widgets
+MODULES		= driver user user/widgets user/gif
 EXTRA_INCDIR    = include /opt/Espressif/include
 
 # libraries used in this project, mainly provided by the SDK
@@ -140,7 +140,7 @@ firmware:
 	$(Q) mkdir -p $@
 
 flash: firmware/0x00000.bin firmware/0x40000.bin
-	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 firmware/0x00000.bin 0x40000 firmware/0x40000.bin
+	-$(ESPTOOL) --port $(ESPPORT) write_flash 0x00000 firmware/0x00000.bin  0x10000 firmware/0x10000.bin  0x40000 firmware/0x40000.bin
 
 clean:
 	$(Q) rm -f $(APP_AR)

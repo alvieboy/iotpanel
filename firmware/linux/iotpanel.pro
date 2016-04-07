@@ -29,7 +29,9 @@ mainwindow.cpp \
 ../esp8266/user/widgets/line.c 	               \
 ../esp8266/user/widgets/clockw.c 	       \
 ../esp8266/user/widgets/romimage.c 	       \
+../esp8266/user/widgets/gif.c 	       	       \
 ../esp8266/user/widgets/widget_registry.c      \
+../esp8266/user/gif/libnsgif.c    \
 ../esp8266/user/flash_serializer.c     \
 ../esp8266/user/crc.c     \
 ../esp8266/user/framebuffer.c     \
@@ -41,7 +43,7 @@ HEADERS  += ../../paneleditor/Panel.h \
             ../../paneleditor/PanelFramebuffer.h \
             mainwindow.h
 
-QMAKE_CFLAGS=-Wall -Werror -Wno-unused -O2 -g -I../esp8266/user -I../esp8266/user/widgets -I../../paneleditor/ -I./drivers $(SDL_CFLAGS) -DHOST
+QMAKE_CFLAGS=-Wall -Werror -Wno-unused -O2 -g -I../esp8266/user -I../esp8266/user/gif -I../esp8266/user/widgets -I../../paneleditor/ -I./drivers $(SDL_CFLAGS) -DHOST
 QMAKE_CXXFLAGS+=-DPANELDISPLAYNOEDIT  -I. -I../../paneleditor/ -I../esp8266/user -I../esp8266/user/widgets -DHOST
 
 #FORMS    += mainwindow.ui
