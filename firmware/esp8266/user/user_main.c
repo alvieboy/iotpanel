@@ -129,7 +129,8 @@ LOCAL void ICACHE_FLASH_ATTR wifiUpdate(const char *status)
 {
     widget_t *w = widget_find("status");
     if (w!=NULL) {
-        widget_set_property(w,"text", status);
+        int r = widget_set_property(w,"text", status);
+        (void)r;
     }
 //    updateScrollingText( &scr, status);
 }
@@ -402,8 +403,8 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
     screen_t *screen = screen_create("default");
 
     widget_t *sc = widget_create("scrollingtext","status");
-    widget_set_property(sc, "font", "thumb" );
-    widget_set_property(sc, "text", "IoT "
+    int r = widget_set_property(sc, "font", "thumb" );
+    r = widget_set_property(sc, "text", "IoT "
 #if 1
                         ESC "c07"
                         "R"
@@ -415,34 +416,34 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 #endif
                         " "
                         "Panel - (C) 2015 Alvie");
-    widget_set_property(sc, "color", "white");
-    widget_set_property(sc, "speed", "0");
+    r = widget_set_property(sc, "color", "white");
+    r = widget_set_property(sc, "speed", "0");
 
-    screen_add_widget(screen, sc, 0, 0);
+    r = screen_add_widget(screen, sc, 0, 0);
 #if 0
     widget_t *text = widget_create("text","example");
-    widget_set_property(text, "font", "thumb" );
-    widget_set_property(text, "wrap", "1" );
-    widget_set_property(text, "width", "64" );
-    widget_set_property(text, "text", "Para mais info contactar" );
-    widget_set_property(text, "color", "yellow" );
+    r = widget_set_property(text, "font", "thumb" );
+    r = widget_set_property(text, "wrap", "1" );
+    r = widget_set_property(text, "width", "64" );
+    r = widget_set_property(text, "text", "Para mais info contactar" );
+    r = widget_set_property(text, "color", "yellow" );
 
-    screen_add_widget(screen, text, 0, 8);
+    r = screen_add_widget(screen, text, 0, 8);
     text = widget_create("text","ger");
-    widget_set_property(text, "font", "thumb" );
-    widget_set_property(text, "wrap", "1" );
-    widget_set_property(text, "width", "64" );
-    widget_set_property(text, "text", "A gerencia" );
-    widget_set_property(text, "color", "green" );
+    r = widget_set_property(text, "font", "thumb" );
+    r = widget_set_property(text, "wrap", "1" );
+    r = widget_set_property(text, "width", "64" );
+    r = widget_set_property(text, "text", "A gerencia" );
+    r = widget_set_property(text, "color", "green" );
 
-    screen_add_widget(screen, text, 0, 16+8);
+    r = screen_add_widget(screen, text, 0, 16+8);
 
     sc = widget_create("scrollingtext","info");
-    widget_set_property(sc, "font", "thumb" );
-    widget_set_property(sc, "text", "Para mais informacoes contacte "
+    r = widget_set_property(sc, "font", "thumb" );
+    r = widget_set_property(sc, "text", "Para mais informacoes contacte "
                         "a gerencia deste estabelecimento");
-    widget_set_property(sc, "color", "yellow");
-    widget_set_property(sc, "speed", "3");
+    r = widget_set_property(sc, "color", "yellow");
+    r = widget_set_property(sc, "speed", "3");
 
     screen_add_widget(screen, sc, 0, 1+32-7);
 
@@ -461,7 +462,7 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 
     screen_add_widget(screen, tx, 33, 16);
 #endif
-
+    (void)r;
     screen_select(screen);
 }
 

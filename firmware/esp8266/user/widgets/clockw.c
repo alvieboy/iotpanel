@@ -35,7 +35,13 @@ int ICACHE_FLASH_ATTR clock_set_bgcolor(widget_t *w, const char *name)
 static void *ICACHE_FLASH_ATTR clock_new(void*what)
 {
     clockw_t *s = os_calloc(sizeof(clockw_t),1);
-    s->text = text_new(what);
+    if (s) {
+        s->text = text_new(what);
+        if (NULL==s->text) {
+            os_free(s);
+            s = NULL;
+        }
+    }
     return s;
 }
 

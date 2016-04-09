@@ -7,6 +7,7 @@
 #include "serdes.h"
 #include "protos.h"
 #include "mutex.h"
+#include "error.h"
 
 typedef struct schedule_entry {
     schedule_type_t type;
@@ -154,24 +155,36 @@ int ICACHE_FLASH_ATTR schedule_append(schedule_type_t type, void *arg)
 
 int ICACHE_FLASH_ATTR schedule_serialize(serializer_t *ser)
 {
-    serialize_uint8(ser, schedule_running ? 1: 0);
+    int r;
+    r = serialize_uint8(ser, schedule_running ? 1: 0);
+
+    if (r<0)
+        return r;
+
     schedule_entry_t *h = schedule_root;
     while (h) {
-        serialize_uint8( ser, h->type );
+        r = serialize_uint8( ser, h->type );
+        if (r<0)
+            return r;
         switch (h->type) {
         case SCHEDULE_SELECT:
             os_printf("Select '%s'\n", h->val.string);
-            serialize_string(ser, h->val.string);
+            r = serialize_string(ser, h->val.string);
             break;
         case SCHEDULE_WAIT:
             os_printf("Wait %d\n", h->val.intval);
-            serialize_uint32(ser, h->val.intval);
+            r = serialize_uint32(ser, h->val.intval);
             break;
+        default:
+            r = EINTERNALERROR;
         }
+        if (r!=NOERROR)
+            return r;
+
         h = h->next;
     }
-    serialize_uint8(ser, 0); //  Last entry
-    return 0;
+    r = serialize_uint8(ser, 0); //  Last entry
+    return r;
 }
 
 int ICACHE_FLASH_ATTR schedule_deserialize(serializer_t *ser)

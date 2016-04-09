@@ -28,8 +28,8 @@ void ICACHE_FLASH_ATTR setupScrollingText(scrollingtext_t *t, const gfxinfo_t *d
     updateScrollingText(t, str);
     DEBUG("Allocating framebuffer for scrolling text '%s'\n",str);
     t->gfx = allocateTextFramebuffer(str, &render);
-
-    drawText( t->gfx, &render, 0, 0, str,  t->fg, t->bg);
+    if (t->gfx)
+        drawText( t->gfx, &render, 0, 0, str,  t->fg, t->bg);
 
 }
 
@@ -130,8 +130,10 @@ int ICACHE_FLASH_ATTR scrollingtext_set_speed(widget_t *w, uint8_t *value)
 static void *ICACHE_FLASH_ATTR scrollingtext_new(void*what)
 {
     scrollingtext_t *s = os_calloc(sizeof(scrollingtext_t),1);
-    s->font = font_find("thumb");
-    s->count = 4;
+    if (s) {
+        s->font = font_find("thumb");
+        s->count = 4;
+    }
     return s;
 }
 

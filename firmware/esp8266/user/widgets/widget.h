@@ -2,6 +2,7 @@
 #define __WIDGET_H__
 
 #include "gfx.h"
+#include "protos.h"
 
 #define MAX_SCREENS 8
 #define NAMELEN 16
@@ -104,26 +105,26 @@ typedef struct screen {
 
 
 void screen_draw(screen_t *screen, gfxinfo_t *gfx);
-void screen_add_widget(screen_t *screen, widget_t *widget, int x, int y);
-void screen_add_cloned_widget(screen_t *screen, widget_t *widget, int x, int y);
+int WUNUSED screen_add_widget(screen_t *screen, widget_t *widget, int x, int y);
+int WUNUSED screen_add_cloned_widget(screen_t *screen, widget_t *widget, int x, int y);
 screen_t* screen_find(const char *name);
 void screen_select(screen_t*);
 
 void screen_destroy_all();
 void draw_current_screen(gfxinfo_t *gfx);
 
-int widget_set_property(widget_t*widget, const char *name, const char *value);
+int WUNUSED widget_set_property(widget_t*widget, const char *name, const char *value);
 screen_t* screen_create(const char *name);
 widget_t *widget_create(const char *class, const char *name);
 widget_t* widget_find(const char *name);
-int screen_move_widget(screen_t *screen, widget_t *widget, int x, int y);
+int WUNUSED screen_move_widget(screen_t *screen, widget_t *widget, int x, int y);
 void widget_ref(widget_t*widget);
 void widget_unref(widget_t*widget);
 
 const property_t *widget_get_property(widget_t*,const char *name);
 
 //void screen_serialize(serializer_t *ser, screen_t *screen);
-int serialize_all(serializer_t *ser);
-int deserialize_all(serializer_t *ser);
+int WUNUSED serialize_all(serializer_t *ser);
+int WUNUSED deserialize_all(serializer_t *ser);
 
 #endif

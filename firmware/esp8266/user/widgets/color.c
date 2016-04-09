@@ -2,6 +2,7 @@
 #include <string.h>
 #include "ets_sys.h"
 #include "osapi.h"
+#include "error.h"
 
 struct color_entry {
     const char *name;
@@ -29,7 +30,7 @@ int ICACHE_FLASH_ATTR color_parse(const char *name, color_t *color)
         }
         e++;
     }
-    return -1;
+    return ENOTFOUND;
 }
 
 const char * ICACHE_FLASH_ATTR color_name(color_t color)

@@ -32,4 +32,7 @@ void system_restart();
 
 unsigned system_get_free_heap_size();
 
+
+#define WUNUSED __attribute__((warn_unused_result))
+
 #endif

@@ -6,6 +6,7 @@
 #include "alloc.h"
 #include <string.h>
 #include "protos.h"
+#include "error.h"
 
 #define DEFAULT_DELAY 10
 
@@ -97,13 +98,16 @@ LOCAL int loadgif(gif_t *w, struct smallfsfile *file)
     size_t size;
     gif_result code;
     unsigned int i;
+    int r;
 
     /* create our gif animation */
     gif_create(&gif, &gif_callbacks);
 
     size = smallfsfile__getSize(file);
     unsigned char *data = (unsigned char*)os_malloc(size);
-
+    if (data==NULL) {
+        return ENOMEM;
+    }
     /* load file into memory */
     smallfsfile__read(file, data, size);
 
@@ -125,37 +129,47 @@ LOCAL int loadgif(gif_t *w, struct smallfsfile *file)
 
     w->cframe = -1;
     w->frames = gif.frame_count;
+    r = NOERROR;
     w->fb = os_malloc( sizeof(void*) * w->frames );
 
-    for (i = 0; i != gif.frame_count; i++) {
-        unsigned int row, col;
-        unsigned char *image;
+    if (w->fb != NULL) {
 
-        w->fb[i] = (pixel_t*)os_malloc(asize);
+        for (i = 0; i != gif.frame_count; i++) {
+            unsigned int row, col;
+            unsigned char *image;
 
-        code = gif_decode_frame(&gif, i);
-        if (code != GIF_OK)
-            os_printf("gif_decode_frame", code);
+            w->fb[i] = (pixel_t*)os_malloc(asize);
 
-        os_printf("colour_table_size %d\n", gif.colour_table_size);
-        os_printf("global_colours %d\n", gif.global_colours);
-        os_printf("loop_count %d\n", gif.loop_count);
-        os_printf("# frame %u:\n", i);
-        image = (unsigned char *) gif.frame_image;
-        for (row = 0; row != gif.height; row++) {
-            for (col = 0; col != gif.width; col++) {
-                size_t z = (row * gif.width + col) * 1;
-                w->fb[i][row*gif.width + col] = image[z];
+            code = gif_decode_frame(&gif, i);
+            if (code != GIF_OK) {
+                os_printf("gif_decode_frame", code);
+                r = EMALFORMED;
+                break;
+            }
+
+            os_printf("colour_table_size %d\n", gif.colour_table_size);
+            os_printf("global_colours %d\n", gif.global_colours);
+            os_printf("loop_count %d\n", gif.loop_count);
+            os_printf("# frame %u:\n", i);
+            image = (unsigned char *) gif.frame_image;
+            for (row = 0; row != gif.height; row++) {
+                for (col = 0; col != gif.width; col++) {
+                    size_t z = (row * gif.width + col) * 1;
+                    w->fb[i][row*gif.width + col] = image[z];
+                }
             }
         }
+    } else {
+        r = ENOMEM;
     }
 
     /* clean up */
     gif_finalise(&gif);
     os_free(data);
-    w->cframe = 0;
-
-    return 0;
+    if (r==NOERROR) {
+        w->cframe = 0;
+    }
+    return r;
 }
 
 LOCAL int ICACHE_FLASH_ATTR gif_set_filename(widget_t *w, const char *v)
@@ -201,12 +215,14 @@ LOCAL int ICACHE_FLASH_ATTR gif_set_filename(widget_t *w, const char *v)
 LOCAL void *ICACHE_FLASH_ATTR gif_new(void*what)
 {
     gif_t *r = os_calloc(sizeof(gif_t),1);
-    r->fb = NULL;
-    r->w = -1;
-    r->h = -1;
-    r->cframe = -1;
-    r->delay = DEFAULT_DELAY;
-    r->filename[0] = '\0';
+    if (NULL!=r) {
+        r->fb = NULL;
+        r->w = -1;
+        r->h = -1;
+        r->cframe = -1;
+        r->delay = DEFAULT_DELAY;
+        r->filename[0] = '\0';
+    }
     return r;
 }
 

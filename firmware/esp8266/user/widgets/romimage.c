@@ -6,6 +6,7 @@
 #include "alloc.h"
 #include <string.h>
 #include "protos.h"
+#include "error.h"
 
 LOCAL void ICACHE_FLASH_ATTR romimage_redraw(widget_t *w, int x, int y, gfxinfo_t *gfx)
 {
@@ -59,42 +60,50 @@ LOCAL int ICACHE_FLASH_ATTR romimage_set_filename(widget_t *w, const char *v)
     // Open it up.
     struct smallfsfile file;
     strncpy(r->filename,v,sizeof(r->filename));
+    int ret = NOERROR;
 
     if (smallfs__start() == 0) {
         if (smallfs__open(smallfs__getfs(), &file, r->filename)==0) {
             // Found. Allocate and link
             unsigned size = r->w * r->h;
             r->fb = (pixel_t*)os_malloc(size);
-
-            if (smallfsfile__valid(&file)) {
-                smallfsfile__read(&file, r->fb, size);
+            if (r->fb) {
+                if (smallfsfile__valid(&file)) {
+                    smallfsfile__read(&file, r->fb, size);
+                } else {
+                    os_free(r->fb);
+                    r->fb = NULL;
+                    ret = EINTERNALERROR;
+                    os_printf("Cannot open file %s!!!\n", r->filename);
+                }
             } else {
-                os_free(r->fb);
-                r->fb = NULL;
-                os_printf("Cannot open file %s!!!\n", r->filename);
+                ret = ENOMEM;
             }
         } else {
             os_printf("Cannot open file %s!!!\n", r->filename);
+            ret = ENOTFOUND;
         }
         smallfs__end(smallfs__getfs());
     } else {
         os_printf("Could not open smallfs!!!\n");
+        ret = EINTERNALERROR;
     }
 
     if (r->fb == NULL) {
         r->filename[0] = '\0';
-        return -1;
     }
-    return 0;
+    return ret;
 }
 
 LOCAL void *ICACHE_FLASH_ATTR romimage_new(void*what)
 {
     romimage_t *r = os_calloc(sizeof(romimage_t),1);
-    r->fb = NULL;
-    r->w = -1;
-    r->h = -1;
-    r->filename[0] = '\0';
+    if (r) {
+        r->fb = NULL;
+        r->w = -1;
+        r->h = -1;
+        r->filename[0] = '\0';
+    }
     return r;
 }
 

@@ -287,8 +287,12 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAdd(clientInfo_t *cl)
         return -1;
     }
 
-    screen_add_widget(s, w, x, y);
-    client_sendOK(cl,"ADD");
+    int r =screen_add_widget(s, w, x, y);
+    if (r<0) {
+        client_senderror(cl,r);
+    } else {
+        client_sendOK(cl,"ADD");
+    }
     return 0;
 }
 
@@ -358,6 +362,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandClone(clientInfo_t *cl)
 {
     int x, y;
     char *end;
+    int r;
 
     if (cl->argc<4) {
         client_senderror(cl,EINVALIDARGUMENT);
@@ -387,8 +392,12 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandClone(clientInfo_t *cl)
     }
 
     /* Ok, create it. */
-    screen_add_cloned_widget(s, w, x, y);
-    client_sendOK(cl,"CLONE");
+    r = screen_add_cloned_widget(s, w, x, y);
+    if (r<0) {
+        client_senderror(cl,r);
+    } else {
+        client_sendOK(cl,"CLONE");
+    }
     return 0;
 }
 
@@ -574,8 +583,12 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandSave(clientInfo_t *cl)
 {
-    serialize_all(&flash_serializer);
-    client_sendOK(cl,"SAVE");
+    int r = serialize_all(&flash_serializer);
+    if (r<0) {
+        client_senderror(cl,r);
+    } else {
+        client_sendOK(cl,"SAVE");
+    }
     return 0;
 }
 

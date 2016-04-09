@@ -15,7 +15,7 @@ typedef enum {
 
 struct PanelProperty
 {
-    PanelProperty(const QString &n) : name(n) {}
+    PanelProperty(const QString &n, ePropertyType type) : name(n), type(type) {}
     PanelProperty() {}
     QString name;
     ePropertyType type;

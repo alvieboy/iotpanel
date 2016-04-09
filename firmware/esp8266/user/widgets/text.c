@@ -24,7 +24,8 @@ void ICACHE_FLASH_ATTR setupText(text_t *t, const gfxinfo_t *dest,
     render.align = t->align;
     DEBUG("Text area width %d wrap %d\n", t->width, t->wrap);
     t->gfx = allocateTextFramebuffer(str, &render);
-    drawText( t->gfx, &render, 0, 0, str,  t->fg, t->bg);
+    if (t->gfx)
+        drawText( t->gfx, &render, 0, 0, str,  t->fg, t->bg);
 }
 
 LOCAL int ICACHE_FLASH_ATTR text_set_text(widget_t *w, const char *str)
@@ -74,8 +75,8 @@ void ICACHE_FLASH_ATTR drawTextWidget(text_t *t, int x, int y)
             t->gfx = allocateTextFramebuffer( str, &render);
         }
         /* Draw */
-
-        drawText( t->gfx, &render, 0,0, str,  t->fg, t->bg);
+        if (t->gfx)
+            drawText( t->gfx, &render, 0,0, str,  t->fg, t->bg);
 
         t->update = 0;
     }
@@ -83,7 +84,8 @@ void ICACHE_FLASH_ATTR drawTextWidget(text_t *t, int x, int y)
        // printf("\n\n\nADDING oFFSET %d\\n\n", (t->dest->width - t->gfx->width));
         x += (t->width - t->gfx->width);
     }
-    overlayFramebuffer(t->gfx, t->dest, x, y, t->fg==t->bg ? 0:-1);
+    if (t->gfx)
+        overlayFramebuffer(t->gfx, t->dest, x, y, t->fg==t->bg ? 0:-1);
 }
 
 int ICACHE_FLASH_ATTR text_set_font(widget_t *w, const char *name)
@@ -117,13 +119,15 @@ int ICACHE_FLASH_ATTR text_set_bgcolor(widget_t *w, const char *name)
 void *ICACHE_FLASH_ATTR text_new(void*what)
 {
     text_t *s = os_calloc(sizeof(text_t),1);
-    s->font = font_find("thumb");
-    s->pstr = NULL;
-    s->gfx = NULL;
-    s->width = -1;
-    s->height = -1;
-    s->wrap = 0;
-    s->align = ALIGN_LEFT;
+    if (s) {
+        s->font = font_find("thumb");
+        s->pstr = NULL;
+        s->gfx = NULL;
+        s->width = -1;
+        s->height = -1;
+        s->wrap = 0;
+        s->align = ALIGN_LEFT;
+    }
     return s;
 }
 
