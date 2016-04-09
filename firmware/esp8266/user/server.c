@@ -20,6 +20,7 @@
 #include "flash_serializer.h"
 #include "user_interface.h"
 #include "alloc.h"
+#include "error.h"
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
@@ -134,19 +135,25 @@ LOCAL ICACHE_FLASH_ATTR void client_sendOK(clientInfo_t *cl, const char *args)
     client_sendRawLine(cl);
 }
 
-LOCAL ICACHE_FLASH_ATTR void client_senderror(clientInfo_t *cl, const char *args)
+LOCAL ICACHE_FLASH_ATTR void client_senderrorstring(clientInfo_t *cl, const char *args)
 {
     os_sprintf(cl->tline,"%s ERROR %s\n",cl->rline[0]?cl->rline:"?", args);
+    client_sendRawLine(cl);
+}
+
+LOCAL ICACHE_FLASH_ATTR void client_senderror(clientInfo_t *cl, int errno)
+{
+    os_sprintf(cl->tline,"%s ERROR %s\n",cl->rline[0]?cl->rline:"?", getErrorString(errno));
     client_sendRawLine(cl);
 }
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandHelp(clientInfo_t *cl)
 {
     if (cl->argc>1) {
-        client_senderror(cl, "INVALIDARGS");
+        client_senderror(cl, EINVALIDARGUMENT);
         return -1;
     }
-    client_senderror(cl, "INVALIDARGS");
+    client_senderror(cl, EINVALIDARGUMENT);
     return -1;
 #if 0
     if (cl->argv==0) {
@@ -161,7 +168,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandHelp(clientInfo_t *cl)
 LOCAL ICACHE_FLASH_ATTR int handleCommandLogin(clientInfo_t *cl)
 {
     if (cl->authenticated) {
-        client_senderror(cl, "ALREADY");
+        client_senderror(cl, EALREADY);
         return -1;
     }
     client_sendOK(cl,"da39a3ee5e6b4b0d3255bfef95601890afd80709");
@@ -171,7 +178,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandLogin(clientInfo_t *cl)
 LOCAL ICACHE_FLASH_ATTR int handleCommandAuth(clientInfo_t *cl)
 {
     if (cl->authenticated) {
-        client_senderror(cl, "ALREADY");
+        client_senderror(cl, EALREADY);
         return -1;
     }
     client_sendOK(cl,"WELCOME");
@@ -182,18 +189,19 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAuth(clientInfo_t *cl)
 LOCAL ICACHE_FLASH_ATTR int handleCommandPropset(clientInfo_t *cl)
 {
     if (cl->argc!=3) {
-        client_senderror(cl, "INVALIDARGS");
+        client_senderror(cl, EINVALIDARGUMENT);
         return -1;
     }
 
     widget_t *w = widget_find(cl->argv[0]);
     if (!w) {
-        client_senderror(cl,"NOTFOUND");
+        client_senderror(cl,ENOTFOUND);
         return -1;
     }
 
-    if (widget_set_property( w, cl->argv[1], cl->argv[2])<0) {
-        client_senderror(cl,"INVALIDPROP");
+    int r = widget_set_property( w, cl->argv[1], cl->argv[2]);
+    if (r<0) {
+        client_senderror(cl,r);
         return -1;
     }
     client_sendOK(cl,"PROPSET");
@@ -213,7 +221,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandNewScreen(clientInfo_t *cl)
     if (s) {
         client_sendOK(cl,"NEWSCREEN");
     } else {
-        client_senderror(cl,"TOOMANY");
+        client_senderror(cl,ETOOMANY);
     }
     return s!=NULL;
 }
@@ -221,14 +229,14 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandNewScreen(clientInfo_t *cl)
 LOCAL ICACHE_FLASH_ATTR int handleCommandSelect(clientInfo_t *cl)
 {
     if (cl->argc!=1) {
-        client_senderror(cl,"INVALIDARGS");
+        client_senderror(cl,EINVALIDARGUMENT);
     }
     screen_t *s = screen_find(cl->argv[0]);
     if (s) {
         screen_select(s);
         client_sendOK(cl,"SELECT");
     } else {
-        client_senderror(cl,"NOTFOUND");
+        client_senderror(cl,ENOTFOUND);
     }
     return s!=NULL;
 }
@@ -239,35 +247,35 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAdd(clientInfo_t *cl)
     char *end;
 
     if (cl->argc<5) {
-        client_senderror(cl,"INVALIDARGS");
+        client_senderror(cl,EINVALIDARGUMENT);
     }
     screen_t *s = screen_find(cl->argv[0]);
     if (!s) {
-        client_senderror(cl,"NOTFOUND");
+        client_senderror(cl,ENOTFOUND);
         return -1;
     }
 
     const widgetdef_t *c = widgetdef_find(cl->argv[1]);
     if (!c) {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
 
     widget_t *w = widget_find(cl->argv[2]);
     if (w) {
-        client_senderror(cl,"ALREADY");
+        client_senderror(cl,EALREADY);
         return -1;
     }
 
     x = (int)strtol(cl->argv[3],&end,10);
     if (*end !='\0') {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
 
     y = (int)strtol(cl->argv[4],&end,10);
     if (*end !='\0') {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
 
@@ -275,7 +283,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAdd(clientInfo_t *cl)
 
     w = widget_create(cl->argv[1], cl->argv[2]);
     if (!w) {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
 
@@ -293,34 +301,34 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandMove(clientInfo_t *cl)
     char *end;
 
     if (cl->argc<4) {
-        client_senderror(cl,"INVALIDARGS");
+        client_senderror(cl,EINVALIDARGUMENT);
     }
     screen_t *s = screen_find(cl->argv[0]);
     if (!s) {
-        client_senderror(cl,"NOTFOUND");
+        client_senderror(cl,ENOTFOUND);
         return -1;
     }
 
     widget_t *w = widget_find(cl->argv[1]);
     if (!w) {
-        client_senderror(cl,"NOTFOUND");
+        client_senderror(cl,ENOTFOUND);
         return -1;
     }
 
     x = (int)strtol(cl->argv[2],&end,10);
     if (*end !='\0') {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
 
     y = (int)strtol(cl->argv[3],&end,10);
     if (*end !='\0') {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
 
     if (screen_move_widget(s, w, x, y)<0) {
-        client_senderror(cl,"NOTFOUND");
+        client_senderror(cl,ENOTFOUND);
         return -1;
     }
 
@@ -334,11 +342,11 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandBlank(clientInfo_t *cl)
     char *end;
 
     if (cl->argc<1) {
-        client_senderror(cl,"INVALIDARGS");
+        client_senderror(cl,EINVALIDARGUMENT);
     }
     b = (int)strtol(cl->argv[0],&end,10);
     if (*end !='\0') {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
     setBlanking(b);
@@ -352,29 +360,29 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandClone(clientInfo_t *cl)
     char *end;
 
     if (cl->argc<4) {
-        client_senderror(cl,"INVALIDARGS");
+        client_senderror(cl,EINVALIDARGUMENT);
     }
     screen_t *s = screen_find(cl->argv[1]);
     if (!s) {
-        client_senderror(cl,"NOTFOUND");
+        client_senderror(cl,ENOTFOUND);
         return -1;
     }
 
     widget_t *w = widget_find(cl->argv[0]);
     if (!w) {
-        client_senderror(cl,"NOTFOUND");
+        client_senderror(cl,ENOTFOUND);
         return -1;
     }
 
     x = (int)strtol(cl->argv[2],&end,10);
     if (*end !='\0') {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
 
     y = (int)strtol(cl->argv[3],&end,10);
     if (*end !='\0') {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
 
@@ -394,7 +402,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandFwGet(clientInfo_t *cl)
 LOCAL ICACHE_FLASH_ATTR int handleCommandFwSet(clientInfo_t *cl)
 {
     if (cl->argc!=1) {
-        client_senderror(cl,"INVALIDARGS");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
     strncpy( currentFw, cl->argv[0], sizeof(currentFw));
@@ -413,7 +421,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandNewSchedule(clientInfo_t *cl)
 LOCAL ICACHE_FLASH_ATTR int handleCommandAddSchedule(clientInfo_t *cl)
 {
     if (cl->argc<2) {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
     if (strcmp(cl->argv[0], "SELECT")==0) {
@@ -429,7 +437,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandAddSchedule(clientInfo_t *cl)
 LOCAL ICACHE_FLASH_ATTR int handleCommandSchedule(clientInfo_t *cl)
 {
     if (cl->argc!=1) {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
     if (strcmp(cl->argv[0], "START")==0) {
@@ -437,7 +445,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandSchedule(clientInfo_t *cl)
     } else if (strcmp(cl->argv[0], "STOP")==0) {
         schedule_stop();
     } else {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
     client_sendOK(cl,"SCHEDULE");
@@ -451,7 +459,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandSetTime(clientInfo_t *cl)
     char *end = NULL;
 
     if (cl->argc!=1) {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
 
@@ -479,7 +487,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
     char *end = NULL;
 
     if (cl->argc<1) {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
 
@@ -495,7 +503,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
         ota_initialize();
     } else if (strcmp(cl->argv[0],"CHUNK")==0) {
         if (cl->argc<3) {
-            client_senderror(cl,"INVALID");
+            client_senderror(cl,EINVALIDARGUMENT);
             return -1;
         } else {
             // Parse address and size
@@ -506,15 +514,15 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
                 size = (unsigned int)strtol(cl->argv[2],&end,10);
                 if (end && *end=='\0') {
                     if (ota_set_chunk(start,size)<0) {
-                        client_senderror(cl,"OTA CHUNKERROR");
+                        client_senderrorstring(cl,"OTA CHUNKERROR");
                         return -1;
                   }
                 } else {
-                    client_senderror(cl,"MALFORMED");
+                    client_senderror(cl,EMALFORMED);
                     return -1;
                 }
             } else {
-                client_senderror(cl,"MALFORMED");
+                client_senderror(cl,EMALFORMED);
                 return -1;
             }
         }
@@ -523,7 +531,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
         base64_decodestate b64state;
 
         if ( cl->argc<2) {
-            client_senderror(cl,"INVALID");
+            client_senderror(cl,EINVALIDARGUMENT);
             return -1;
         }
         base64_init_decodestate(&b64state);
@@ -539,13 +547,14 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
                                     &b64state);
         if (r!= 512) {
             os_printf("Invalid len of %d\n", r);
-            client_senderror(cl,"INVALIDLEN");
+            client_senderror(cl,EINVALIDLEN);
             return -1;
         }
 
+        r = ota_program_chunk(otachunk);
 
-        if (ota_program_chunk(otachunk)<0) {
-            client_senderror(cl,"OTA PROGRAM");
+        if (r<0) {
+            client_senderror(cl,r);
             return -1;
         }
     } else if (strcmp(cl->argv[0],"FINALISE")==0) {
@@ -553,7 +562,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
         espconn_disconnect(cl->conn);
         ota_finalize();
     } else {
-        client_senderror(cl,"INVALID");
+        client_senderror(cl,EINVALIDARGUMENT);
         return -1;
     }
 
@@ -663,7 +672,7 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
 {
     cl->cmd = strchr(cl->rline, ' ');
     if (!cl->cmd) {
-        client_senderror(cl,"MALFORMED");
+        client_senderror(cl,EMALFORMED);
         return;
     }
     *cl->cmd++='\0';
@@ -675,7 +684,7 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
     if (cl->args) {
         cl->argc = parse_args(cl, cl->args, &cl->rline[cl->rlinepos]);
         if (cl->argc<0) {
-            client_senderror(cl,"MALFORMED");
+            client_senderror(cl,EMALFORMED);
             return;
         }
     }
@@ -684,7 +693,7 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
     while (entry->name) {
         if (strcmp(entry->name, cl->cmd)==0) {
             if (entry->needauth && !cl->authenticated) {
-                client_senderror(cl,"UNKNONW");
+                client_senderror(cl,EUNKNOWN);
             } else {
                 if (entry->handler(cl)==-2) {
                     os_printf("Destroying connection\n");
@@ -699,7 +708,7 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
         entry++;
     }
     if (!entry->name) {
-        client_senderror(cl,"UNKNOWN");
+        client_senderror(cl,EUNKNOWN);
     }
 }
 
@@ -708,7 +717,7 @@ LOCAL ICACHE_FLASH_ATTR void client_data(clientInfo_t*cl, char *data, unsigned s
 {
     unsigned total = (unsigned)length + cl->rlinepos;
     if (total>MAX_LINE_LEN) {
-        client_senderror(cl, "TOOBIG");
+        client_senderror(cl, ETOOBIG);
         return;
     }
     /* Append to memory line */

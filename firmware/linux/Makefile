@@ -76,6 +76,7 @@ SOURCES       = main.cpp \
 		../esp8266/user/gif/libnsgif.c \
 		../esp8266/user/flash_serializer.c \
 		../esp8266/user/crc.c \
+		../esp8266/user/error.c \
 		../esp8266/user/framebuffer.c \
 		../esp8266/user/flash.c \
 		../esp8266/user/smallfs.c moc_Panel.cpp \
@@ -108,6 +109,7 @@ OBJECTS       = main.o \
 		libnsgif.o \
 		flash_serializer.o \
 		crc.o \
+		error.o \
 		framebuffer.o \
 		flash.o \
 		smallfs.o \
@@ -200,6 +202,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		../esp8266/user/gif/libnsgif.c \
 		../esp8266/user/flash_serializer.c \
 		../esp8266/user/crc.c \
+		../esp8266/user/error.c \
 		../esp8266/user/framebuffer.c \
 		../esp8266/user/flash.c \
 		../esp8266/user/smallfs.c
@@ -375,7 +378,7 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents ../../paneleditor/Panel.h ../../paneleditor/PanelFramebuffer.h mainwindow.h $(DISTDIR)/
-	$(COPY_FILE) --parents main.cpp mainwindow.cpp ../../paneleditor/PanelFramebuffer.cpp ../../paneleditor/Panel.cpp iotpanel.c ../esp8266/user/font.c ../esp8266/user/server.c ../esp8266/user/schedule.c ../esp8266/user/clock.c ../esp8266/user/user_main.c ../esp8266/user/gfx.c ../esp8266/user/font_tom_thumb.c ../esp8266/user/upgrade.c ../esp8266/user/cdecode.c ../esp8266/user/serdes.c ../esp8266/user/widgets/color.c ../esp8266/user/widgets/scrollingtext.c ../esp8266/user/widgets/widget.c ../esp8266/user/widgets/rectangle.c ../esp8266/user/widgets/text.c ../esp8266/user/widgets/line.c ../esp8266/user/widgets/clockw.c ../esp8266/user/widgets/romimage.c ../esp8266/user/widgets/gif.c ../esp8266/user/widgets/widget_registry.c ../esp8266/user/gif/libnsgif.c ../esp8266/user/flash_serializer.c ../esp8266/user/crc.c ../esp8266/user/framebuffer.c ../esp8266/user/flash.c ../esp8266/user/smallfs.c $(DISTDIR)/
+	$(COPY_FILE) --parents main.cpp mainwindow.cpp ../../paneleditor/PanelFramebuffer.cpp ../../paneleditor/Panel.cpp iotpanel.c ../esp8266/user/font.c ../esp8266/user/server.c ../esp8266/user/schedule.c ../esp8266/user/clock.c ../esp8266/user/user_main.c ../esp8266/user/gfx.c ../esp8266/user/font_tom_thumb.c ../esp8266/user/upgrade.c ../esp8266/user/cdecode.c ../esp8266/user/serdes.c ../esp8266/user/widgets/color.c ../esp8266/user/widgets/scrollingtext.c ../esp8266/user/widgets/widget.c ../esp8266/user/widgets/rectangle.c ../esp8266/user/widgets/text.c ../esp8266/user/widgets/line.c ../esp8266/user/widgets/clockw.c ../esp8266/user/widgets/romimage.c ../esp8266/user/widgets/gif.c ../esp8266/user/widgets/widget_registry.c ../esp8266/user/gif/libnsgif.c ../esp8266/user/flash_serializer.c ../esp8266/user/crc.c ../esp8266/user/error.c ../esp8266/user/framebuffer.c ../esp8266/user/flash.c ../esp8266/user/smallfs.c $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -477,7 +480,8 @@ server.o: ../esp8266/user/server.c ets_sys.h \
 		../esp8266/user/cdecode.h \
 		../esp8266/user/clock.h \
 		../esp8266/user/flash_serializer.h \
-		../esp8266/user/alloc.h
+		../esp8266/user/alloc.h \
+		../esp8266/user/error.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o server.o ../esp8266/user/server.c
 
 schedule.o: ../esp8266/user/schedule.c ../esp8266/user/schedule.h \
@@ -547,7 +551,8 @@ upgrade.o: ../esp8266/user/upgrade.c ../esp8266/user/upgrade.h \
 		user_interface.h \
 		../esp8266/user/alloc.h \
 		driver/uart.h \
-		../esp8266/user/protos.h
+		../esp8266/user/protos.h \
+		../esp8266/user/error.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o upgrade.o ../esp8266/user/upgrade.c
 
 cdecode.o: ../esp8266/user/cdecode.c ../esp8266/user/cdecode.h \
@@ -597,7 +602,8 @@ widget.o: ../esp8266/user/widgets/widget.c ../esp8266/user/widgets/widget.h \
 		../esp8266/user/debug.h \
 		../esp8266/user/serdes.h \
 		../esp8266/user/protos.h \
-		../esp8266/user/schedule.h
+		../esp8266/user/schedule.h \
+		../esp8266/user/error.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o widget.o ../esp8266/user/widgets/widget.c
 
 rectangle.o: ../esp8266/user/widgets/rectangle.c ../esp8266/user/widgets/widget.h \
@@ -727,13 +733,19 @@ flash_serializer.o: ../esp8266/user/flash_serializer.c ../esp8266/user/serdes.h 
 		../esp8266/user/protos.h \
 		../esp8266/user/alloc.h \
 		user_interface.h \
-		../esp8266/user/flash.h
+		../esp8266/user/flash.h \
+		../esp8266/user/error.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o flash_serializer.o ../esp8266/user/flash_serializer.c
 
 crc.o: ../esp8266/user/crc.c ../esp8266/user/crc.h \
 		ets_sys.h \
 		os_type.h
 	$(CC) -c $(CFLAGS) $(INCPATH) -o crc.o ../esp8266/user/crc.c
+
+error.o: ../esp8266/user/error.c ../esp8266/user/error.h \
+		ets_sys.h \
+		os_type.h
+	$(CC) -c $(CFLAGS) $(INCPATH) -o error.o ../esp8266/user/error.c
 
 framebuffer.o: ../esp8266/user/framebuffer.c os_type.h \
 		ets_sys.h \

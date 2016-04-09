@@ -34,6 +34,7 @@ mainwindow.cpp \
 ../esp8266/user/gif/libnsgif.c    \
 ../esp8266/user/flash_serializer.c     \
 ../esp8266/user/crc.c     \
+../esp8266/user/error.c     \
 ../esp8266/user/framebuffer.c     \
 ../esp8266/user/flash.c     \
 ../esp8266/user/smallfs.c

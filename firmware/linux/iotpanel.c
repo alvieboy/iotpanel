@@ -33,8 +33,9 @@ typedef int socklen_t;
 #endif
 int displayThread(void*);
 
-void ser_initialize(struct serializer_t *me)
+int ser_initialize(struct serializer_t *me)
 {
+    return 0;
 }
 
 int ser_write(struct serializer_t *me, const void *data, unsigned size)
@@ -53,8 +54,9 @@ int ser_read(struct serializer_t *me, void *data, unsigned size)
 {
     return -1;
 }
-void ser_rewind(struct serializer_t *me)
+int ser_rewind(struct serializer_t *me)
 {
+    return 0;
 }
 
 
@@ -502,4 +504,9 @@ void pp_soft_wdt_stop()
 
 void ets_intr_lock()
 {
+}
+
+unsigned getFPS()
+{
+    return 100;
 }

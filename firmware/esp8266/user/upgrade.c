@@ -6,6 +6,7 @@
 #include "driver/uart.h"
 #include "protos.h"
 #include "flashutils.h"
+#include "error.h"
 
 extern void panel_stop();
 
@@ -133,7 +134,7 @@ LOCAL int read_current_icache_seg0_size()
     offset += sizeof(header_entry_t);
 
     if (hdr->magic != 0xe9) {
-        return -1;
+        return EINVALIDMAGIC;
     }
     nseg = hdr->num_segments;
 //    os_printf("Num segments %d\n", nseg);
@@ -155,12 +156,19 @@ int ICACHE_FLASH_ATTR get_free_flash()
     int total_flash = 512*1024; // 512KB
     int reserved_flash = RESERVED_SECTORS * SECTORSIZE;
 
-    int irom0size = ALIGN(read_current_icache_seg0_size(), SECTORSIZE);
+    int irom0size = read_current_icache_seg0_size();
+
     if (irom0size<0)
-        return -1;
-    int seg0size = ALIGN(read_current_irom0_size(), SECTORSIZE);
+        return irom0size;
+
+    irom0size = ALIGN(irom0size, SECTORSIZE);
+
+    int seg0size = read_current_irom0_size();
+
     if (seg0size<0)
-        return -1;
+        return seg0size;
+
+    seg0size = ALIGN(seg0size, SECTORSIZE);
 
     return total_flash-(reserved_flash+irom0size+seg0size);
 }
@@ -222,7 +230,7 @@ int apply_firmware()
     if (NULL==buf) {
         // Uups. Clear FW
         clear_firmware_info( FIRMWARE_ERROR_NORESOURCES );
-        return -1;
+        return ENOMEM;
     }
     clear_firmware_info(FIRMWARE_UPGRADE_INPROGRESS);
 
@@ -263,32 +271,36 @@ int apply_firmware()
 
         for (block=0; block<chunk.chunksize_blocks; block++) {
             /* Read source block */
+            int r;
 #if 1
             uint32_t source = ((uint32_t)chunk.source_sector)<<SECTORBITS;
             //uart_putstr("R");
-            if (spi_flash_read( source, (uint32*)buf, SECTORSIZE )<0) {
+            r = spi_flash_read( source, (uint32*)buf, SECTORSIZE );
+            if (r<0) {
                 clear_firmware_info( FIRMWARE_ERROR_SPIREADERROR | source );
                 uart_puthex(FIRMWARE_ERROR_SPIREADERROR);
-                return -1;
+                return r;
             }
            // uart_putstr("  >> block\n");
            // dump_sector( buf );
             /* Erase sector */
             //uart_putstr("E");
-            if (spi_flash_erase_sector( (uint16)chunk.dest_sector) <0) {
+            r =spi_flash_erase_sector( (uint16)chunk.dest_sector);
+            if (r<0) {
                 clear_firmware_info( FIRMWARE_ERROR_SPIERASEERROR | chunk.dest_sector );
                 uart_puthex(FIRMWARE_ERROR_SPIERASEERROR);
-                return -1;
+                return r;
             }
             /* Program sector */
             //uart_putstr("W");
             
             uint32_t dest = ((uint32_t)chunk.dest_sector)<<SECTORBITS;
-            if (spi_flash_write( dest, (uint32*)buf, SECTORSIZE)<0) {
+            r = spi_flash_write( dest, (uint32*)buf, SECTORSIZE);
+            if (r<0) {
 
                 clear_firmware_info( FIRMWARE_ERROR_SPIWRITEERROR | chunk.dest_sector );
                 uart_puthex(FIRMWARE_ERROR_SPIWRITEERROR);
-                return -1;
+                return r;
             }
             chunk.source_sector++;
             chunk.dest_sector++;
@@ -311,7 +323,7 @@ int apply_firmware()
     uart_putstr("\nDone, restarting (waiting for HW watchdog)\n");
     while (1) {
     }
-    return 0;
+    return NOERROR;
 }
 
 void ICACHE_FLASH_ATTR ota_initialize()
@@ -423,12 +435,15 @@ LOCAL void ICACHE_FLASH_ATTR ota_save_chunk()
 int ICACHE_FLASH_ATTR ota_program_chunk(void *data) // Needs to be 512 bytes
 {
     // See if we still have space in current chunk
+    int r;
     struct ota_chunk *chunk = &ota_state.chunks[ ota_state.current_chunk ];
+
 #ifdef DEBUG_OTA
     os_printf("Programming current chunk %d\n",ota_state.current_chunk);
 #endif
+
     if (ota_state.size<BLOCKSIZE) {
-        return -1;
+        return EINVALIDLEN;
     }
 
     if ( chunk->block == BLOCKS_PER_SECTOR ) {
@@ -447,7 +462,7 @@ int ICACHE_FLASH_ATTR ota_program_chunk(void *data) // Needs to be 512 bytes
             ota_state.current_chunk++;
             if (ota_state.current_chunk == OTA_NUM_CHUNKS) {
                 // No more room...
-                return -1;
+                return ETOOBIG;
             }
             chunk = &ota_state.chunks[ ota_state.current_chunk ];
         }
@@ -458,6 +473,7 @@ int ICACHE_FLASH_ATTR ota_program_chunk(void *data) // Needs to be 512 bytes
 
     unsigned target_offset = ((unsigned)target_sector * SECTORSIZE) +
         chunk->block * BLOCKSIZE;
+
 #ifdef DEBUG_OTA
     os_printf("Target sector is %d, offset 0x%x\n", target_sector, target_offset);
 #endif
@@ -466,9 +482,11 @@ int ICACHE_FLASH_ATTR ota_program_chunk(void *data) // Needs to be 512 bytes
 #ifdef DEBUG_OTA
         os_printf("Erasing sector %d\n", target_sector);
 #endif
-        if ( spi_flash_erase_sector( (uint16)target_sector ) < 0) {
+
+        r = spi_flash_erase_sector( (uint16)target_sector );
+        if (r< 0) {
             // Ups.
-            return -1;
+            return r;
         }
         chunk->erased = 1;
     }
@@ -477,8 +495,9 @@ int ICACHE_FLASH_ATTR ota_program_chunk(void *data) // Needs to be 512 bytes
     os_printf("Writing block at 0x%8x\n", target_offset);
 #endif
     //dump_block(data);
-    if (spi_flash_write( target_offset, (uint32*)data, BLOCKSIZE)<0) {
-        return -1;
+    r = spi_flash_write( target_offset, (uint32*)data, BLOCKSIZE);
+    if (r<0) {
+        return r;
     }
     // And increment it.
     chunk->block++;
@@ -541,12 +560,12 @@ int ICACHE_FLASH_ATTR ota_set_chunk(uint32_t address, int size_bytes)
         ota_state.start_address = address;
         if (((size_bytes & (SECTORSIZE-1)) !=0)) {
             os_printf("Attempting to set unaligned size of %d\n", size_bytes);
-            return -1; // Need to sector aligned
+            return EINVALIDARGUMENT; // Need to sector aligned
         }
         ota_state.size = size_bytes;
         return 0;
     }
-    return -1;
+    return EALREADY;
 }
 
 

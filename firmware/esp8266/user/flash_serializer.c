@@ -6,6 +6,7 @@
 #include "osapi.h"
 #include "user_interface.h"
 #include "flash.h"
+#include "error.h"
 
 #define FLASH_MAGIC 0xF14F
 
@@ -46,7 +47,7 @@ LOCAL void byte_memcpy(uint8_t *dest, const uint8_t *src, unsigned size)
 }
 #endif
 
-void ICACHE_FLASH_ATTR flash_ser_initialize(struct serializer_t *me)
+int ICACHE_FLASH_ATTR flash_ser_initialize(struct serializer_t *me)
 {
     flash_serializer_ctx_t *ctx = &flash_serializer_ctx;
     me->pvt = ctx;
@@ -59,6 +60,7 @@ void ICACHE_FLASH_ATTR flash_ser_initialize(struct serializer_t *me)
 
     flash_control_init( &ctx->fc );
     os_printf("Start of flash area: 0x%08x\n",  ctx->startsector<<SECTORBITS);
+    return 0;
 }
 
 LOCAL int flash_validate(flash_serializer_ctx_t *ctx)
@@ -71,7 +73,7 @@ LOCAL int flash_validate(flash_serializer_ctx_t *ctx)
     spiflash_read_cached(&ctx->fc, offset, (void*)&header, sizeof(config_header_t));
     if (header.magic != FLASH_MAGIC) {
         DEBUGFLASH("Invalid flash magic %04x\n", (unsigned)header.magic);
-        return -1;
+        return EINVALIDMAGIC;
     }
 
     crc = crc16_calc( (uint8_t*)&header, sizeof(config_header_t)-sizeof(uint16_t));
@@ -79,7 +81,7 @@ LOCAL int flash_validate(flash_serializer_ctx_t *ctx)
     if (crc != header.headercrc) {
         DEBUGFLASH("Invalid flash header crc 0x%04x (calculated 0x%04x)\n", (unsigned)header.headercrc,
                   crc);
-        return -2;
+        return EINVALIDCRC;
     }
 
     uint16_t len = header.size;
@@ -96,11 +98,11 @@ LOCAL int flash_validate(flash_serializer_ctx_t *ctx)
     if (crc!=header.datacrc) {
         DEBUGFLASH("Invalid flash data crc 0x%04x (calculated 0x%04x)\n", (unsigned)header.datacrc,
                   crc);
-        return -3;
+        return EINVALIDCRC;
     }
     ctx->validated = 1;
 
-    return 0;
+    return NOERROR;
 }
 
 
@@ -154,13 +156,14 @@ LOCAL int ICACHE_FLASH_ATTR flash_ser_write(struct serializer_t *me, const void 
 LOCAL int ICACHE_FLASH_ATTR flash_ser_read(struct serializer_t *me, void *data, unsigned size)
 {
     flash_serializer_ctx_t *ctx = FLASHCTX(me);
-
+    int r;
     if (!ctx->validated) {
-        if (flash_validate(ctx)<0)
-            return -1;
+        r = flash_validate(ctx);
+        if (r<0)
+            return r;
     }
 
-    int r = spiflash_read_cached(&ctx->fc,(ctx->currentsector<<SECTORBITS) + ctx->sectoroffset, data, size );
+    r = spiflash_read_cached(&ctx->fc,(ctx->currentsector<<SECTORBITS) + ctx->sectoroffset, data, size );
     if (r>=0) {
         ctx->sectoroffset+=size;
         ctx->currentsector+= (ctx->sectoroffset & ~((1<<SECTORBITS)-1));
@@ -169,7 +172,7 @@ LOCAL int ICACHE_FLASH_ATTR flash_ser_read(struct serializer_t *me, void *data, 
     return r;
 }
 
-LOCAL void ICACHE_FLASH_ATTR flash_ser_finalise(struct serializer_t *me)
+LOCAL int ICACHE_FLASH_ATTR flash_ser_finalise(struct serializer_t *me)
 {
     flash_serializer_ctx_t *ctx = FLASHCTX(me);
     config_header_t header;
@@ -187,28 +190,31 @@ LOCAL void ICACHE_FLASH_ATTR flash_ser_finalise(struct serializer_t *me)
     spiflash_write_cached(&ctx->fc, ctx->startsector<<SECTORBITS, (uint8_t*)&header, sizeof(header));
 
     spiflash_flush(&ctx->fc);
+    return NOERROR;
 }
 
-LOCAL void ICACHE_FLASH_ATTR flash_ser_release(struct serializer_t *me)
+LOCAL int ICACHE_FLASH_ATTR flash_ser_release(struct serializer_t *me)
 {
     flash_serializer_ctx_t *ctx = FLASHCTX(me);
     flash_control_release(&ctx->fc);
+    return 0;
 }
 
 
-LOCAL void ICACHE_FLASH_ATTR flash_ser_rewind(struct serializer_t *me)
+LOCAL int ICACHE_FLASH_ATTR flash_ser_rewind(struct serializer_t *me)
 {
     flash_serializer_ctx_t *ctx = FLASHCTX(me);
     ctx->currentsector = ctx->startsector;
     ctx->sectoroffset = sizeof(config_header_t);
+    return NOERROR;
 }
 
-LOCAL void ICACHE_FLASH_ATTR flash_ser_truncate(struct serializer_t *me)
+LOCAL int ICACHE_FLASH_ATTR flash_ser_truncate(struct serializer_t *me)
 {
     flash_serializer_ctx_t *ctx = FLASHCTX(me);
     ctx->crc = 0;
     ctx->erased = 0;
-    flash_ser_rewind(me);
+    return flash_ser_rewind(me);
 }
 
 

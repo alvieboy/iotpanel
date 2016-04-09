@@ -123,7 +123,7 @@ void widget_unref(widget_t*widget);
 const property_t *widget_get_property(widget_t*,const char *name);
 
 //void screen_serialize(serializer_t *ser, screen_t *screen);
-void serialize_all(serializer_t *ser);
+int serialize_all(serializer_t *ser);
 int deserialize_all(serializer_t *ser);
 
 #endif

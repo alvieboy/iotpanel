@@ -10,6 +10,7 @@
 #include "serdes.h"
 #include "protos.h"
 #include "schedule.h"
+#include "error.h"
 
 #define DEBUGSERIALIZE(x...) /* os_printf(x) */
 
@@ -44,8 +45,8 @@ LOCAL inline int check_unsigned_bounds( long value, uint8_t size)
     unsigned bits = 8*size;
     unsigned mask = ~((1<<bits)-1);
     if (uv & mask)
-        return -1;
-    return 0;
+        return EOUTOFBOUNDS;
+    return NOERROR;
 }
 
 LOCAL inline int check_signed_bounds( long value, uint8_t size)
@@ -54,12 +55,13 @@ LOCAL inline int check_signed_bounds( long value, uint8_t size)
     long max = (1<<(bits-1))-1;
     long min = -1 - max;
 
-    os_printf("Check bounds %ld between %ld and %ld\n", value, min, max);
+    DEBUGSERIALIZE("Check bounds %ld between %ld and %ld\n", value, min, max);
 
     if ((value>max) || (value<min))
-        return -1;
-    os_printf("Bounds ok\n");
-    return 0;
+        return EOUTOFBOUNDS;
+
+    DEBUGSERIALIZE("Bounds ok\n");
+    return NOERROR;
 }
 
 const property_t * ICACHE_FLASH_ATTR widget_get_property(widget_t*widget,const char *name)
@@ -79,16 +81,16 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
     const property_t *prop;
     long li;
     char *end;
-    int valid = -1;
+    int valid = EINVALIDPROPERTY;
 
     for (prop = widget->def->properties; prop->name; prop++) {
-        os_printf("find prop %s %s\n", prop->name, name);
+        DEBUGSERIALIZE("find prop %s %s\n", prop->name, name);
         if (strcmp(prop->name,name)==0) {
 
             if (is_integer_property( prop->type )) {
                 li = (long)strtol(value,&end,10);
                 if (*end !='\0') {
-                    return -1;
+                    return EINVALIDARGUMENT;
                 }
                 // Check bounds
                 switch (prop->type) {
@@ -114,11 +116,11 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
                     valid = (li != 0) && (li!=1);
                     break;
                 default:
-                    os_printf("Invalid property\n");
-                    valid = -1;
+                    DEBUGSERIALIZE("Invalid property\n");
+                    valid = EINVALIDPROPERTY;
                 }
-                if (valid!=0) {
-                    os_printf("Property out of bounds %ld for type %d (valid %d)\n", li, prop->type, valid);
+                if (valid!=NOERROR) {
+                    DEBUGSERIALIZE("Property out of bounds %ld for type %d (valid %d)\n", li, prop->type, valid);
                     return valid;
                 }
             }
@@ -143,7 +145,7 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
                 break;
             default:
                 //os_printf("Unknonw prop type\n");
-                return -1;
+                return EINVALIDPROPERTY;
             }
 #undef SETBLOCK
         }
@@ -207,13 +209,13 @@ void ICACHE_FLASH_ATTR screen_add_cloned_widget(screen_t *screen, widget_t *widg
 
 int ICACHE_FLASH_ATTR screen_move_widget(screen_t *screen, widget_t *widget, int x, int y)
 {
-    int r = -1;
+    int r = ENOTFOUND;
     widget_entry_t *it = screen->widgets;
     while (it) {
         if (it->widget == widget) {
             it->x = x;
             it->y = y;
-            r=0;
+            r=NOERROR;
             break;
         }
         it = it->next;
@@ -233,7 +235,7 @@ screen_t* ICACHE_FLASH_ATTR screen_create(const char *name)
     int i;
     for (i=0;i<MAX_SCREENS;i++) {
         if (screens[i].name[0] == '\0') {
-            os_printf("Creating new screen at %d '%s'\n", i, name);
+            DEBUGSERIALIZE("Creating new screen at %d '%s'\n", i, name);
             strncpy( screens[i].name, name, sizeof(screens[i].name) );
             screens[i].widgets = NULL;
             return &screens[i];
@@ -350,7 +352,7 @@ int ICACHE_FLASH_ATTR widget_serialize_properties(serializer_t *ser, widget_t*wi
 {
     property_t *prop;
     char *strval;
-    int r = 0;
+    int r = NOERROR;
     typedef union {
         uint32_t u32;
         int32_t i32;
@@ -363,7 +365,7 @@ int ICACHE_FLASH_ATTR widget_serialize_properties(serializer_t *ser, widget_t*wi
     numericvalue intval;
 
     for (prop = widget->def->properties; prop->name; prop++) {
-        os_printf("Serialize prop %s\n", prop->name);
+        DEBUGSERIALIZE("Serialize prop %s\n", prop->name);
 
         if (prop->getter==NULL)
             continue;
@@ -374,33 +376,33 @@ int ICACHE_FLASH_ATTR widget_serialize_properties(serializer_t *ser, widget_t*wi
         case T_UINT8:
         case T_BOOL:
             r = prop->getter( widget, &intval.u8);
-            if (r==0)
+            if (r==NOERROR)
                 serialize_uint8( ser, intval.u8);
             break;
         case T_UINT16:
             r = prop->getter( widget, &intval.u16);
-            if (r==0)
+            if (r==NOERROR)
                 serialize_uint16( ser, intval.u16);
             break;
         case T_UINT32:
             r = prop->getter( widget, &intval.u32);
-            if (r==0)
+            if (r==NOERROR)
                 serialize_uint32( ser, intval.u32);
             break;
 
         case T_INT8:
             r = prop->getter( widget, &intval.i8);
-            if (r==0)
+            if (r==NOERROR)
                 serialize_uint8( ser, intval.i8);
             break;
         case T_INT16:
             r = prop->getter( widget, &intval.i16);
-            if (r==0)
+            if (r==NOERROR)
                 serialize_uint16( ser, intval.i16);
             break;
         case T_INT32:
             r = prop->getter( widget, &intval.i32);
-            if (r==0)
+            if (r==NOERROR)
                 serialize_uint32( ser, intval.i32);
             break;
         case T_STRING:
@@ -408,85 +410,119 @@ int ICACHE_FLASH_ATTR widget_serialize_properties(serializer_t *ser, widget_t*wi
             serialize_string( ser, strval );
             break;
         default:
-            r = -1;
+            r = EINTERNALERROR;
+            break;
         }
+        if (r!=NOERROR)
+            break;
     }
-    if (r==0)
+    if (r==NOERROR) {
         r = serialize_uint8(ser, 0x00);
+    }
     return r;
 }
 
 #define WIDGET_NORMAL 0x01
 #define WIDGET_CLONED 0x02
 
-void ICACHE_FLASH_ATTR screen_serialize(serializer_t *ser, screen_t *screen)
+int ICACHE_FLASH_ATTR screen_serialize(serializer_t *ser, screen_t *screen)
 {
-    os_printf("Serializing screen %s\n", screen->name);
-    serialize_string( ser, screen->name );
+    DEBUGSERIALIZE("Serializing screen %s\n", screen->name);
+    int r = NOERROR;
     int cnt = 0;
 
-    widget_entry_t *w = screen->widgets;
-    while (w) {
-        if (screen != w->widget->parent) {
-            /* Cloned widget */
-            os_printf("Cloning widget from screen '%s'", w->widget->parent);
-            serialize_uint8(ser, WIDGET_CLONED);
-        } else {
-            /* Normal widget */
-            serialize_uint8(ser, WIDGET_NORMAL);
-        }
-        os_printf("Serialize widget %d '%s' class '%s'\n", cnt, w->widget->name, w->widget->def->name);
-        serialize_string(ser, w->widget->name);
-        serialize_int16(ser, w->x);
-        serialize_int16(ser, w->y);
+    do {
+        r = serialize_string( ser, screen->name );
 
-        if (screen == w->widget->parent) {
-            serialize_string(ser, w->widget->def->name);
-            widget_serialize_properties(ser, w->widget);
+        if (r!=NOERROR)
+            break;
+
+        widget_entry_t *w = screen->widgets;
+
+        while (w) {
+            if (screen != w->widget->parent) {
+                /* Cloned widget */
+                DEBUGSERIALIZE("Cloning widget from screen '%s'", w->widget->parent);
+                r =serialize_uint8(ser, WIDGET_CLONED);
+            } else {
+                /* Normal widget */
+                r = serialize_uint8(ser, WIDGET_NORMAL);
+            }
+
+            if (r!=NOERROR)
+                break;
+
+            DEBUGSERIALIZE("Serialize widget %d '%s' class '%s'\n", cnt, w->widget->name, w->widget->def->name);
+
+            r =serialize_string(ser, w->widget->name);
+            if (r!=NOERROR) break;
+            r= serialize_int16(ser, w->x);
+            if (r!=NOERROR) break;
+            r= serialize_int16(ser, w->y);
+            if (r!=NOERROR) break;
+
+            if (screen == w->widget->parent) {
+                r =serialize_string(ser, w->widget->def->name);
+                if (r!=NOERROR) break;
+                r =widget_serialize_properties(ser, w->widget);
+                if (r!=NOERROR) break;
+            }
+            cnt++;
+            w = w->next;
         }
-        cnt++;
-        w = w->next;
-    }
-    /* Last */
-    serialize_uint8(ser, 0x00);
+        /* Last */
+        r = serialize_uint8(ser, 0x00);
+    } while (0);
+    return r;
 }
 
-void ICACHE_FLASH_ATTR serialize_all(serializer_t *ser)
+int ICACHE_FLASH_ATTR serialize_all(serializer_t *ser)
 {
     int i;
-    //current_screen = NULL;
-
+    int r = NOERROR;
     /* Iterate through all screens */
-    os_printf("Current screen %p \n", current_screen);
+    do {
+        DEBUGSERIALIZE("Current screen %p \n", current_screen);
 
-    ser->initialize(ser);
-    ser->truncate(ser);
+        r = ser->initialize(ser);
+        if (r!=NOERROR) break;
 
-    for (i=0;i<MAX_SCREENS;i++) {
-        if (screens[i].name[0] != '\0') {
-            os_printf("Serializing screen %d '%s'\n", i, screens[i].name);
-            screen_serialize( ser, &screens[i]);
+        r = ser->truncate(ser);
+        if (r!=NOERROR) break;
+
+        for (i=0;i<MAX_SCREENS;i++) {
+            if (screens[i].name[0] != '\0') {
+                DEBUGSERIALIZE("Serializing screen %d '%s'\n", i, screens[i].name);
+                r = screen_serialize( ser, &screens[i]);
+                if (r!=NOERROR) break;
+            }
         }
-    }
-    /* Last one */
-    serialize_uint8( ser, 0x00 );
+        /* Last one */
+        r = serialize_uint8( ser, 0x00 );
+        if (r!=NOERROR) break;
 
-    // Serialize current screen
-    if (current_screen) {
-        os_printf("Current screen %p %s\n", current_screen, current_screen->name);
-        serialize_string( ser, current_screen->name );
-    } else {
-        os_printf("NULL current screen\n");
-        serialize_uint8(ser, 0);
-    }
+        // Serialize current screen
+        if (current_screen) {
+            DEBUGSERIALIZE("Current screen %p %s\n", current_screen, current_screen->name);
+            r = serialize_string( ser, current_screen->name );
+        } else {
+            DEBUGSERIALIZE("NULL current screen\n");
+            r = serialize_uint8(ser, 0);
+        }
+        if (r!=NOERROR) break;
 
-    serialize_int32(ser, getBlanking());
+        r = serialize_int32(ser, getBlanking());
+        if (r!=NOERROR) break;
 
-    schedule_serialize(ser);
+        r = schedule_serialize(ser);
+        if (r!=NOERROR) break;
 
+        r = ser->finalise(ser);
+        if (r!=NOERROR) break;
 
-    ser->finalise(ser);
-    ser->release(ser);
+        r = ser->release(ser);
+    } while (0);
+    return r;
 }
 
 LOCAL int ICACHE_FLASH_ATTR deserialize_properties(serializer_t *ser, widget_t *w)
@@ -533,11 +569,11 @@ LOCAL int ICACHE_FLASH_ATTR deserialize_properties(serializer_t *ser, widget_t *
                 DEBUGSERIALIZE("Deserialize string with alloc\n");
                 char *value = deserialize_string_alloc(ser);
                 if (value) {
-                    os_printf("String prop '%s'\n", value);
+                    DEBUGSERIALIZE("String prop '%s'\n", value);
                     valid = prop->setter( w, (void*)value );
                     os_free(value);
                 } else {
-                    os_printf("Error deserializing string\n");
+                    DEBUGSERIALIZE("Error deserializing string\n");
                     return -1;
                 }
             }

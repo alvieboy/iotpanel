@@ -7,13 +7,13 @@
 
 typedef struct serializer_t
 {
-    void (*initialize)(struct serializer_t *me);
+    int (*initialize)(struct serializer_t *me);
     int (*write)(struct serializer_t *me, const void *data, unsigned size);
     int (*read)(struct serializer_t *me, void *data, unsigned size);
-    void (*rewind)(struct serializer_t *me);
-    void (*truncate)(struct serializer_t *me);
-    void (*finalise)(struct serializer_t *me);
-    void (*release)(struct serializer_t *me);
+    int (*rewind)(struct serializer_t *me);
+    int (*truncate)(struct serializer_t *me);
+    int (*finalise)(struct serializer_t *me);
+    int (*release)(struct serializer_t *me);
     void *pvt;
 } serializer_t;
 
