@@ -106,6 +106,14 @@ LOCAL inline void myspi_master_32bit_write(uint8 spi_no, uint32 data)
     SET_PERI_REG_MASK(SPI_FLASH_CMD(spi_no), SPI_FLASH_USR);
 }
 
+LOCAL inline void myspi_master_64bit_write(uint8 spi_no, uint32 data1, uint32 data2)
+{
+    WRITE_PERI_REG(SPI_FLASH_USER1(spi_no), (63<<SPI_USR_OUT_BITLEN_S) | (63<<SPI_USR_DIN_BITLEN_S) );
+    WRITE_PERI_REG(SPI_FLASH_C0(spi_no), data1);
+    WRITE_PERI_REG(SPI_FLASH_C1(spi_no), data2);
+    SET_PERI_REG_MASK(SPI_FLASH_CMD(spi_no), SPI_FLASH_USR);
+}
+
 LOCAL inline void myspi_master_8bit_write(uint8 spi_no, uint8 data)
 {
 #ifdef USEDATA
@@ -178,6 +186,20 @@ static int iter = 0;
 //static uint16_t preloadtimings[] = { 12, 12, 12 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
 static uint16_t preloadtimings[] = { 40,40,40 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
 static uint8_t  blanking[] = { 8, 16, 32 };
+
+void setPreloadValues( uint16_t *values )
+{
+    preloadtimings[0] = values[0];
+    preloadtimings[1] = values[1];
+    preloadtimings[2] = values[2];
+}
+
+void setBlankValues( uint8_t *values )
+{
+    blanking[0] = values[0];
+    blanking[1] = values[1];
+    blanking[2] = values[2];
+}
 
 #define PRELOAD (36/HORIZONTAL_PANELS)
 

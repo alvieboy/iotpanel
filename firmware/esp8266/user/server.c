@@ -27,6 +27,9 @@ char currentFw[32] = {0};
 static unsigned char *otachunk;
 
 extern void setBlanking(int);
+extern void setPreloadValues( uint16_t *values );
+extern void setBlankValues( uint8_t *values );
+extern unsigned getFPS();
 
 #define MAX_LINE_LEN 1024
 
@@ -80,6 +83,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandSave(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandReset(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandInfo(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandMove(clientInfo_t *);
+
 commandEntry_t commandHandlers[] = {
     { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
     { "LOGIN",   &handleCommandLogin, 0 ,"<username>"},
@@ -575,9 +579,9 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandReset(clientInfo_t *cl)
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandInfo(clientInfo_t *cl)
 {
-    char info[64];
+    char info[128];
     uint32 memfree = system_get_free_heap_size();
-    os_sprintf(info,"%u", memfree);
+    os_sprintf(info,"memfree=%u fps=%d", memfree, getFPS());
     client_sendOK(cl,info);
     return 0;
 }

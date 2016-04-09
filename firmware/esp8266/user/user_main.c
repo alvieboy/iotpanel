@@ -140,6 +140,12 @@ struct espconn conn_udpb;
 
 unsigned lastFrame = 0;
 unsigned lastFrameTime = 0;
+LOCAL unsigned fps = 0;
+
+unsigned ICACHE_FLASH_ATTR getFPS()
+{
+    return fps;
+}
 
 LOCAL void ICACHE_FLASH_ATTR broadcastIP()
 {
@@ -163,6 +169,7 @@ LOCAL void ICACHE_FLASH_ATTR broadcastIP()
             unsigned delta = now_millis - lastFrameTime;
             delta = (1000*(t-lastFrame))/delta;
             os_printf("Current time: %u ticks %u fps %d\n", now_millis, t, delta);
+            fps=delta;
         }
         os_printf("Mem free: %u\n", system_get_free_heap_size());
         lastFrameTime = now_millis;
