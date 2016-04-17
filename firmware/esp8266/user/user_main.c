@@ -243,20 +243,45 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
 #endif
 
 
+extern void render(gfxinfo_t*gfx);
 
 void ICACHE_FLASH_ATTR redraw()
 {
     schedule_event();
-    draw_current_screen(&gfx);
+    //draw_current_screen(&gfx);
+    render(&gfx);
 }
 
 unsigned tickcount = 0;
+
+extern void setup();
+extern void loop();
+extern void GAMELOOP();
+extern void GAMESTART();
+
 
 #ifdef HOST
 
 extern void user_procTask(os_event_t *events);
 
 #else
+
+int isJump()
+{
+    return 0;
+}
+
+int isRight()
+{
+    return 0;
+}
+
+int isLeft()
+{
+    return 0;
+}
+
+int started=0;
 
 
 extern unsigned char *currentBuffer;
@@ -266,11 +291,17 @@ extern unsigned int ticks;
 
 static uint8_t currentDrawBuffer = 0;
 
+
+
 static void ICACHE_FLASH_ATTR
 user_procTask(os_event_t *events)
 {
     pp_soft_wdt_stop();
-
+    if(!started) {
+        setup();
+        GAMESTART();
+        started=1;
+    }
 #if 1
     wifiConnect();
 
@@ -304,6 +335,7 @@ user_procTask(os_event_t *events)
 
 //    if ((tickcount&0xf)==0) {
     redraw();
+    GAMELOOP();
     //os_printf(".%u",tickcount);
     //os_printf("Buf %d ready\n", currentDrawBuffer);
     bufferStatus[currentDrawBuffer] = BUFFER_READY;
