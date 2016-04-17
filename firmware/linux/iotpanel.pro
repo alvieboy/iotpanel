@@ -32,6 +32,7 @@ mainwindow.cpp \
 ../esp8266/user/widgets/gif.c 	       	       \
 ../esp8266/user/widgets/widget_registry.c      \
 ../esp8266/user/gif/libnsgif.c    \
+../esp8266/user/jsw.c    \
 ../esp8266/user/flash_serializer.c     \
 ../esp8266/user/crc.c     \
 ../esp8266/user/error.c     \
