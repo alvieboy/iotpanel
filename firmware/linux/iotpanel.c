@@ -122,11 +122,17 @@ int os_sprintf(char *dest, const char *fmt,...)
 static espconn_recv_callback cb_data;
 static espconn_connect_callback cb_connect;
 static espconn_connect_callback cb_disconn;
+static espconn_sent_callback cb_sent;
 // Espconn stuff.
 
 sint8 espconn_regist_recvcb(struct espconn*conn, espconn_recv_callback cb)
 {
     cb_data = cb;
+    return 0;
+}
+sint8 espconn_regist_sentcb(struct espconn*conn, espconn_sent_callback cb)
+{
+    cb_sent = cb;
     return 0;
 }
 
@@ -348,7 +354,10 @@ void user_procTask(void*arg)
 
 sint8 espconn_sent(struct espconn*conn, unsigned char *ptr, uint16_t size)
 {
-    return send(conn->sockfd, ptr, size, 0);
+    sint8 r = send(conn->sockfd, ptr, size, 0);
+    if (cb_sent)
+        cb_sent(conn);
+    return r;
 }
 
 

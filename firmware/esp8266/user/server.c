@@ -21,9 +21,16 @@
 #include "user_interface.h"
 #include "alloc.h"
 #include "error.h"
+#include "ws.h"
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
+
+#ifdef ENABLE_WEBSOCKET
+LOCAL esp_tcp wstcp;
+LOCAL struct espconn wsconn;
+#endif
+
 char currentFw[32] = {0};
 static unsigned char *otachunk;
 
@@ -799,6 +806,48 @@ LOCAL void ICACHE_FLASH_ATTR server_listen(void *arg)
     espconn_regist_disconcb(pesp_conn, server_discon);
 }
 
+#ifdef ENABLE_WEBSOCKET
+
+LOCAL void ICACHE_FLASH_ATTR ws_recv(void *arg, char *pusrdata, unsigned short length)
+{
+    ws_data( (struct espconn*)arg, (const unsigned char*)pusrdata, length);
+}
+
+LOCAL ICACHE_FLASH_ATTR void ws_recon(void *arg, sint8 err)
+{
+}
+
+LOCAL ICACHE_FLASH_ATTR void ws_conn(void *arg)
+{
+    struct espconn *pesp_conn = arg;
+    espconn_regist_time(pesp_conn, 7200, 1);
+    ws_connect(pesp_conn);
+}
+
+LOCAL ICACHE_FLASH_ATTR void ws_discon(void *arg)
+{
+    ws_disconnect((struct espconn*)arg);
+}
+
+LOCAL ICACHE_FLASH_ATTR void ws_sent(void *arg)
+{
+    ws_datasent((struct espconn*)arg);
+}
+
+LOCAL void ICACHE_FLASH_ATTR ws_listen(void *arg)
+{
+    struct espconn *pesp_conn = arg;
+
+    espconn_regist_recvcb(pesp_conn, ws_recv);
+    espconn_regist_sentcb(pesp_conn, ws_sent);
+    espconn_regist_reconcb(pesp_conn, ws_recon);
+    //espconn_regist_connectcb(pesp_conn, ws_conn);
+    espconn_regist_disconcb(pesp_conn, ws_discon);
+    ws_conn(arg);
+}
+
+#endif
+
 void ICACHE_FLASH_ATTR user_server_init(uint32 port)
 {
      esp_conn.type = ESPCONN_TCP;
@@ -815,4 +864,18 @@ void ICACHE_FLASH_ATTR user_server_init(uint32 port)
 #else
      espconn_accept(&esp_conn);
 #endif
+
+#ifdef ENABLE_WEBSOCKET
+     wsconn.type = ESPCONN_TCP;
+     wsconn.state = ESPCONN_NONE;
+     wsconn.proto.tcp = &wstcp;
+     wsconn.proto.tcp->local_port = 8000;
+     espconn_regist_connectcb(&wsconn, ws_listen);
+     espconn_regist_time(&wsconn, 7200, 0);
+
+     espconn_accept(&wsconn);
+
+#endif
+
+
 }
