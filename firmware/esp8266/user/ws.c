@@ -1,6 +1,7 @@
+#include "ws.h"
+
 #ifdef ENABLE_WEBSOCKET
 
-#include "ws.h"
 #include "ets_sys.h"
 #include "alloc.h"
 #include "protos.h"
