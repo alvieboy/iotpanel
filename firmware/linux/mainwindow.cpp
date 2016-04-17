@@ -22,10 +22,10 @@ MainWindow::MainWindow(QWidget *parent) :
     resize(64*LEDSIZE, 32*LEDSIZE);
     m_panel = new Panel(this);
     setCentralWidget(m_panel);
-
+    setWindowTitle("RGB Led Panel Simulator");
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateImage()));
-    timer->start(20);
+    timer->start(10);
 }
 
 MainWindow::~MainWindow()

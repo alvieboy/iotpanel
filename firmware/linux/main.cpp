@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <cstdio>
 #include <QDebug>
+#include "Panel.h"
+#include <QKeyEvent>
 
 extern "C" {
 #include "framebuffer.h"
@@ -75,8 +77,42 @@ int main(int argc,char **argv)
     quit=1;
     thread.wait();
 }
+
+extern "C" void setup();
+extern "C" void GAMELOOP();
+extern "C" void GAMESTART();
+int started=0;
+
+
+int key_up=0;
+int key_left=0;
+int key_right=0;
+
+extern "C" int isJump()
+{
+    return key_up;
+}
+
+extern "C" int isRight()
+{
+    return key_left;
+}
+
+extern "C" int isLeft()
+{
+    return key_right;
+}
+
+extern "C" unsigned tickcount;
+
 extern "C" void user_procTask(void*arg)
 {
+    if(!started) {
+        setup();
+        GAMESTART();
+        started=1;
+    }
+
     while (!quit) {
      //   printf("Waiting for buffer %d\n", currentDrawBuffer);
         while (bufferStatus[currentDrawBuffer] != BUFFER_FREE) {
@@ -90,7 +126,9 @@ extern "C" void user_procTask(void*arg)
 
         gfx.fb = &framebuffers[currentDrawBuffer][0];
         redraw();
-
+        if ((tickcount&0x3)==0)
+            GAMELOOP();
+        tickcount++;
         bufferStatus[currentDrawBuffer] = BUFFER_READY;
         currentDrawBuffer ++;
         currentDrawBuffer&=1;
@@ -108,3 +146,76 @@ extern "C" void user_procTask(void*arg)
     //int tstatus;
     //SDL_WaitThread(thread,&tstatus);
 }
+extern "C"  int zoom;
+
+static void decreaseZoom()
+{
+    switch (zoom) {
+    case 0:
+        zoom=1;
+        break;
+    case 1:
+        zoom=3;
+        break;
+    case 3:
+        zoom=7;
+        break;
+    }
+}
+
+static void increaseZoom()
+{
+    switch (zoom) {
+    case 7:
+        zoom=3;
+        break;
+    case 3:
+        zoom=1;
+        break;
+    case 1:
+        zoom=0;
+        break;
+    }
+}
+
+
+void Panel::keyPressEvent( QKeyEvent *k )
+{
+    switch ( k->key()) {
+    case Qt::Key_Left:
+        key_left=1;
+        break;
+    case Qt::Key_Right:
+        key_right=1;
+        break;
+    case Qt::Key_Up:
+        key_up=1;
+        break;
+    case Qt::Key_Z:
+        increaseZoom();
+        break;
+    case Qt::Key_X:
+        decreaseZoom();
+        break;
+    default:
+        break;
+    }
+}
+
+void Panel::keyReleaseEvent( QKeyEvent *k )
+{
+    switch ( k->key()) {
+    case Qt::Key_Left:
+        key_left=0;
+        break;
+    case Qt::Key_Right:
+        key_right=0;
+        break;
+    case Qt::Key_Up:
+        key_up=0;
+        break;
+    default:
+        break;
+    }
+}
+

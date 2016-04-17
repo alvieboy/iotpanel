@@ -17,6 +17,8 @@ class Panel : public QWidget {
       virtual ~Panel();
   protected:
       void paintEvent(QPaintEvent *event);
+      void keyPressEvent( QKeyEvent *k );
+      void keyReleaseEvent( QKeyEvent *k );
 #ifndef PANELDISPLAYNOEDIT
   protected:
       void paintItemLocation(QPainter&,  PanelItem*i);

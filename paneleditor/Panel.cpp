@@ -121,6 +121,7 @@ Panel::Panel(QWidget *parent): QWidget(parent), m_fb(64,32)
     background = new QBrush(QColor(0,0,0));
     grey = new QBrush(QColor(128,128,128));
     m_fb.clear(QColor(64,64,64));
+    setFocusPolicy(Qt::StrongFocus); 
 #ifndef PANELDISPLAYNOEDIT
     grabbedItem = NULL;
     setMouseTracking(true);
