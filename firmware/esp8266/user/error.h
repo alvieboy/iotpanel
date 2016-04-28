@@ -17,6 +17,7 @@
 #define EINVALIDLEN     -12
 #define ETOOBIG         -13
 #define ENOMEM          -14
+#define ECONNECTIONCLOSED -15
 
 const char *getErrorString(int errno);
 

@@ -132,11 +132,8 @@ uint8_t smallfs__readByte(struct smallfs *fs, unsigned address);
 int smallfs__open(struct smallfs *fs, struct smallfsfile *f, const char *name);
 int smallfs__openByOffset(struct smallfs *fs, struct smallfsfile *f, unsigned offset);
 int smallfs__getFirstEntry(struct smallfs *fs, struct smallfsentry *e);
-void smallfs__seek_if_needed(struct smallfs *fs, unsigned address);
 
-static inline void smallfs__seek(struct smallfs *fs, unsigned address) {
-    smallfs__seek_if_needed(fs,address);
-}
+void smallfs__seek(struct smallfs *fs, unsigned address);
 
 struct smallfs *smallfs__getfs();
 int smallfs__start();

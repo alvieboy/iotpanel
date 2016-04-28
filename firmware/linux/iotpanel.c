@@ -33,7 +33,7 @@ typedef int socklen_t;
 #endif
 int displayThread(void*);
 
-int ser_initialize(struct serializer_t *me)
+int ser_initialize(struct serializer_t *me, int offset)
 {
     return 0;
 }
@@ -246,8 +246,11 @@ static void clientData()
 static void newConnection()
 {
     socklen_t len = sizeof(struct sockaddr_in);
-    current_conn->sockfd = accept( listenfd, (struct sockaddr*)&current_conn->sock, &len);
-    cb_connect(current_conn);
+    printf("Got connection\n");
+    if (current_conn->sockfd<0) {
+        current_conn->sockfd = accept( listenfd, (struct sockaddr*)&current_conn->sock, &len);
+        cb_connect(current_conn);
+    }
 }
 
 
@@ -259,7 +262,6 @@ void netCheck()
     int max=-1;
     tv.tv_sec=0;
     tv.tv_usec=5000;
-
     do {
         FD_ZERO(&rfs);
 
@@ -385,6 +387,18 @@ sint8 espconn_accept(struct espconn*conn)
         perror("socket");
         abort();
     }
+
+    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))<0) {
+        perror("setsockopt");
+        abort();
+    }
+#ifdef SO_REUSEPORT
+    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEPORT, &yes, sizeof(yes))<0) {
+        perror("setsockopt");
+        abort();
+    }
+#endif
+
     memset(&conn->sock,0, sizeof(conn->sock));
     conn->sock.sin_family = AF_INET;
     conn->sock.sin_addr.s_addr = INADDR_ANY;
@@ -393,10 +407,7 @@ sint8 espconn_accept(struct espconn*conn)
         perror("bind");
         abort();
     }
-    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes))<0) {
-        perror("setsockopt");
-        abort();
-    }
+
     listen(listenfd,1);
     return 0;
 }
@@ -518,4 +529,9 @@ void ets_intr_lock()
 unsigned getFPS()
 {
     return 100;
+}
+
+int wifi_add_ap(const char *ssid,const char *pwd)
+{
+    return 0;
 }

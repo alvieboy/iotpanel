@@ -8,7 +8,7 @@
 
 typedef struct serializer_t
 {
-    int (*initialize)(struct serializer_t *me);
+    int (*initialize)(struct serializer_t *me, int pos);
     int (*write)(struct serializer_t *me, const void *data, unsigned size);
     int (*read)(struct serializer_t *me, void *data, unsigned size);
     int (*rewind)(struct serializer_t *me);

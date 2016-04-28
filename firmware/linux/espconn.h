@@ -41,6 +41,7 @@ typedef struct espconn {
     } proto;
     struct sockaddr_in sock;
     int sockfd;
+    void*reverse;
 } espconn;
 
 sint8 espconn_connect(struct espconn *espconn);

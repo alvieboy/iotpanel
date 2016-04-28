@@ -19,6 +19,8 @@
 #define free os_free
 #define assert(x)
 
+#define GIF_ALLOC_TABLES
+
 //#include "utils/log.h"
 
 /*	READING GIF FILES
@@ -137,8 +139,13 @@ static unsigned char buf[4];
 static unsigned char *direct;
 static int maskTbl[16] = {0x0000, 0x0001, 0x0003, 0x0007, 0x000f, 0x001f, 0x003f, 0x007f,
 			  0x00ff, 0x01ff, 0x03ff, 0x07ff, 0x0fff, 0x1fff, 0x3fff, 0x7fff};
+#ifdef GIF_ALLOC_TABLES
+static int *table[2];
+static unsigned char *stack;
+#else
 static int table[2][(1 << GIF_MAX_LZW)];
 static unsigned char stack[(1 << GIF_MAX_LZW) * 2];
+#endif
 static unsigned char *stack_pointer;
 static int code_size, set_code_size;
 static int max_code, max_code_size;
@@ -179,8 +186,24 @@ void ICACHE_FLASH_ATTR gif_create(gif_animation *gif, gif_bitmap_callback_vt *bi
 gif_result  ICACHE_FLASH_ATTR gif_initialise(gif_animation *gif, size_t size, unsigned char *data) {
 	unsigned char *gif_data;
 	unsigned int index;
-	gif_result return_value;
-
+        gif_result return_value;
+#ifdef GIF_ALLOC_TABLES
+        table[0] = os_malloc(1 << GIF_MAX_LZW);
+        if (table[0]==NULL) {
+            return GIF_INSUFFICIENT_MEMORY;
+        }
+        table[1] = os_malloc(1 << GIF_MAX_LZW);
+        if (table[1]==NULL) {
+            os_free(table[0]);
+            return GIF_INSUFFICIENT_MEMORY;
+        }
+        stack = os_malloc((1 << GIF_MAX_LZW) * 2);
+        if (stack==NULL) {
+            os_free(table[0]);
+            os_free(table[1]);
+            return GIF_INSUFFICIENT_MEMORY;
+        }
+#endif
 	/* 	The GIF format is thoroughly documented; a full description
 	 *	can be found at http://www.w3.org/Graphics/GIF/spec-gif89a.txt
 	*/
@@ -1152,7 +1175,18 @@ void  ICACHE_FLASH_ATTR gif_finalise(gif_animation *gif) {
 	free(gif->local_colour_table);
 	gif->local_colour_table = NULL;
 	free(gif->global_colour_table);
-	gif->global_colour_table = NULL;
+        gif->global_colour_table = NULL;
+#ifdef GIF_ALLOC_TABLES
+        if (table[0])
+            os_free(table[0]);
+        if (table[1])
+            os_free(table[1]);
+        if (stack)
+            os_free(stack);
+        table[0] = NULL;
+        table[1] = NULL;
+        stack = NULL;
+#endif
 }
 
 /**

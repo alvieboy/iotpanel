@@ -22,6 +22,11 @@
 #include "alloc.h"
 #include "error.h"
 #include "ws.h"
+#include "wifi.h"
+#include "server.h"
+
+#undef DEBUG
+#define DEBUG(x...)   os_printf(x)
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
@@ -31,6 +36,8 @@ LOCAL esp_tcp wstcp;
 LOCAL struct espconn wsconn;
 #endif
 
+#undef ENABLE_SEQUENCE_TAG
+
 char currentFw[32] = {0};
 static unsigned char *otachunk;
 
@@ -39,23 +46,6 @@ extern void setPreloadValues( uint16_t *values );
 extern void setBlankValues( uint8_t *values );
 extern unsigned getFPS();
 
-#define MAX_LINE_LEN 1024
-
-typedef struct {
-    char rline[MAX_LINE_LEN+1];
-    char tline[128+1];
-    unsigned  rlinepos;
-    // Command placeholders.
-    char *cmd;
-    char *args;
-    int argc;
-    unsigned char authtoken[10];
-    unsigned  authenticated:1;
-    char *argv[8];
-    struct espconn *conn;
-} clientInfo_t;
-
-static clientInfo_t clientInfo;
 
 typedef int (*commandHandler_t)(clientInfo_t*);
 
@@ -67,6 +57,7 @@ typedef struct {
     unsigned needauth:1;
     const char *help;
 } commandEntry_t;
+
 
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandLogin(clientInfo_t *);
@@ -91,6 +82,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandSave(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandReset(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandInfo(clientInfo_t *);
 LOCAL ICACHE_FLASH_ATTR int handleCommandMove(clientInfo_t *);
+LOCAL ICACHE_FLASH_ATTR int handleCommandAddAP(clientInfo_t *);
 
 commandEntry_t commandHandlers[] = {
     { "HELP",    &handleCommandHelp, 0, "[<commandname>]" },
@@ -115,6 +107,7 @@ commandEntry_t commandHandlers[] = {
     { "RESET",   &handleCommandReset, 1 ,""},
     { "INFO",   &handleCommandInfo, 1 ,""},
     { "MOVE",    &handleCommandMove, 1,"<screenname> <widgetname> <x> <y>" },
+    { "ADDAP",    &handleCommandAddAP, 1,"<ssid> <pwd>" },
     { 0, 0, 1, NULL }
 };
 
@@ -133,24 +126,36 @@ LOCAL void ICACHE_FLASH_ATTR client_genRandom(unsigned char *dest)
 
 LOCAL ICACHE_FLASH_ATTR void client_sendRawLine(clientInfo_t *cl)
 {
-    espconn_sent(&esp_conn, (uint8*)cl->tline, strlen(cl->tline));
+    cl->backend->send(cl->backendpvt, (uint8*)cl->tline, strlen(cl->tline));
 }
 
 LOCAL ICACHE_FLASH_ATTR void client_sendOK(clientInfo_t *cl, const char *args)
 {
-    os_sprintf(cl->tline,"%s OK %s\n", cl->rline, args);
+#ifdef ENABLE_SEQUENCE_TAG
+    os_sprintf(cl->tline,"%s OK %s", cl->rline, args);
+#else
+    os_sprintf(cl->tline,"OK %s", args);
+#endif
     client_sendRawLine(cl);
 }
 
 LOCAL ICACHE_FLASH_ATTR void client_senderrorstring(clientInfo_t *cl, const char *args)
 {
-    os_sprintf(cl->tline,"%s ERROR %s\n",cl->rline[0]?cl->rline:"?", args);
+#ifdef ENABLE_SEQUENCE_TAG
+    os_sprintf(cl->tline,"%s ERROR %s",cl->rline[0]?cl->rline:"?", args);
+#else
+    os_sprintf(cl->tline,"ERROR %s", args);
+#endif
     client_sendRawLine(cl);
 }
 
 LOCAL ICACHE_FLASH_ATTR void client_senderror(clientInfo_t *cl, int errno)
 {
-    os_sprintf(cl->tline,"%s ERROR %s\n",cl->rline[0]?cl->rline:"?", getErrorString(errno));
+#ifdef ENABLE_SEQUENCE_TAG
+    os_sprintf(cl->tline,"%s ERROR %s",cl->rline[0]?cl->rline:"?", getErrorString(errno));
+#else
+#endif
+    os_sprintf(cl->tline,"ERROR %s", getErrorString(errno));
     client_sendRawLine(cl);
 }
 
@@ -487,8 +492,27 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandSetTime(clientInfo_t *cl)
     } else {
         return -1;
     }
-
 }
+
+LOCAL ICACHE_FLASH_ATTR int handleCommandAddAP(clientInfo_t *cl)
+{
+    int r;
+    if (cl->argc!=2) {
+        client_senderror(cl,EINVALIDARGUMENT);
+        return -1;
+    }
+
+    r =wifi_add_ap(cl->argv[0], cl->argv[1]);
+
+    if (r!=NOERROR) {
+        client_sendOK(cl,"ADDAP");
+    } else {
+        client_senderror(cl,r);
+    }
+    return r;
+}
+
+
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandLogout(clientInfo_t *cl)
 {
@@ -575,7 +599,8 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
         }
     } else if (strcmp(cl->argv[0],"FINALISE")==0) {
         client_sendOK(cl,"OTA");
-        espconn_disconnect(cl->conn);
+        //espconn_disconnect(cl->conn);
+        cl->backend->disconnect(cl->backendpvt);
         ota_finalize();
     } else {
         client_senderror(cl,EINVALIDARGUMENT);
@@ -590,7 +615,9 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandSave(clientInfo_t *cl)
 {
-    int r = serialize_all(&flash_serializer);
+    serializer_t *ser = &flash_serializer;
+
+    int r = serialize_all(ser);
     if (r<0) {
         client_senderror(cl,r);
     } else {
@@ -615,13 +642,24 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandInfo(clientInfo_t *cl)
     return 0;
 }
 
-LOCAL ICACHE_FLASH_ATTR void clientInfo_init(clientInfo_t*cl)
+clientInfo_t *clientInfo_allocate(server_backend_t *backend, void *backendpvt)
 {
+    clientInfo_t *cl = os_calloc(sizeof(clientInfo_t),1);
+    if(NULL==cl)
+        return NULL;
     cl->rlinepos=0;
     cl->authenticated=0;
     client_genRandom(cl->authtoken);
+    cl->backend = backend;
+    cl->backendpvt = backendpvt;
+    DEBUG("Allocated new clientInfo\n");
+    return cl;
 }
-
+void clientInfo_destroy(clientInfo_t *cl)
+{
+    DEBUG("Destroying clientInfo\n");
+    os_free(cl);
+}
 
 LOCAL int ICACHE_FLASH_ATTR parse_args(clientInfo_t *cl, char *start, char *end)
 {
@@ -688,25 +726,31 @@ LOCAL int ICACHE_FLASH_ATTR parse_args(clientInfo_t *cl, char *start, char *end)
     return argc;
 }
 
-LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
+ICACHE_FLASH_ATTR int client_processData(clientInfo_t *cl)
 {
+#ifdef ENABLE_SEQUENCE_TAG
     cl->cmd = strchr(cl->rline, ' ');
     if (!cl->cmd) {
         client_senderror(cl,EMALFORMED);
-        return;
+        return NOERROR;
     }
     *cl->cmd++='\0';
+#else
+    cl->cmd = cl->rline;
+#endif
+
     cl->args = strchr(cl->cmd, ' ');
     if (cl->args) {
         *cl->args++='\0';
     }
+    DEBUG("CMD: '%s'\n", cl->cmd);
     cl->argc = 0;
     if (cl->args) {
         cl->argc = parse_args(cl, cl->args, &cl->rline[cl->rlinepos]);
         if (cl->argc<0) {
             client_senderror(cl,EMALFORMED);
-            return;
-        }
+            return NOERROR;
+        }                  
     }
     /* Find command handler */
     commandEntry_t *entry = &commandHandlers[0];
@@ -717,10 +761,11 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
             } else {
                 if (entry->handler(cl)==-2) {
                     os_printf("Destroying connection\n");
-                    espconn_disconnect(cl->conn);
-                    espconn_delete(cl->conn);
-                    cl->conn = NULL;
-                    return;
+                    //espconn_disconnect(cl->conn);
+                    //espconn_delete(cl->conn);
+                    cl->backend->disconnect(cl->backendpvt);
+                    //cl->conn = NULL;
+                    return ECONNECTIONCLOSED;
                 }
             }
             break;
@@ -730,15 +775,22 @@ LOCAL ICACHE_FLASH_ATTR void client_processData(clientInfo_t *cl)
     if (!entry->name) {
         client_senderror(cl,EUNKNOWN);
     }
+    return NOERROR;
 }
 
+LOCAL ICACHE_FLASH_ATTR void trim(char *stringstart, char *stringend)
+{
+    while (isspace(*stringend) && (stringend!=stringstart)) {
+        *stringend-- = '\0';
+    }
+}
 
-LOCAL ICACHE_FLASH_ATTR void client_data(clientInfo_t*cl, char *data, unsigned short length)
+LOCAL ICACHE_FLASH_ATTR int client_data(clientInfo_t*cl, char *data, unsigned short length)
 {
     unsigned total = (unsigned)length + cl->rlinepos;
     if (total>MAX_LINE_LEN) {
         client_senderror(cl, ETOOBIG);
-        return;
+        return NOERROR;
     }
     /* Append to memory line */
     memcpy(&cl->rline[cl->rlinepos], data, length);
@@ -746,13 +798,17 @@ LOCAL ICACHE_FLASH_ATTR void client_data(clientInfo_t*cl, char *data, unsigned s
     cl->rline[cl->rlinepos]='\0';
 
     char *eol = NULL;
+    int r = NOERROR;
+
     do {
         /* Locate newline */
         eol = memchr(cl->rline, '\n', cl->rlinepos);
         if (eol) {
             /* Found newline. */
+            /* Remove any eventual trailing spaces */
+            trim(cl->rline, eol);
             *eol++='\0';
-            client_processData(cl);
+            r = client_processData(cl);
             /* Move back data if needed */
             unsigned remaining = eol - &cl->rline[cl->rlinepos];
             if (remaining) {
@@ -760,15 +816,29 @@ LOCAL ICACHE_FLASH_ATTR void client_data(clientInfo_t*cl, char *data, unsigned s
                 memcpy(cl->rline, eol, remaining);
             }
             cl->rlinepos = remaining;
+            if (r!=NOERROR)
+                break;
         }
     } while (eol);
+    return r;
 }
 
 LOCAL void ICACHE_FLASH_ATTR server_recv(void *arg, char *pusrdata, unsigned short length)
 {
-    clientInfo.conn = arg;//struct espconn *pesp_conn = arg;
+    struct espconn *pesp_conn = arg;
+    clientInfo_t *client =  (clientInfo_t*)pesp_conn->reverse;
+    if (NULL==client) {
+        // ???
+        espconn_disconnect(pesp_conn);
+        espconn_delete(pesp_conn);
+        return;
+    }
     DEBUG("Server data: %d\n", length);
-    client_data( &clientInfo, pusrdata, length);
+    if (client_data( client, pusrdata, length)!=NOERROR) {
+        // Destroy
+        clientInfo_destroy(client);
+        pesp_conn->reverse=NULL;
+    }
 }
 
 LOCAL ICACHE_FLASH_ATTR void server_recon(void *arg, sint8 err)
@@ -777,21 +847,45 @@ LOCAL ICACHE_FLASH_ATTR void server_recon(void *arg, sint8 err)
     DEBUG("Server recon\n");
 }
 
+LOCAL int ICACHE_FLASH_ATTR wrap_esp_send(void *pvt, unsigned char *buf, size_t size)
+{
+    // Append newline.
+    buf[size++] = '\n';
+    buf[size] = '\0';
+    return espconn_sent( (struct espconn*)pvt, buf, size);
+}
+LOCAL int ICACHE_FLASH_ATTR wrap_esp_disconnect(void*pvt)
+{
+    return espconn_disconnect( (struct espconn*)pvt );
+}
+
+static server_backend_t backend_esp = {
+    &wrap_esp_send,
+    &wrap_esp_disconnect
+};
+
 LOCAL ICACHE_FLASH_ATTR void server_conn(void *arg)
 {
     struct espconn *pesp_conn = arg;
     DEBUG("Server conn\n");
-    clientInfo_init(&clientInfo);
-    clientInfo.conn = pesp_conn;
-
-    espconn_regist_time(pesp_conn, 7200, 1);
-
+    clientInfo_t *client = clientInfo_allocate( &backend_esp, arg );
+    if (NULL!=client) {
+        pesp_conn->reverse = client;
+        espconn_regist_time(pesp_conn, 7200, 1);
+    } else {
+        espconn_disconnect(pesp_conn);
+        espconn_delete(pesp_conn);
+    }
 }
 
 LOCAL ICACHE_FLASH_ATTR void server_discon(void *arg)
 {
     //struct espconn *pesp_conn = arg;
     DEBUG("Server discon\n");
+    struct espconn *pesp_conn = arg;
+    clientInfo_t *client = (clientInfo_t*)pesp_conn->reverse;
+    client->backend->disconnect(client->backendpvt);
+    clientInfo_destroy(client);
 }
 
 
@@ -799,11 +893,12 @@ LOCAL ICACHE_FLASH_ATTR void server_discon(void *arg)
 LOCAL void ICACHE_FLASH_ATTR server_listen(void *arg)
 {
     struct espconn *pesp_conn = arg;
-
+    os_printf("Conn.....\n");
     espconn_regist_recvcb(pesp_conn, server_recv);
     espconn_regist_reconcb(pesp_conn, server_recon);
-    espconn_regist_connectcb(pesp_conn, server_conn);
+    //espconn_regist_connectcb(pesp_conn, server_conn);
     espconn_regist_disconcb(pesp_conn, server_discon);
+    server_conn(arg);
 }
 
 #ifdef ENABLE_WEBSOCKET

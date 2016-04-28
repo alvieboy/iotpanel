@@ -3,7 +3,7 @@
 #include "protos.h"
 #include "alloc.h"
 
-#define DEBUGFLASH(x...)  /* os_printf(x) */
+#define DEBUGFLASH(x...)  /*os_printf(x)*/
 
 void ICACHE_FLASH_ATTR flash_control_init(flash_control_t *ctrl)
 {

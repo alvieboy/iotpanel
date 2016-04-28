@@ -20,6 +20,7 @@ mainwindow.cpp \
 ../esp8266/user/font_tom_thumb.c               \
 ../esp8266/user/upgrade.c                      \
 ../esp8266/user/cdecode.c                      \
+../esp8266/user/cencode.c                      \
 ../esp8266/user/serdes.c                       \
 ../esp8266/user/widgets/color.c                \
 ../esp8266/user/widgets/scrollingtext.c        \
@@ -32,6 +33,7 @@ mainwindow.cpp \
 ../esp8266/user/widgets/gif.c 	       	       \
 ../esp8266/user/widgets/widget_registry.c      \
 ../esp8266/user/gif/libnsgif.c    \
+../esp8266/user/ws.c    \
 ../esp8266/user/flash_serializer.c     \
 ../esp8266/user/crc.c     \
 ../esp8266/user/error.c     \
@@ -46,5 +48,5 @@ HEADERS  += ../../paneleditor/Panel.h \
 
 QMAKE_CFLAGS=-Wall -Werror -Wno-unused -O2 -g -I../esp8266/user -I../esp8266/user/gif -I../esp8266/user/widgets -I../../paneleditor/ -I./drivers $(SDL_CFLAGS) -DHOST
 QMAKE_CXXFLAGS+=-DPANELDISPLAYNOEDIT  -I. -I../../paneleditor/ -I../esp8266/user -I../esp8266/user/widgets -DHOST
-
+QMAKE_LIBS+=-lssl -lcrypto
 #FORMS    += mainwindow.ui
