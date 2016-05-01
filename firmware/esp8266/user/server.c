@@ -115,9 +115,9 @@ commandEntry_t commandHandlers[] = {
 LOCAL void ICACHE_FLASH_ATTR client_genRandom(unsigned char *dest)
 {
     int i, v;
-    /* 10 bytes (80 bits) */
+    /* 20 bytes (160 bits) */
     srand(system_get_time());
-    for (i=0;i<10;i++) {
+    for (i=0;i<20;i++) {
         v = rand();
         *dest++ = v&0xff;
     }
@@ -177,24 +177,124 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandHelp(clientInfo_t *cl)
 #endif
 }
 
+LOCAL char nibble2ascii(char nibble)
+{
+    nibble&=0xf;
+    if (nibble>9) {
+        return 'A'+(nibble-10);
+    }
+    return '0'+nibble;
+}
+
+LOCAL char *puthexbyte(unsigned char byte, char *target)
+{
+    *target++ = nibble2ascii(byte>>4);
+    *target++ = nibble2ascii(byte);
+    return target;
+}
+
+
 LOCAL ICACHE_FLASH_ATTR int handleCommandLogin(clientInfo_t *cl)
 {
+    char token[41];
+    char *dest;
+    int i;
     if (cl->authenticated) {
         client_senderror(cl, EALREADY);
         return -1;
     }
-    client_sendOK(cl,"da39a3ee5e6b4b0d3255bfef95601890afd80709");
+    dest = &token[0];
+    for (i=0; i<20; i++) {
+        dest = puthexbyte(cl->authtoken[i], dest);
+    }
+    *dest='\0';
+    client_sendOK(cl,token);
     return 0;
+}
+
+LOCAL int ICACHE_FLASH_ATTR ascii2nibble(char in)
+{
+    in = tolower(in);
+    if (in>='0' && in<='9') {
+        return in - '0';
+    }
+    if (in>='a' && in<='f') {
+        return in - 'a' + 10;
+    }
+    return -1;
+}
+
+LOCAL int ICACHE_FLASH_ATTR parsehex(const char *input, unsigned char*dest, size_t maxsize)
+{
+    int i,j;
+    int r=0;
+    do {
+        if (*input=='\0')
+            break;
+        i = ascii2nibble(*input++);
+        if (i<0)
+            return -1;
+        j = ascii2nibble(*input++);
+        if (j<0)
+            return -1;
+        *dest++ = (i<<4) + j;
+        r++, maxsize--;
+    } while (maxsize);
+
+    if (*input!='\0')
+        return -1;
+
+    return r;
+}
+
+LOCAL const char *ICACHE_FLASH_ATTR getPassword(clientInfo_t *cl)
+{
+    return "admin";
+}
+
+LOCAL int ICACHE_FLASH_ATTR getPasswordLen(clientInfo_t *cl)
+{
+    return 5;
 }
 
 LOCAL ICACHE_FLASH_ATTR int handleCommandAuth(clientInfo_t *cl)
 {
+    unsigned char token[20];
+    unsigned char computed[20];
+    SHA1_CTX ctx;
+
     if (cl->authenticated) {
         client_senderror(cl, EALREADY);
         return -1;
     }
-    client_sendOK(cl,"WELCOME");
-    cl->authenticated=1;
+    if (cl->argc!=1) {
+        client_senderror(cl, EINVALIDARGUMENT);
+        return -1;
+    }
+    // Extract token.
+    if (strlen(cl->argv[0])!=40) {
+        client_senderror(cl, EINVALIDARGUMENT);
+        return -1;
+    }
+    // Parse it
+    if (parsehex(cl->argv[0], &token[0], 20)!=20) {
+        client_senderror(cl, EINVALIDARGUMENT);
+        return -1;
+    }
+    // Verify.
+    SHA1_Init(&ctx);
+    SHA1_Update( &ctx, cl->authtoken, 20);
+    SHA1_Update( &ctx, (const uint8_t*)getPassword(cl), getPasswordLen(cl));
+    SHA1_Final( &computed[0], &ctx );
+
+    if (memcmp(computed,token,20)==0) {
+        client_sendOK(cl,"WELCOME");
+        cl->authenticated=1;
+    } else {
+        client_senderror(cl, EINVALIDCRED);
+        cl->authenticated=0;
+        return -1;
+    }
     return 0;
 }
 
