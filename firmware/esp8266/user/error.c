@@ -17,7 +17,8 @@ static const char *errorList[] = {
     "Invalid length",
     "Too big",
     "Not enough memory",
-    "Connection closed"
+    "Connection closed",
+    "Invalid credentials"
 };
 
 const char *ICACHE_FLASH_ATTR getErrorString(int errno)

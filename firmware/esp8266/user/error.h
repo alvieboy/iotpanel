@@ -18,7 +18,7 @@
 #define ETOOBIG         -13
 #define ENOMEM          -14
 #define ECONNECTIONCLOSED -15
-
+#define EINVALIDCRED -16
 const char *getErrorString(int errno);
 
 #endif
