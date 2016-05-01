@@ -11,32 +11,6 @@
 #include <ctype.h>
 #include "server.h"
 
-// This comes from RTOS sdk.
-#ifdef __linux__
-#include <openssl/ssl.h>
-#define SHA1_CTX SHA_CTX
-#define SHA1_SIZE   20
-
-#else
-#define SHA1_SIZE   20
-
-/*
- *  This structure will hold context information for the SHA-1
- *  hashing operation
- */
-typedef struct
-{
-    uint32_t Intermediate_Hash[SHA1_SIZE/4]; /* Message Digest */
-    uint32_t Length_Low;            /* Message length in bits */
-    uint32_t Length_High;           /* Message length in bits */
-    uint16_t Message_Block_Index;   /* Index into message block array   */
-    uint8_t Message_Block[64];      /* 512-bit message blocks */
-} SHA1_CTX;
-
-void SHA1_Init(SHA1_CTX *);
-void SHA1_Update(SHA1_CTX *, const uint8_t * msg, int len);
-void SHA1_Final(uint8_t *digest, SHA1_CTX *);
-#endif
 
 static const char *magicKey = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 static const unsigned magicKeyLen = 36; // Does NOT includes final NULL
@@ -742,7 +716,7 @@ void ICACHE_FLASH_ATTR ws_disconnect( struct espconn *conn )
     if (NULL==s)
         return;
 
-    ws_data_impl(s, NULL, 0); // Notify we closed.
+    //ws_data_impl(s, NULL, 0); // Notify we closed.
 
     if (prev) {
         prev->next = s->next;
