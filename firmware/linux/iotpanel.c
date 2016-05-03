@@ -250,6 +250,8 @@ static void newConnection()
     if (current_conn->sockfd<0) {
         current_conn->sockfd = accept( listenfd, (struct sockaddr*)&current_conn->sock, &len);
         cb_connect(current_conn);
+    } else {
+        printf("Too many connections\n");
     }
 }
 
