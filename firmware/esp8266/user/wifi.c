@@ -7,6 +7,7 @@
 #include "flash_serializer.h"
 #include "error.h"
 #include "alloc.h"
+#include "wifi-config.h"
 
 void wifi_scan_ap();
 
@@ -215,8 +216,8 @@ void ICACHE_FLASH_ATTR wifiConnect()
         config.authmode = AUTH_WPA_PSK;
         config.ssid_len = 5;// or its actual length
         config.max_connection = 2; // how many stations can connect to ESP8266 softAP at most.
-        //config.channel = 4;
-        config.beacon_interval = 100;
+        config.channel = 4;
+        //config.beacon_interval = 100;
 
         os_printf("New settings: ssid %s, channel %d\n", config.ssid, config.channel);
 
@@ -262,17 +263,18 @@ LOCAL void ICACHE_FLASH_ATTR wifi_ap_found_callback(struct ap_info *ap, const ui
 
 void ICACHE_FLASH_ATTR scan_done_cb(void *arg, STATUS status)
 {
-    struct bss_info *bss_link = arg;
     int rescan = 1;
     struct ap_info *best = NULL;
     sint8 bestrssi = -128;
     const uint8_t *bssid;
 
-    if (status == OK) {
+   // os_printf("Scan finished status %d\n", status);
 
-        struct bss_info *inf = bss_link->next.stqe_next;
+    if (status == OK) {
+        struct bss_info *inf = (struct bss_info *)arg;
 
         while (inf) {
+            //os_printf("Checking '%s'\n", inf->ssid);
             struct ap_info *ap = wifi_get_ap((const char*)inf->ssid);
             if (ap) {
                 rescan=0;
@@ -307,7 +309,17 @@ void ICACHE_FLASH_ATTR wifi_init()
     int r = wifi_load_ap_from_flash();
     if (r!=NOERROR) {
         /* Start AP mode right away */
+        // Load internal aps
+#if 0
+        struct ap_info_basic *i = &internal_accesspoints[0];
+        while (i->ssid[0]) {
+            wifi_add_ap(i->ssid, i->pwd);
+            i++;
+        }
+#else
         apmode = 1;
+#endif
+
 //        wifiConnect();
     } else {
 

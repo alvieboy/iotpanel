@@ -7,6 +7,11 @@ struct ap_info {
     char pwd[65];
 };
 
+struct ap_info_basic {
+    char ssid[33];
+    char pwd[65];
+};
+
 #define END_OF_ACCESSPOINTS {0,0}
 
 struct ap_info *wifi_get_ap(const char *name);
