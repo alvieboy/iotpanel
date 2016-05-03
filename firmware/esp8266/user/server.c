@@ -26,7 +26,7 @@
 #include "server.h"
 
 #undef DEBUG
-#define DEBUG(x...)   os_printf(x)
+#define DEBUG(x...)   /*os_printf(x)*/
 
 LOCAL esp_tcp esptcp;
 LOCAL struct espconn esp_conn;
@@ -686,7 +686,7 @@ LOCAL ICACHE_FLASH_ATTR int handleCommandOTA(clientInfo_t *cl)
                                     (char*)otachunk,
                                     &b64state);
         if (r!= 512) {
-            os_printf("Invalid len of %d\n", r);
+            DEBUG("Invalid len of %d\n", r);
             client_senderror(cl,EINVALIDLEN);
             return -1;
         }
@@ -860,7 +860,7 @@ ICACHE_FLASH_ATTR int client_processData(clientInfo_t *cl)
                 client_senderror(cl,EUNKNOWN);
             } else {
                 if (entry->handler(cl)==-2) {
-                    os_printf("Destroying connection\n");
+                    DEBUG("Destroying connection\n");
                     //espconn_disconnect(cl->conn);
                     //espconn_delete(cl->conn);
                     cl->backend->disconnect(cl->backendpvt);
@@ -993,7 +993,7 @@ LOCAL ICACHE_FLASH_ATTR void server_discon(void *arg)
 LOCAL void ICACHE_FLASH_ATTR server_listen(void *arg)
 {
     struct espconn *pesp_conn = arg;
-    os_printf("Conn.....\n");
+    DEBUG("Conn.....\n");
     espconn_regist_recvcb(pesp_conn, server_recv);
     espconn_regist_reconcb(pesp_conn, server_recon);
     //espconn_regist_connectcb(pesp_conn, server_conn);
