@@ -41,7 +41,7 @@ typedef struct websocket
     enum httpstate state;
     enum websocketstate wsstate;
     uint8_t close;
-    char filename[16];
+    char filename[17];
     char *reply;
     struct smallfsfile filetx;
     unsigned char wskey[32];

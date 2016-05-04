@@ -11,18 +11,18 @@
 #include <ctype.h>
 #include "server.h"
 
-
+static const char htmlContentType[] = "Content-Type: text/html\r\n";
 static const char *magicKey = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 static const unsigned magicKeyLen = 36; // Does NOT includes final NULL
 
 LOCAL websocket_t *wssockets = NULL;
+
 typedef int(*header_handler_fun_t)(websocket_t*s, const char *arg,int);
 
 LOCAL int ws_header_upgrade(websocket_t*,const char*,int);
 LOCAL int ws_header_connection(websocket_t*,const char*,int);
 LOCAL int ws_header_secwebsocketkey(websocket_t*,const char*,int);
 LOCAL void ws_client_connect( websocket_t* );
-
 
 struct header_handlers_t {
     const char *header;
@@ -42,8 +42,6 @@ static void os_printstr(const char *c, int len)
         c++;
     }
 }
-
-
 
 LOCAL int ICACHE_FLASH_ATTR ws_parse_command(websocket_t*s, const unsigned char *data, size_t len)
 {
@@ -105,6 +103,7 @@ LOCAL void ICACHE_FLASH_ATTR ws_sendfilechunk(websocket_t*s)
 LOCAL void ICACHE_FLASH_ATTR ws_send_http_header(websocket_t *s,
                                                  unsigned status,
                                                  const char *statustext,
+                                                 const char *extraheaders,
                                                  const char *content,
                                                  unsigned contentlen)
 {
@@ -112,9 +111,9 @@ LOCAL void ICACHE_FLASH_ATTR ws_send_http_header(websocket_t *s,
         s->reply = os_malloc(512);
     }
     int sz = os_sprintf(s->reply,"HTTP/1.0 %d %s\r\n"
-                        "Content-Type: text/html\r\n"
                         "Connection: close\r\n"
                         "Content-Length: %d\r\n"
+                        "%s"
                         "\r\n%s",
                         status,
                         statustext,
@@ -146,6 +145,10 @@ LOCAL int ICACHE_FLASH_ATTR ws_handle_file_request(websocket_t*s)
 {
     // Find file.
     const char *file = s->filename;
+    char headerfilename[21];
+    char *extraheaders = NULL;
+    struct smallfsfile headerfile;
+
     if (file[0] == '/')
         file++;
 
@@ -158,19 +161,39 @@ LOCAL int ICACHE_FLASH_ATTR ws_handle_file_request(websocket_t*s)
     // Open it.
     if (smallfs__start()!=0) {
         os_printf("Cannot start smallfs!\n");
-        ws_send_http_header(s, 400, "ISR", "ISR",3);
+        ws_send_http_header(s, 400, "ISR", htmlContentType, "ISR",3);
         return -1;
     }
+    // Check if we have extra headers to send.
+    os_sprintf(headerfilename,"%s.hdr", file);
+
+    smallfs__open(smallfs__getfs(), &headerfile, headerfilename);
+
+    if (smallfsfile__valid(&headerfile)) {
+        extraheaders = os_malloc( smallfsfile__size(&headerfile) );
+        smallfsfile__read( &headerfile, extraheaders, smallfsfile__size(&headerfile));
+        os_printf("Header file found\n");
+    } else {
+        os_printf("No header file found\n");
+    }
+
+
     smallfs__open(smallfs__getfs(), &s->filetx, file);
 
     if (!smallfsfile__valid(&s->filetx)) {
         os_printf("Cannot open file!\n");
         smallfs__end(smallfs__getfs());
-        ws_send_http_header(s, 404, "Not found", "Not found",9);
+        ws_send_http_header(s, 404, "Not found", htmlContentType, "Not found",9);
+        if (extraheaders) {
+            os_free(extraheaders);
+        }
         return -1;
     }
 
-    ws_send_http_header(s, 200, "OK", "",smallfsfile__size(&s->filetx));
+    ws_send_http_header(s, 200, "OK", extraheaders ? extraheaders:"", "",smallfsfile__size(&s->filetx));
+    if (extraheaders) {
+        os_free(extraheaders);
+    }
     s->state = DATA;
     ws_sendfilechunk(s);
 
