@@ -5,7 +5,7 @@
 
 #define     DEBUGSERIALIZE(x...) /* os_printf(x) */
 
-int ICACHE_FLASH_ATTR serialize_string(serializer_t *f, const char *str)
+int ICACHEFUN(serialize_string)(serializer_t *f, const char *str)
 {
     const char nullstr[] = "";
     if (NULL==str)
@@ -20,12 +20,12 @@ int ICACHE_FLASH_ATTR serialize_string(serializer_t *f, const char *str)
     return r;
 }
 
-int ICACHE_FLASH_ATTR serialize_bytearray(serializer_t *f, const unsigned char *ptr, unsigned size)
+int ICACHEFUN(serialize_bytearray)(serializer_t *f, const unsigned char *ptr, unsigned size)
 {
     return f->write(f, ptr, size);
 }
 
-int ICACHE_FLASH_ATTR serialize_long(serializer_t *f, long i)
+int ICACHEFUN(serialize_long)(serializer_t *f, long i)
 {
     unsigned char buf[5];
     long ic=i;
@@ -63,37 +63,37 @@ int ICACHE_FLASH_ATTR serialize_long(serializer_t *f, long i)
     return ret;
 }
 
-int ICACHE_FLASH_ATTR serialize_int8(serializer_t *f, int8_t i)
+int ICACHEFUN(serialize_int8)(serializer_t *f, int8_t i)
 {
     return serialize_long(f,(long)i);
 }
 
-int ICACHE_FLASH_ATTR serialize_uint8(serializer_t *f, uint8_t i)
+int ICACHEFUN(serialize_uint8)(serializer_t *f, uint8_t i)
 {
     return serialize_long(f,(long)i);
 }
 
-int ICACHE_FLASH_ATTR serialize_int16(serializer_t *f, int16_t i)
+int ICACHEFUN(serialize_int16)(serializer_t *f, int16_t i)
 {
     return serialize_long(f,(long)i);
 }
 
-int ICACHE_FLASH_ATTR serialize_uint16(serializer_t *f, uint16_t i)
+int ICACHEFUN(serialize_uint16)(serializer_t *f, uint16_t i)
 {
     return serialize_long(f,(long)i);
 }
 
-int ICACHE_FLASH_ATTR serialize_int32(serializer_t *f, int32_t i)
+int ICACHEFUN(serialize_int32)(serializer_t *f, int32_t i)
 {
     return serialize_long(f,(long)i);
 }
 
-int ICACHE_FLASH_ATTR serialize_uint32(serializer_t *f, uint32_t i)
+int ICACHEFUN(serialize_uint32)(serializer_t *f, uint32_t i)
 {
     return serialize_long(f,(long)i);
 }
 
-char *ICACHE_FLASH_ATTR deserialize_string_alloc(serializer_t *f)
+char *ICACHEFUN(deserialize_string_alloc)(serializer_t *f)
 {
     uint16_t len = 0;
     char *r = NULL;
@@ -116,7 +116,7 @@ char *ICACHE_FLASH_ATTR deserialize_string_alloc(serializer_t *f)
 }
 
 
-int ICACHE_FLASH_ATTR deserialize_string(serializer_t *f, char *dest, unsigned *size, unsigned maxsize)
+int ICACHEFUN(deserialize_string)(serializer_t *f, char *dest, unsigned *size, unsigned maxsize)
 {
     uint16_t len = 0;
     int r;
@@ -141,13 +141,13 @@ int ICACHE_FLASH_ATTR deserialize_string(serializer_t *f, char *dest, unsigned *
     return r;
 }
 
-int ICACHE_FLASH_ATTR deserialize_bytearray(serializer_t *f, unsigned char *dest, unsigned size)
+int ICACHEFUN(deserialize_bytearray)(serializer_t *f, unsigned char *dest, unsigned size)
 {
     int r = f->read(f, dest, size);
     return r;
 }
 
-int ICACHE_FLASH_ATTR deserialize_long(serializer_t *f, long *dest)
+int ICACHEFUN(deserialize_long)(serializer_t *f, long *dest)
 {
     int first = 1;
     long val = 0;
@@ -171,7 +171,7 @@ int ICACHE_FLASH_ATTR deserialize_long(serializer_t *f, long *dest)
     return 0;
 }
 
-int ICACHE_FLASH_ATTR deserialize_int8(serializer_t *f, int8_t *i)
+int ICACHEFUN(deserialize_int8)(serializer_t *f, int8_t *i)
 {
     long val;
     int r;
@@ -182,12 +182,12 @@ int ICACHE_FLASH_ATTR deserialize_int8(serializer_t *f, int8_t *i)
     return r;
 }
 
-int ICACHE_FLASH_ATTR deserialize_uint8(serializer_t *f, uint8_t *i)
+int ICACHEFUN(deserialize_uint8)(serializer_t *f, uint8_t *i)
 {
     return deserialize_int8(f,(int8_t*)i);
 }
 
-int ICACHE_FLASH_ATTR deserialize_int16(serializer_t *f, int16_t *i)
+int ICACHEFUN(deserialize_int16)(serializer_t *f, int16_t *i)
 {
     long val;
     int r;
@@ -198,12 +198,12 @@ int ICACHE_FLASH_ATTR deserialize_int16(serializer_t *f, int16_t *i)
     return r;
 }
 
-int ICACHE_FLASH_ATTR deserialize_uint16(serializer_t *f, uint16_t *i)
+int ICACHEFUN(deserialize_uint16)(serializer_t *f, uint16_t *i)
 {
     return deserialize_int16(f,(int16_t*)i);
 }
 
-int ICACHE_FLASH_ATTR deserialize_int32(serializer_t *f, int32_t *i)
+int ICACHEFUN(deserialize_int32)(serializer_t *f, int32_t *i)
 {
     long val;
     int r;
@@ -214,7 +214,7 @@ int ICACHE_FLASH_ATTR deserialize_int32(serializer_t *f, int32_t *i)
     return r;
 }
 
-int ICACHE_FLASH_ATTR deserialize_uint32(serializer_t *f, uint32_t *i)
+int ICACHEFUN(deserialize_uint32)(serializer_t *f, uint32_t *i)
 {
     return deserialize_int32(f,(int32_t*)i);
 }

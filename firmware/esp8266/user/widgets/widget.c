@@ -86,7 +86,7 @@ int ICACHE_FLASH_ATTR widget_set_property(widget_t*widget, const char *name, con
     for (prop = widget->def->properties; prop->name; prop++) {
         DEBUGSERIALIZE("find prop %s %s\n", prop->name, name);
         if (strcmp(prop->name,name)==0) {
-
+            li = 0;
             if (is_integer_property( prop->type )) {
                 li = (long)strtol(value,&end,10);
                 if (*end !='\0') {
@@ -495,7 +495,7 @@ int ICACHE_FLASH_ATTR serialize_all(serializer_t *ser)
     do {
         DEBUGSERIALIZE("Current screen %p \n", current_screen);
 
-        r = ser->initialize(ser);
+        r = ser->initialize(ser, -1);
         if (r!=NOERROR) break;
 
         r = ser->truncate(ser);
@@ -689,7 +689,7 @@ int ICACHE_FLASH_ATTR deserialize_all(serializer_t *ser)
     int r;
     int32_t blank;
 
-    r = ser->initialize(ser);
+    r = ser->initialize(ser, -1);
 
     if (r<0)
         return r;

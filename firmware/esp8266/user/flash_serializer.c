@@ -47,12 +47,13 @@ LOCAL void byte_memcpy(uint8_t *dest, const uint8_t *src, unsigned size)
 }
 #endif
 
-int ICACHE_FLASH_ATTR flash_ser_initialize(struct serializer_t *me)
+int ICACHE_FLASH_ATTR flash_ser_initialize(struct serializer_t *me, int pos)
 {
     flash_serializer_ctx_t *ctx = &flash_serializer_ctx;
     me->pvt = ctx;
-
-    ctx->startsector = ctx->currentsector = flash_get_first_sector();
+    if (pos<0)
+        pos = flash_get_first_sector();
+    ctx->startsector = ctx->currentsector = (unsigned)pos;
     ctx->erased = 0;
     ctx->sectoroffset = sizeof(config_header_t);
     ctx->validated = 0;
@@ -68,7 +69,7 @@ LOCAL int flash_validate(flash_serializer_ctx_t *ctx)
     config_header_t header;
     uint16_t crc = 0;
     unsigned char chunk[64];
-    unsigned offset = flash_get_first_sector() << SECTORBITS;
+    unsigned offset = (unsigned)ctx->startsector << SECTORBITS;
 
     spiflash_read_cached(&ctx->fc, offset, (void*)&header, sizeof(config_header_t));
     if (header.magic != FLASH_MAGIC) {
@@ -182,7 +183,7 @@ LOCAL int ICACHE_FLASH_ATTR flash_ser_finalise(struct serializer_t *me)
     header.size  = ((ctx->currentsector-ctx->startsector)<<SECTORBITS) +
         ctx->sectoroffset - sizeof(config_header_t);
     DEBUGFLASH("Data size: %d\n", header.size);
-    DEBUGFLASH("Data CRC: %04x\n", header.size);
+    DEBUGFLASH("Data CRC: %04x\n", ctx->crc);
     header.datacrc = ctx->crc;
 
     header.headercrc = crc16_calc( (uint8_t*)&header, sizeof(config_header_t)-sizeof(uint16_t));

@@ -11,7 +11,7 @@ public:
     ~PanelFramebuffer();
 
     void set(unsigned x, unsigned y, const QColor &color) {
-        if (x>=m_uWidth || x<0 || y>=m_uHeight || y<0)
+        if (x>=m_uWidth  || y>=m_uHeight )
             return;
         m_framebuffer[ (y*m_uWidth)+ x ] = color;
     }

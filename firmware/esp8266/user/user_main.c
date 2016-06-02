@@ -25,13 +25,19 @@
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
 
+#define HAVE_BROADCAST
+
 #ifndef UART0
 #define UART0 0
 #endif
 
 #ifndef HOST
 os_event_t    user_procTaskQueue[user_procTaskQueueLen];
+#ifdef HAVE_BROADCAST
 os_event_t    broadcast_procTaskQueue[user_procTaskQueueLen];
+#endif
+
+LOCAL void ICACHE_FLASH_ATTR jsw_input_setup();
 
 static void user_procTask(os_event_t *events);
 static volatile os_timer_t some_timer;
@@ -137,7 +143,9 @@ LOCAL void ICACHE_FLASH_ATTR wifiUpdate(const char *status)
 
 static struct ip_info ip;
 
+#ifdef HAVE_BROADCAST
 struct espconn conn_udpb;
+#endif
 
 unsigned lastFrame = 0;
 unsigned lastFrameTime = 0;
@@ -148,19 +156,36 @@ unsigned ICACHE_FLASH_ATTR getFPS()
     return fps;
 }
 
+#ifdef HAVE_BROADCAST
 LOCAL void ICACHE_FLASH_ATTR broadcastIP()
 {
     uint32_t lip = ip.ip.addr;
     if (lip!=0) {
-        unsigned char payload[10];
-        unsigned int size = 0;
-        payload[size++] = lip>>24;
-        payload[size++] = lip>>16;
-        payload[size++] = lip>>8;
-        payload[size++] = lip;
-        wifi_get_macaddr(STATION_IF, &payload[size]);
-        size += 6;
-        espconn_sent( &conn_udpb, payload, size);
+        char payload[256];
+        unsigned char mac[6];
+        unsigned size;
+        wifi_get_macaddr(STATION_IF, mac);
+
+        size = os_sprintf(payload,
+                       "NOTIFY * HTTP/1.1\r\n"
+                       "Location: %u.%u.%u.%u\r\n"
+                       "NT: alvie:iotpanel\r\n"
+                       "NTS: ssdp:alive\r\n"
+                       "USN: hwaddr:%02x%02x%02x%02x%02x%02x\r\n"
+                       "\r\n",
+                       (unsigned)((lip>>24)&0xff),
+                       (unsigned)((lip>>16)&0xff),
+                       (unsigned)((lip>>8)&0xff),
+                       (unsigned)((lip>>0)&0xff),
+                       mac[0],
+                       mac[1],
+                       mac[2],
+                       mac[3],
+                       mac[4],
+                       mac[5]
+                       );
+
+        espconn_sent( &conn_udpb, (uint8*)payload, size);
 #if 1
         os_printf("Sending new broadcast\n");
 
@@ -178,6 +203,7 @@ LOCAL void ICACHE_FLASH_ATTR broadcastIP()
 #endif
     }
 }
+#endif
 
 //static int broadcastRunning=0;
 
@@ -190,8 +216,9 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
     switch (status) {
     case STATION_IDLE:
         ip.ip.addr = 0;
-        wifi_set_opmode(STATION_MODE);
-        wifi_scan_ap();
+        //wifi_set_opmode(STATION_MODE);
+        //wifi_scan_ap();
+        wifi_idle();
         break;
     case STATION_CONNECTING:
         ip.ip.addr = 0;
@@ -200,20 +227,23 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
     case STATION_WRONG_PASSWORD:
         wifiUpdate("Error connecting: bad password");
         ip.ip.addr = 0;
-        wifi_set_opmode(STATION_MODE);
-        wifi_scan_ap();
+        //wifi_set_opmode(STATION_MODE);
+        //wifi_scan_ap();
+        wifi_idle();
         break;
     case STATION_NO_AP_FOUND:
         wifiUpdate("Error connecting: no AP found");
         ip.ip.addr = 0;
-        wifi_set_opmode(STATION_MODE);
-        wifi_scan_ap();
+        wifi_idle();
+        //wifi_set_opmode(STATION_MODE);
+        //wifi_scan_ap();
         break;
     case STATION_CONNECT_FAIL:
         wifiUpdate("Connection failed, retrying");
         ip.ip.addr = 0;
-        wifi_set_opmode(STATION_MODE);
-        wifi_scan_ap();
+        //wifi_set_opmode(STATION_MODE);
+        //wifi_scan_ap();
+        wifi_idle();
         break;
     case STATION_GOT_IP:
         wifi_get_ip_info(STATION_IF, &ip);
@@ -224,19 +254,11 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
                    (ip.ip.addr>>24) & 0xff
                   );
         wifiUpdate(buf);
-        {
-            char buf2[64];
-            system_rtc_mem_read( 0,buf2,64);
-            int i;
-            for (i=0;i<64;i++) {
-                os_printf("%02x ",buf2[i]);
-            }
-            os_printf("\n");
-        }
-
-
         break;
     default:
+        os_printf("Setting up USB listener\n");
+        jsw_input_setup();
+
         break;
     }
 }
@@ -266,19 +288,23 @@ extern void user_procTask(os_event_t *events);
 
 #else
 
+int jump=0;
+int right=0;
+int left=0;
+
 int isJump()
 {
-    return 0;
+    return jump;
 }
 
 int isRight()
 {
-    return 0;
+    return right;
 }
 
 int isLeft()
 {
-    return 0;
+    return left;
 }
 
 int started=0;
@@ -333,9 +359,15 @@ user_procTask(os_event_t *events)
 
     gfx.fb = &framebuffers[currentDrawBuffer][0];
 
-//    if ((tickcount&0xf)==0) {
-    redraw();
-    GAMELOOP();
+    if ((tickcount&0x1)==0) {
+        redraw();
+        GAMELOOP();
+    } else {
+        // Copy last buffer
+        unsigned lastBuffer = (!currentDrawBuffer) & 0x1;
+        memcpy( framebuffers[currentDrawBuffer], framebuffers[lastBuffer], sizeof(framebuffers[currentDrawBuffer]));
+    }
+
     //os_printf(".%u",tickcount);
     //os_printf("Buf %d ready\n", currentDrawBuffer);
     bufferStatus[currentDrawBuffer] = BUFFER_READY;
@@ -346,10 +378,11 @@ user_procTask(os_event_t *events)
     time_tick();
 //    }
     tickcount++;
-
+#ifdef HAVE_BROADCAST
     if ((tickcount&0x3ff)==0) {
         broadcastIP();
     }
+#endif
     system_os_post(user_procTaskPrio, 0, 0 );
 }
 #endif
@@ -499,16 +532,17 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 }
 
 #ifndef HOST
-LOCAL esp_udp eudp;
+#ifdef HAVE_BROADCAST
 
+LOCAL esp_udp eudp;
 LOCAL void ICACHE_FLASH_ATTR broadcast_setup()
 {
     memset(&conn_udpb, 0, sizeof(conn_udpb));
     conn_udpb.type = ESPCONN_UDP;
     conn_udpb.state = ESPCONN_NONE;
     conn_udpb.proto.udp = &eudp;
-    eudp.local_port = 8082;
-    eudp.remote_port = 8082;
+    eudp.local_port = 1900;
+    eudp.remote_port = 1900;
     eudp.local_ip[0] = 0;
     eudp.local_ip[1] = 0;
     eudp.local_ip[2] = 0;
@@ -528,6 +562,8 @@ LOCAL void ICACHE_FLASH_ATTR broadcast_setup()
     espconn_create(&conn_udpb);
 }
 #endif
+#endif
+
 #if 0
 LOCAL void upgrade_procTask(os_event_t *events)
 {
@@ -556,26 +592,24 @@ void ICACHE_FLASH_ATTR user_init_2()
     spi_setup();
     timer_setup();
     uart_setup();
+    wifi_init();
     os_printf("Last FW status: 0x%08x\n", get_last_firmware_status());
+#ifdef HAVE_BROADCAST
     broadcast_setup();
+#endif
 
     pp_soft_wdt_stop();
 
 #endif
-    init_framebuffers();
 
-    //setupFramebuffer();
-    //setupDefaultScreen();
-#ifndef HOST
-    setupWifiSta("","",NULL);
-#endif
+    init_framebuffers();
     user_server_init(8081);
 
 #ifndef HOST
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U,  FUNC_GPIO15); // GPIO15.
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U,  FUNC_GPIO12);  // DI
 
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_GPIO3); // No RX ability
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, FUNC_U1RXD);
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
 
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO4_U, FUNC_GPIO4);
@@ -585,23 +619,8 @@ void ICACHE_FLASH_ATTR user_init_2()
     GPIO_OUTPUT_SET(12, 0);
     GPIO_OUTPUT_SET(5, 1);
 #endif
-    //setupFramebuffer();
-    //clearFramebuffer(&gfx);
+    jsw_input_setup();
     setupDefaultScreen();
-
-    {
-        char buf[64];
-        system_rtc_mem_read( 0,buf,64);
-        int i;
-        for (i=0;i<64;i++) {
-            os_printf("%02x ",buf[i]);
-        }
-        os_printf("\n");
-    }
-
-
-
-
 
 #ifdef HOST
     user_procTask(NULL);
@@ -642,3 +661,80 @@ void user_init()
         user_init_2();
     }
 }
+
+LOCAL esp_udp jsw_udp;
+LOCAL struct espconn conn_jsw;
+
+
+extern int jump,right,left;
+LOCAL int zin_q, zout_q;
+extern int zoom;
+
+static void ICACHE_FLASH_ATTR decreaseZoom()
+{
+    switch (zoom) {
+    case 0:
+        zoom=1;
+        break;
+    case 1:
+        zoom=3;
+        break;
+    case 3:
+        zoom=7;
+        break;
+    }
+}
+
+static void ICACHE_FLASH_ATTR increaseZoom()
+{
+    switch (zoom) {
+    case 7:
+        zoom=3;
+        break;
+    case 3:
+        zoom=1;
+        break;
+    case 1:
+        zoom=0;
+        break;
+    }
+}
+
+
+LOCAL void ICACHE_FLASH_ATTR jsw_data(void *arg, char *data, unsigned short len)
+{
+    int zin, zout;
+    //os_printf("UDP data len %d\n", len);
+    if (len==2) {
+        if (data[0] == (data[1] ^ 0xff)) {
+            jump = data[0] & 1;
+            right = data[0] & 2;
+            left = data[0] & 4;
+            zin = data[0]  & 8;
+            zout = data[0] & 16;
+            if (zin && !zin_q) {
+                increaseZoom();
+            }
+            if (zout && !zout_q) {
+                decreaseZoom();
+            }
+            zin_q = zin;
+            zout_q = zout;
+        }
+    }
+}
+
+void ICACHE_FLASH_ATTR jsw_input_setup()
+{
+    memset(&conn_jsw, 0, sizeof(conn_jsw));
+    memset(&jsw_udp, 0, sizeof(jsw_udp));
+
+    conn_jsw.type = ESPCONN_UDP;
+    conn_jsw.state = ESPCONN_NONE;
+    conn_jsw.proto.udp = &jsw_udp;
+    jsw_udp.local_port = 4000;
+
+    espconn_regist_recvcb(&conn_jsw, jsw_data);
+    espconn_create(&conn_jsw);
+}
+

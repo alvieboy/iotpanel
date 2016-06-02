@@ -26,7 +26,9 @@ extern int smallfs_start;
 static struct smallfs fs;
 static uint8_t smallfs_initialized = 0;
 
-int ICACHE_FLASH_ATTR smallfs__start()
+LOCAL void smallfs__seek_if_needed(struct smallfs *fs, unsigned address);
+
+int ICACHEFUN(smallfs__start) ()
 {
     int r = -1;
     if (!smallfs_initialized) {
@@ -39,12 +41,12 @@ int ICACHE_FLASH_ATTR smallfs__start()
     return r;
 }
 
-struct smallfs *ICACHE_FLASH_ATTR smallfs__getfs()
+struct smallfs *ICACHEFUN(smallfs__getfs)()
 {
     return &fs;
 }
 
-int ICACHE_FLASH_ATTR smallfs__begin(struct smallfs *f, unsigned offset)
+int ICACHEFUN(smallfs__begin)(struct smallfs *f, unsigned offset)
 {
     f->fsstart = offset;
     f->offset = 0xffffffff;
@@ -55,17 +57,18 @@ int ICACHE_FLASH_ATTR smallfs__begin(struct smallfs *f, unsigned offset)
     } else {
         flash_control_release(&f->fc);
     }
+#ifdef SMALLFSDEBUG
     os_printf("Invalid magic %08x\n", BE32(f->hdr.magic));
-
+#endif
     return -1;
 }
 
-void ICACHE_FLASH_ATTR smallfs__end(struct smallfs *f)
+void ICACHEFUN(smallfs__end)(struct smallfs *f)
 {
     flash_control_release(&f->fc);
 }
 
-void ICACHE_FLASH_ATTR smallfs__seek_if_needed(struct smallfs *f, unsigned address)
+LOCAL void ICACHEFUN(smallfs__seek_if_needed)(struct smallfs *f, unsigned address)
 {
     if (address!=f->offset)
     {
@@ -73,7 +76,7 @@ void ICACHE_FLASH_ATTR smallfs__seek_if_needed(struct smallfs *f, unsigned addre
     }
 }
 
-uint8_t ICACHE_FLASH_ATTR smallfs__readByte(struct smallfs *fs, unsigned address)
+uint8_t ICACHEFUN(smallfs__readByte)(struct smallfs *fs, unsigned address)
 {
     uint8_t byte;
     smallfs__seek_if_needed(fs, address);
@@ -84,13 +87,13 @@ uint8_t ICACHE_FLASH_ATTR smallfs__readByte(struct smallfs *fs, unsigned address
 }
 
 
-void ICACHE_FLASH_ATTR smallfs__read(struct smallfs *fs, unsigned address, void *target, unsigned size)
+void ICACHEFUN(smallfs__read)(struct smallfs *fs, unsigned address, void *target, unsigned size)
 {
     smallfs__seek_if_needed(fs, address);
     spiflash_read_cached(&fs->fc, fs->offset, target, size);
 }
 
-int ICACHE_FLASH_ATTR smallfs__getFirstEntry(struct smallfs *fs, struct smallfsentry *e)
+int ICACHEFUN(smallfs__getFirstEntry)(struct smallfs *fs, struct smallfsentry *e)
 {
     int r = -1;
     unsigned o = fs->fsstart + sizeof(struct smallfs_header);
@@ -105,14 +108,14 @@ int ICACHE_FLASH_ATTR smallfs__getFirstEntry(struct smallfs *fs, struct smallfse
     return r;
 }
 
-bool ICACHE_FLASH_ATTR smallfsentry__hasNext(const struct smallfsentry *e)
+bool ICACHEFUN(smallfsentry__hasNext)(const struct smallfsentry *e)
 {
     if (!(smallfsentry__valid(e)))
         return false;
     return (e->m_index+1)<smallfs__getCount(e->fs);
 }
 
-bool ICACHE_FLASH_ATTR smallfsentry__equals(const struct smallfsentry *e, const char *name)
+bool ICACHEFUN(smallfsentry__equals)(const struct smallfsentry *e, const char *name)
 {
     if (!(smallfsentry__valid(e)))
         return false;
@@ -125,7 +128,7 @@ bool ICACHE_FLASH_ATTR smallfsentry__equals(const struct smallfsentry *e, const 
     return (strcmp(name,buf)==0);
 }
 
-bool ICACHE_FLASH_ATTR smallfsentry__endsWith(const struct smallfsentry *e, const char *name)
+bool ICACHEFUN(smallfsentry__endsWith)(const struct smallfsentry *e, const char *name)
 {
     struct smallfs_entry he;
     char buf[256];
@@ -139,7 +142,7 @@ bool ICACHE_FLASH_ATTR smallfsentry__endsWith(const struct smallfsentry *e, cons
     return (strcmp(name,p)==0);
 }
 
-void ICACHE_FLASH_ATTR smallfsentry__getName(const struct smallfsentry *e, char *name)
+void ICACHEFUN(smallfsentry__getName)(const struct smallfsentry *e, char *name)
 {
     struct smallfs_entry he;
     smallfs__read( e->fs, e->m_offset, &he,sizeof(struct smallfs_entry));
@@ -147,7 +150,7 @@ void ICACHE_FLASH_ATTR smallfsentry__getName(const struct smallfsentry *e, char 
     name[he.namesize] = '\0';
 }
 
-bool ICACHE_FLASH_ATTR smallfsentry__startsWith(const struct smallfsentry *e, const char *name)
+bool ICACHEFUN(smallfsentry__startsWith)(const struct smallfsentry *e, const char *name)
 {
     struct smallfs_entry he;
     char buf[256];
@@ -157,12 +160,13 @@ bool ICACHE_FLASH_ATTR smallfsentry__startsWith(const struct smallfsentry *e, co
     return (strncmp(name,buf,strlen(name))==0);
 }
 
-int ICACHE_FLASH_ATTR smallfsentry__open(struct smallfsentry *e, struct smallfsfile *file)
+int ICACHEFUN(smallfsentry__open)(struct smallfsentry *e, struct smallfsfile *file)
 {
     return smallfs__openByOffset(e->fs, file, e->m_offset);
 };
 
-void ICACHE_FLASH_ATTR smallfsentry__advance(struct smallfsentry *e,int amount) {
+void ICACHEFUN(smallfsentry__advance)(struct smallfsentry *e,int amount)
+{
     if (smallfsentry__hasNext(e)) {
         struct smallfs_entry he;
         e->m_index++;
@@ -173,7 +177,7 @@ void ICACHE_FLASH_ATTR smallfsentry__advance(struct smallfsentry *e,int amount) 
     }
 }
 
-int ICACHE_FLASH_ATTR smallfs__openByOffset(struct smallfs*fs,struct smallfsfile *file, unsigned offset)
+int ICACHEFUN(smallfs__openByOffset)(struct smallfs*fs,struct smallfsfile *file, unsigned offset)
 {
     struct smallfs_entry e;
     smallfs__read(fs, offset, &e,sizeof(struct smallfs_entry));
@@ -182,7 +186,7 @@ int ICACHE_FLASH_ATTR smallfs__openByOffset(struct smallfs*fs,struct smallfsfile
     return 0;
 }
 
-int ICACHE_FLASH_ATTR smallfs__open(struct smallfs *fs, struct smallfsfile *file, const char *name)
+int ICACHEFUN(smallfs__open)(struct smallfs *fs, struct smallfsfile *file, const char *name)
 {
     /* Start at root offset */
     unsigned o = fs->fsstart + sizeof(struct smallfs_header);
@@ -217,83 +221,82 @@ int ICACHE_FLASH_ATTR smallfs__open(struct smallfs *fs, struct smallfsfile *file
     return -1;
 }
 
-int ICACHE_FLASH_ATTR smallfsfile__read(struct smallfsfile *file, void *buf, int s)
+int ICACHEFUN(smallfsfile__read)(struct smallfsfile *file, void *buf, int s)
 {
-	if (!smallfsfile__valid(file))
-		return -1;
+    if (!smallfsfile__valid(file))
+        return -1;
 
-	if (file->seekpos==file->filesize)
-		return 0; /* EOF */
+    if (file->seekpos==file->filesize)
+        return 0; /* EOF */
 
-	if (s + file->seekpos > file->filesize) {
-		s = file->filesize-file->seekpos;
-	}
-	smallfs__read(file->fs, file->seekpos + file->flashoffset, buf, s);
+    if (s + file->seekpos > file->filesize) {
+        s = file->filesize-file->seekpos;
+    }
+    smallfs__read(file->fs, file->seekpos + file->flashoffset, buf, s);
 
-	file->seekpos+=s;
-	return s;
+    file->seekpos+=s;
+    return s;
 }
 
-int ICACHE_FLASH_ATTR smallfsfile__readCallback(struct smallfsfile *file, int s, void (*callback)(unsigned char, void*), void *data)
+int ICACHEFUN(smallfsfile__readCallback)(struct smallfsfile *file, int s, void (*callback)(unsigned char, void*), void *data)
 {
-	unsigned char c;
-	int save_s;
+    unsigned char c;
+    int save_s;
 
-	if (!smallfsfile__valid(file))
-		return -1;
+    if (!smallfsfile__valid(file))
+        return -1;
 
-        if (file->seekpos==file->filesize)
-		return 0; /* EOF */
+    if (file->seekpos==file->filesize)
+        return 0; /* EOF */
 
-	if (s + file->seekpos > file->filesize) {
-		s = file->filesize-file->seekpos;
-	}
-#ifdef SMALLFSDEBUG
-	Serial.print("Will read ");
-	Serial.print(s);
-	Serial.print(" bytes from file at offset ");
-	Serial.print(flashoffset);
-	Serial.print(" seekpos is ");
+    if (s + file->seekpos > file->filesize) {
+        s = file->filesize-file->seekpos;
+    }
+    //SmallFS.spi_enable();
 
-	Serial.println(seekpos);
-#endif
+    //SmallFS.startread( seekpos + flashoffset );
+    save_s = s;
+    unsigned tpos = file->seekpos + file->flashoffset;
+    file->seekpos += s;
 
-	//SmallFS.spi_enable();
+    while (s--) {
+        c=smallfs__readByte(file->fs,tpos++);
+        callback(c,data);
+    }
 
-	//SmallFS.startread( seekpos + flashoffset );
-	save_s = s;
-	unsigned tpos = file->seekpos + file->flashoffset;
-	file->seekpos += s;
-
-	while (s--) {
-		c=smallfs__readByte(file->fs,tpos++);
-		callback(c,data);
-	}
-
-	return save_s;
+    return save_s;
 }
 
-void ICACHE_FLASH_ATTR smallfsfile__seek(struct smallfsfile *file, int pos, int whence)
+void ICACHEFUN(smallfsfile__seek)(struct smallfsfile *file, int pos, int whence)
 {
-	int newpos;
+    int newpos;
 
-	if (whence==SEEK_SET)
-		newpos = pos;
-	else if (whence==SEEK_CUR)
-		newpos = file->seekpos + pos;
-	else
-		newpos = file->filesize + pos;
+    if (whence==SEEK_SET)
+        newpos = pos;
+    else if (whence==SEEK_CUR)
+        newpos = file->seekpos + pos;
+    else
+        newpos = file->filesize + pos;
 
-	if (newpos>file->filesize)
-		newpos=file->filesize;
+    if (newpos>file->filesize)
+        newpos=file->filesize;
 
-	if (newpos<0)
-		newpos=0;
+    if (newpos<0)
+        newpos=0;
 
-	file->seekpos=newpos;
-	smallfs__seek(file->fs, file->seekpos + file->flashoffset);
+    file->seekpos=newpos;
+    smallfs__seek(file->fs, file->seekpos + file->flashoffset);
 }
 
-//struct smallfs_header SmallFS_class::hdr;
-//unsigned SmallFS_class::fsstart=0;
-//unsigned SmallFS_class::offset=0;
+void ICACHEFUN(smallfs__seek)(struct smallfs *fs, unsigned address) {
+    smallfs__seek_if_needed(fs,address);
+}
+
+void ICACHEFUN(smallfsentry__test)(const struct smallfsentry *e, char *name)
+{
+    struct smallfs_entry he;
+    smallfs__read( e->fs, e->m_offset, &he,sizeof(struct smallfs_entry));
+    smallfs__read( e->fs, e->m_offset + sizeof(struct smallfs_entry), name, he.namesize);
+    name[he.namesize] = '\0';
+}
+

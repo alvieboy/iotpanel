@@ -29,16 +29,16 @@ MODULES		= driver user user/widgets user/gif
 EXTRA_INCDIR    = include /opt/Espressif/include
 
 # libraries used in this project, mainly provided by the SDK
-LIBS		= c gcc hal pp phy net80211 lwip wpa main
+LIBS		= c gcc hal pp phy net80211 lwip wpa main crypto ssl
 
 # compiler flags using during compilation of source files
-CFLAGS		= -O2 -g -ffunction-sections -fdata-sections \
+CFLAGS		= -Os -g -ffunction-sections -fdata-sections \
 	-Wpointer-arith -Wall -Werror -Wno-error=parentheses -Wno-parentheses -Wundef \
 	-Wl,-EL -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DICACHE_FLASH \
 	-fomit-frame-pointer
 
 # linker flags used to generate the main object file
-LDFLAGS		= -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static -Wl,--gc-sections
+LDFLAGS		= -nostdlib -Os -Wl,--no-check-sections -u call_user_start -Wl,-static -Wl,--gc-sections
 
 # linker script used for the above linkier step
 LD_SCRIPT	= eagle.app.v6.ld
@@ -46,7 +46,7 @@ LD_SCRIPT	= eagle.app.v6.ld
 # various paths from the SDK used in this project
 SDK_LIBDIR	= lib
 SDK_LDDIR	= ld
-SDK_INCDIR	= include include/json
+SDK_INCDIR	= include include/json include/ssl
 
 # we create two different files for uploading into the flash
 # these are the names and options to generate them

@@ -1989,7 +1989,7 @@ STATIC uint8_t get_color_at(int x, int y, int zoom)
     return -1;
 }
 
-int zoom = 7;
+int zoom = 0;
 
 void ICACHE_FLASH_ATTR render(gfxinfo_t*gfx)
 {

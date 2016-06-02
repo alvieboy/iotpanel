@@ -22,7 +22,7 @@ LOCAL int getNumberOfPrintableChars(const char *str, const textrendersettings_t 
 
 LOCAL int unpackHexByte(const char *str, uint8_t *dest);
 
-LOCAL void ICACHE_FLASH_ATTR drawChar16(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
+LOCAL void ICACHEFUN(drawChar16)(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
                                         uint8 color, uint8 bg)
 {
     const uint8 *cptr;
@@ -58,7 +58,7 @@ LOCAL void ICACHE_FLASH_ATTR drawChar16(const gfxinfo_t *gfx, const font_t *font
 }
 
 
-void ICACHE_FLASH_ATTR drawChar(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
+void ICACHEFUN(drawChar)(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
               uint8 color, uint8 bg)
 {
     const uint8 *cptr;
@@ -97,7 +97,7 @@ void ICACHE_FLASH_ATTR drawChar(const gfxinfo_t *gfx, const font_t *font, int x,
         y++;
     } while (--hc);
 }
-LOCAL int ICACHE_FLASH_ATTR parseUnprintable(const char**str, uint8 *color, uint8 *bg)
+LOCAL int ICACHEFUN(parseUnprintable)(const char**str, uint8 *color, uint8 *bg)
 {
     uint8_t code;
 
@@ -137,7 +137,7 @@ LOCAL int ICACHE_FLASH_ATTR parseUnprintable(const char**str, uint8 *color, uint
 
 
 #if 1
-void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t *s, int x, int y, const char *str, uint8 color, uint8 bg)
+void ICACHEFUN(drawText)(const gfxinfo_t *gfx, const textrendersettings_t *s, int x, int y, const char *str, uint8 color, uint8 bg)
 {
     int i,j;
     int sx = x;
@@ -180,7 +180,7 @@ void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t
     } while (*str);
 }
 #else
-void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t *s, int x, int y, const char *str, uint8 color, uint8 bg)
+void ICACHEFUN(drawText)(const gfxinfo_t *gfx, const textrendersettings_t *s, int x, int y, const char *str, uint8 color, uint8 bg)
 {
     DEBUG("Draw text bg %d fg %d\n", bg, color);
     uint8_t code;
@@ -222,7 +222,7 @@ void ICACHE_FLASH_ATTR drawText(const gfxinfo_t *gfx, const textrendersettings_t
 }
 #endif
 
-LOCAL void ICACHE_FLASH_ATTR freeTextFramebuffer(gfxinfo_t *info)
+LOCAL void ICACHEFUN(freeTextFramebuffer)(gfxinfo_t *info)
 {
     if (info->fb) {
         DEBUG("Freeing fb @ %p\n", info->fb);
@@ -233,7 +233,7 @@ LOCAL void ICACHE_FLASH_ATTR freeTextFramebuffer(gfxinfo_t *info)
     os_free(info);
 }
 
-gfxinfo_t * ICACHE_FLASH_ATTR allocateTextFramebuffer(const char *str, const textrendersettings_t *s)
+gfxinfo_t * ICACHEFUN(allocateTextFramebuffer)(const char *str, const textrendersettings_t *s)
 {
     int size_x, size_y;
     if (textComputeLength(str,s,&size_x,&size_y)<0)
@@ -262,7 +262,7 @@ gfxinfo_t * ICACHE_FLASH_ATTR allocateTextFramebuffer(const char *str, const tex
     return info;
 }
 
-LOCAL int ICACHE_FLASH_ATTR unpackHexNibbleOr(const char *str, uint8_t *dest)
+LOCAL int ICACHEFUN(unpackHexNibbleOr)(const char *str, uint8_t *dest)
 {
     
     char l = *str;
@@ -278,7 +278,7 @@ LOCAL int ICACHE_FLASH_ATTR unpackHexNibbleOr(const char *str, uint8_t *dest)
     return -1;
 }
 
-LOCAL int unpackHexByte(const char *str, uint8_t *dest)
+LOCAL int ICACHEFUN(unpackHexByte)(const char *str, uint8_t *dest)
 {
     *dest = 0;
     if (unpackHexNibbleOr(str,dest)<0)
@@ -289,7 +289,7 @@ LOCAL int unpackHexByte(const char *str, uint8_t *dest)
     return 0;
 }
 
-LOCAL int ICACHE_FLASH_ATTR skipUnprintable(const char **str)
+LOCAL int ICACHEFUN(skipUnprintable)(const char **str)
 {
     uint8_t code;
     if (*(*str)==ESCAPE) {
@@ -312,7 +312,7 @@ LOCAL int ICACHE_FLASH_ATTR skipUnprintable(const char **str)
     return 0;
 }
 
-LOCAL int ICACHE_FLASH_ATTR getNumberOfPrintableChars(const char *str,
+LOCAL int ICACHEFUN(getNumberOfPrintableChars)(const char *str,
                                     const textrendersettings_t *settings, int *offset)
 {
     int skip;
@@ -358,7 +358,7 @@ LOCAL int ICACHE_FLASH_ATTR getNumberOfPrintableChars(const char *str,
 }
 
 
-LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str, const textrendersettings_t *s, int *width, int *height)
+LOCAL int ICACHEFUN(textComputeLength)(const char *str, const textrendersettings_t *s, int *width, int *height)
 {
     int i;
     int maxw = 0;
@@ -383,7 +383,7 @@ LOCAL int ICACHE_FLASH_ATTR textComputeLength(const char *str, const textrenders
     return 0;
 }
 
-gfxinfo_t * ICACHE_FLASH_ATTR updateTextFramebuffer(gfxinfo_t *gfx, const textrendersettings_t *s, const char *str)
+gfxinfo_t * ICACHEFUN(updateTextFramebuffer)(gfxinfo_t *gfx, const textrendersettings_t *s, const char *str)
 {
     //    int size = strlen(str) * font->w;
     //if (size > gfx->stride) {
@@ -400,7 +400,7 @@ gfxinfo_t * ICACHE_FLASH_ATTR updateTextFramebuffer(gfxinfo_t *gfx, const textre
     return gfx;
 }
 
-int ICACHE_FLASH_ATTR overlayFramebuffer( const gfxinfo_t *source, const gfxinfo_t *dest, int x, int y, int transparent)
+int ICACHEFUN(overlayFramebuffer)( const gfxinfo_t *source, const gfxinfo_t *dest, int x, int y, int transparent)
 {
     int ptr;
     int src;
@@ -459,14 +459,14 @@ int ICACHE_FLASH_ATTR overlayFramebuffer( const gfxinfo_t *source, const gfxinfo
     return 0;
 }
 
-void ICACHE_FLASH_ATTR gfx_clear(gfxinfo_t *gfx)
+void ICACHEFUN(gfx_clear)(gfxinfo_t *gfx)
 {
     memset(gfx->fb, 0,gfx->height * gfx->stride);
 }
 
 
 
-void ICACHE_FLASH_ATTR gfx_drawLine(gfxinfo_t *gfx,
+void ICACHEFUN(gfx_drawLine)(gfxinfo_t *gfx,
                                     int x0, int y0,
                                     int x1, int y1,
                                     color_t color) {
@@ -508,7 +508,7 @@ void ICACHE_FLASH_ATTR gfx_drawLine(gfxinfo_t *gfx,
   }
 }
 
-void ICACHE_FLASH_ATTR destroyTextFramebuffer(gfxinfo_t *info)
+void ICACHEFUN(destroyTextFramebuffer)(gfxinfo_t *info)
 {
     if (info) {
         if (info->fb)
