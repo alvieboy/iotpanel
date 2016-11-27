@@ -109,10 +109,14 @@ LOCAL void *ICACHE_FLASH_ATTR romimage_new(void*what)
 
 LOCAL void ICACHE_FLASH_ATTR romimage_destroy(void*what)
 {
-    romimage_t *r = ROMIMAGE( (widget_t*)what);
+    romimage_t *r = (romimage_t*)what;
     if (r->fb) {
-        os_free(r->fb);
+        void *p = r->fb;
+        r->fb = NULL;
+        os_printf("Freeing framebuffer");
+        os_free(p);
     }
+    os_printf("Freeing romimage");
     os_free(what);
 }
 
