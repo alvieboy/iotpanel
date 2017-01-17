@@ -185,7 +185,11 @@ static int iter = 0;
                                                    
 //static uint16_t preloadtimings[] = { 12, 12, 12 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
 static uint16_t preloadtimings[] = { 40,40,40 }; //BASETIMER, BASETIMER<<1, BASETIMER<<2 };
-static uint8_t  blanking[] = { 8, 16, 32 };
+static uint8_t  blanking[] = {
+    8*HORIZONTAL_PANELS,
+    16*HORIZONTAL_PANELS,
+    32*HORIZONTAL_PANELS
+};
 
 void setPreloadValues( uint16_t *values )
 {
