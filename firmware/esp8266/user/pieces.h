@@ -1,156 +1,181 @@
+#include "color_defs.h"
+
+#undef C
+#define C 1
+
 static piecedef piece1_1 = {
-    {1,1,1,0},
-    {0,1,0,0},
+    {C,C,C,0},
+    {0,C,0,0},
     {0,0,0,0},
     {0,0,0,0}
 };
 
 static piecedef piece1_2 = {
-    {1,0,0,0},
-    {1,1,0,0},
-    {1,0,0,0},
+    {C,0,0,0},
+    {C,C,0,0},
+    {C,0,0,0},
     {0,0,0,0}
 };
 
 static piecedef piece1_3 = {
-    {0,1,0,0},
-    {1,1,1,0},
+    {0,C,0,0},
+    {C,C,C,0},
     {0,0,0,0},
     {0,0,0,0}
 };
 
 static piecedef piece1_4 = {
-    {0,1,0,0},
-    {1,1,0,0},
-    {0,1,0,0},
+    {0,C,0,0},
+    {C,C,0,0},
+    {0,C,0,0},
     {0,0,0,0}
 };
 
+#undef C
+#define C 2
+
 static piecedef piece2_1 = {
-    {1,1,1,0},
-    {1,0,0,0},
+    {C,C,C,0},
+    {C,0,0,0},
     {0,0,0,0},
     {0,0,0,0}
 };
 static piecedef piece2_2 = {
-    {1,0,0,0},
-    {1,0,0,0},
-    {1,1,0,0},
+    {C,0,0,0},
+    {C,0,0,0},
+    {C,C,0,0},
     {0,0,0,0}
 };
 static piecedef piece2_3 = {
-    {0,0,1,0},
-    {1,1,1,0},
+    {0,0,C,0},
+    {C,C,C,0},
     {0,0,0,0},
     {0,0,0,0}
 };
 static piecedef piece2_4 = {
-    {1,1,0,0},
-    {0,1,0,0},
-    {0,1,0,0},
+    {C,C,0,0},
+    {0,C,0,0},
+    {0,C,0,0},
     {0,0,0,0}
 };
 
+#undef C
+#define C 3
+
 static piecedef piece3_1 = {
-    {0,0,1,0},
-    {1,1,1,0},
+    {0,0,C,0},
+    {C,C,C,0},
     {0,0,0,0},
     {0,0,0,0}
 };
 static piecedef piece3_2 = {
-    {1,1,0,0},
-    {0,1,0,0},
-    {0,1,0,0},
+    {C,C,0,0},
+    {0,C,0,0},
+    {0,C,0,0},
     {0,0,0,0}
 };
 static piecedef piece3_3 = {
-    {1,1,1,0},
-    {1,0,0,0},
+    {C,C,C,0},
+    {C,0,0,0},
     {0,0,0,0},
     {0,0,0,0}
 };
+
 static piecedef piece3_4 = {
-    {1,0,0,0},
-    {1,0,0,0},
-    {1,1,0,0},
+    {C,0,0,0},
+    {C,0,0,0},
+    {C,C,0,0},
     {0,0,0,0}
 };
 
+
+#undef C
+#define C 4
+
 static piecedef piece4_1 = {
-    {1,1,0,0},
-    {0,1,1,0},
+    {C,C,0,0},
+    {0,C,C,0},
     {0,0,0,0},
     {0,0,0,0}
 };
 static piecedef piece4_2 = {
-    {0,1,0,0},
-    {1,1,0,0},
-    {1,0,0,0},
+    {0,C,0,0},
+    {C,C,0,0},
+    {C,0,0,0},
     {0,0,0,0}
 };
 static piecedef piece4_3 = {
-    {1,1,0,0},
-    {0,1,1,0},
+    {C,C,0,0},
+    {0,C,C,0},
     {0,0,0,0},
     {0,0,0,0}
 };
 static piecedef piece4_4 = {
-    {0,1,0,0},
-    {1,1,0,0},
-    {1,0,0,0},
+    {0,C,0,0},
+    {C,C,0,0},
+    {C,0,0,0},
     {0,0,0,0}
 };
 
+#undef C
+#define C 5
+
 static piecedef piece5_1 = {
-    {0,1,1,0},
-    {1,1,0,0},
+    {0,C,C,0},
+    {C,C,0,0},
     {0,0,0,0},
     {0,0,0,0}
 };
 
 static piecedef piece5_2 = {
-    {1,0,0,0},
-    {1,1,0,0},
-    {0,1,0,0},
+    {C,0,0,0},
+    {C,C,0,0},
+    {0,C,0,0},
     {0,0,0,0}
 };
 static piecedef piece5_3 = {
-    {0,1,1,0},
-    {1,1,0,0},
+    {0,C,C,0},
+    {C,C,0,0},
     {0,0,0,0},
     {0,0,0,0}
 };
 static piecedef piece5_4 = {
-    {1,0,0,0},
-    {1,1,0,0},
-    {0,1,0,0},
+    {C,0,0,0},
+    {C,C,0,0},
+    {0,C,0,0},
     {0,0,0,0}
 };
 
+#undef C
+#define C 6
+
 static piecedef piece6 = {
-    {1,1,0,0},
-    {1,1,0,0},
+    {C,C,0,0},
+    {C,C,0,0},
     {0,0,0,0},
     {0,0,0,0}
 };
 
+#undef C
+#define C 7
+
 static piecedef piece7_1 = {
-    {1,1,1,1},
+    {C,C,C,C},
     {0,0,0,0},
     {0,0,0,0},
     {0,0,0,0}
 };
 static piecedef piece7_2 = {
-    {0,1,0,0},
-    {0,1,0,0},
-    {0,1,0,0},
-    {0,1,0,0}
+    {0,C,0,0},
+    {0,C,0,0},
+    {0,C,0,0},
+    {0,C,0,0}
 };
 
 
 static struct piece allpieces[] = {
     {
-        3, 0, 1, 0,
+        3, 0, 0, 0,
         {
             &piece1_1,
             &piece1_2,
@@ -159,7 +184,7 @@ static struct piece allpieces[] = {
         }
     },
     {
-        3, 0, 0, 1,
+        3, 0, 0, 0,
         {
             &piece2_1,
             &piece2_2,
@@ -168,7 +193,7 @@ static struct piece allpieces[] = {
         },
     },
     {
-        3, 1, 0, 2,
+        3, 0, 0, 2,
         {
             &piece3_1,
             &piece3_2,
@@ -177,7 +202,7 @@ static struct piece allpieces[] = {
         }
     },
     {
-        3, 0, 1, 3,
+        3, 0, 0, 3,
         {
             &piece4_1,
             &piece4_2,
@@ -186,7 +211,7 @@ static struct piece allpieces[] = {
         }
     },
     {
-        3, 0, 1, 4,
+        3, 0, 0, 4,
         {
             &piece5_1,
             &piece5_2,
@@ -195,7 +220,7 @@ static struct piece allpieces[] = {
         }
     },
     {
-        2, 1, 1, 5,
+        2, 0, 0, 5,
         {
             &piece6,
             &piece6,
@@ -204,7 +229,7 @@ static struct piece allpieces[] = {
         }
     },
     {
-        4, 0, 1, 6,
+        4, 0, 0, 6,
         {
             &piece7_1,
             &piece7_2,

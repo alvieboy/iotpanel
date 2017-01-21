@@ -36,9 +36,6 @@ static struct piece *nextpiece;
 /* Whether the current piece is valid, or if we need to allocate a new one */
 static bool currentpiecevalid=false;
 
-/* Colors for current and next piece */
-static color_type *currentcolor, *nextcolor;
-
 //static unsigned int timerTicks = 0;
 
 const int OPERATION_CLEAR=0;
@@ -60,6 +57,17 @@ static void ICACHE_FLASH_ATTR draw_block(gfxinfo_t *gfx, int x, int y, uint8_t c
 
 static void ICACHE_FLASH_ATTR draw_block_small(gfxinfo_t *gfx, int x, int y, uint8_t color);
 
+static uint8_t colors[] = {
+    CRGB(0x00, 0x00, 0x00), // Unused.
+
+    CRGB(0xff, 0x00, 0x00),
+    CRGB(0x00, 0xff, 0x00),
+    CRGB(0x00, 0x00, 0xff),
+    CRGB(0xff, 0xff, 0x00),
+    CRGB(0xff, 0x00, 0xff),
+    CRGB(0x00, 0xff, 0xff),
+    CRGB(0xff, 0xff, 0x00),
+};
 
 
 enum {
@@ -142,52 +150,6 @@ enum event_t ICACHE_FLASH_ATTR hasEvent()
     return ret;
 }
 
-
-
-
-
-#if 0
-static color_type colors[] = {
-    {
-        RED, RED, RED, RED, WHITE,
-        RED, RED, RED, RED, WHITE,
-        RED, RED, RED, RED, WHITE,
-        RED, RED, RED, RED, WHITE,
-        WHITE,WHITE,WHITE,WHITE,WHITE
-    },
-    {
-        PURPLE, PURPLE, PURPLE, PURPLE, WHITE,
-        PURPLE, PURPLE, PURPLE, PURPLE, WHITE,
-        PURPLE, PURPLE, PURPLE, PURPLE, WHITE,
-        PURPLE, PURPLE, PURPLE, PURPLE, WHITE,
-        WHITE,WHITE,WHITE,WHITE,WHITE
-    },
-    {
-        BLUE, BLUE, BLUE, BLUE, WHITE,
-        BLUE, BLUE, BLUE, BLUE, WHITE,
-        BLUE, BLUE, BLUE, BLUE, WHITE,
-        BLUE, BLUE, BLUE, BLUE, WHITE,
-        WHITE,WHITE,WHITE,WHITE,WHITE
-    },
-    {
-        YELLOW, YELLOW, YELLOW, YELLOW, WHITE,
-        YELLOW, YELLOW, YELLOW, YELLOW, WHITE,
-        YELLOW, YELLOW, YELLOW, YELLOW, WHITE,
-        YELLOW, YELLOW, YELLOW, YELLOW, WHITE,
-        WHITE,WHITE,WHITE,WHITE,WHITE
-    }
-};
-#else
-#include "color_defs.h"
-
-static color_type colors[] = {
-    CRGB(0xFF,0x00,0x00),
-    CRGB(0x00,0xFF,0x00),
-    CRGB(0x00,0x00,0xFF),
-    CRGB(0xFF,0xFF,0x00)
-};
-#endif
-
 #include "pieces.h"
 
 /* Random function (sorta) */
@@ -205,14 +167,6 @@ static struct piece * ICACHE_FLASH_ATTR getRandomPiece()
     int i = xrand() % (sizeof(allpieces)/sizeof(struct piece));
     DEBUG("Returning piece %i\n",i);
     return &allpieces[i];
-}
-
-
-static color_type * ICACHE_FLASH_ATTR getRandomColor()
-{
-    int i = xrand() % (sizeof(colors)/sizeof(color_type));
-    DEBUG("Returning color %i\n",i);
-    return &colors[i];
 }
 
 static void  ICACHE_FLASH_ATTR area_init()
@@ -264,14 +218,14 @@ static bool  ICACHE_FLASH_ATTR can_place(int x, int y, struct piece *p, int rota
     return true;
 }
 
-static void ICACHE_FLASH_ATTR do_place(int x, int y, int piece_size, piecedef *p, color_type *color)
+static void ICACHE_FLASH_ATTR do_place(int x, int y, int piece_size, piecedef *p)
 {
     int i,j;
     for (i=0;i<piece_size;i++)
         for (j=0;j<piece_size;j++) {
             if ((*p)[j][i]) {
-                DEBUG("Marking %d %d -> %d\n", x+i,y+j, *color);
-                area[x+i][y+j] = *color;
+                DEBUG("Marking %d %d -> %d\n", x+i,y+j, (*p)[j][i]);
+                area[x+i][y+j] = (*p)[j][i];
             }
         }
 }
@@ -283,7 +237,6 @@ static void ICACHE_FLASH_ATTR draw_piece_impl(gfxinfo_t *gfx,
                                               int y,
                                               int piece_size,
                                               piecedef *p,
-                                              color_type *color,
                                               int operation,
                                               int size,
                                               draw_block_func fn)
@@ -299,7 +252,7 @@ static void ICACHE_FLASH_ATTR draw_piece_impl(gfxinfo_t *gfx,
                 if (operation==OPERATION_CLEAR) {
                     fn(gfx , ax, ay, 0);
                 } else {
-                    fn( gfx, ax, ay, *color);
+                    fn( gfx, ax, ay, (*p)[i][j]);
                 }
             }
             ax+=size;
@@ -308,9 +261,9 @@ static void ICACHE_FLASH_ATTR draw_piece_impl(gfxinfo_t *gfx,
     }
 }
 
-static void draw_piece(gfxinfo_t*gfx, int x, int y, int piecesize, piecedef *p, color_type *color, int operation)
+static void draw_piece(gfxinfo_t*gfx, int x, int y, int piecesize, piecedef *p, int operation)
 {
-    draw_piece_impl(gfx, x, y, piecesize, p, color, operation, BLOCKSIZE, &draw_block );
+    draw_piece_impl(gfx, x, y, piecesize, p, operation, BLOCKSIZE, &draw_block );
 }
 
 #if 0
@@ -432,7 +385,6 @@ void setup_game()
 #endif
 
     nextpiece=getRandomPiece();
-    nextcolor=getRandomColor();
 
     score_init();
 
@@ -449,10 +401,10 @@ static void ICACHE_FLASH_ATTR rotatepiece(gfxinfo_t*gfx)
     uint8_t nextrotate = (currentrotate+1)&0x3;
     DEBUG("Current rotate %d next %d\n", currentrotate, nextrotate);
     if (can_place(px,py,currentpiece, nextrotate)) {
-        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(),  currentcolor, OPERATION_CLEAR);
+        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(), OPERATION_CLEAR);
         currentrotate = nextrotate;
         DEBUG("CColor %d\n", *currentcolor);
-        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(),  currentcolor, OPERATION_DRAW);
+        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(), OPERATION_DRAW);
     } else {
         DEBUG("Cannot rotate\n");
     }
@@ -495,8 +447,9 @@ static void ICACHE_FLASH_ATTR special_effects(int y)
 #endif
 }
 
-static void ICACHE_FLASH_ATTR draw_block(gfxinfo_t *gfx, int x, int y, uint8_t color)
+static void ICACHE_FLASH_ATTR draw_block(gfxinfo_t *gfx, int x, int y, uint8_t color_index)
 {
+    uint8_t color = colors[color_index & 0xf];
     if (color!=0) {
         //DEBUG("  > Draw block %d %d %d\n", y, x,color);
     }
@@ -520,8 +473,9 @@ static void ICACHE_FLASH_ATTR draw_block(gfxinfo_t *gfx, int x, int y, uint8_t c
 
 }
 
-static void ICACHE_FLASH_ATTR draw_block_small(gfxinfo_t *gfx, int x, int y, uint8_t color)
+static void ICACHE_FLASH_ATTR draw_block_small(gfxinfo_t *gfx, int x, int y, uint8_t color_index)
 {
+    uint8_t color = colors[color_index & 0xf];
     if (color!=0) {
         //DEBUG("  > Draw block %d %d %d\n", y, x,color);
     }
@@ -598,28 +552,7 @@ static void ICACHE_FLASH_ATTR checklines()
 
 static void ICACHE_FLASH_ATTR draw_next_piece(gfxinfo_t *gfx)
 {
-    draw_piece_impl(gfx, 11, -3, nextpiece->size, nextpiece->layout[0], nextcolor, OPERATION_DRAW, 2, &draw_block_small);
-
-//    draw_piece( gfx, 0,0, &nextpiece, nextcolor, OPERATION_DRAW);
-    //draw_piece( gfx, BLOCKS_X - 3, -BLOCKS_Y*3, &nextpiece, nextcolor, OPERATION_DRAW);
-
-
-#if 0 TODO
-    VGA.setColor(BLACK);
-    unsigned xpos = board_x0 + (BLOCKSIZE * (BLOCKS_X+2));
-    unsigned ypos = board_y0;
-
-
-    VGA.writeArea( xpos,
-                  ypos,
-                  PIECESIZE_MAX * BLOCKSIZE,
-                  PIECESIZE_MAX * BLOCKSIZE,
-                  nextpiecearea
-                 );
-    VGA.setColor(GREEN);
-
-    draw_piece( BLOCKS_X + 2, 0, &nextpiece, nextcolor, OPERATION_DRAW);
-#endif
+    draw_piece_impl(gfx, 11, -3, nextpiece->size, nextpiece->layout[0], OPERATION_DRAW, 2, &draw_block_small);
 }
 
 static void ICACHE_FLASH_ATTR processEvent( gfxinfo_t *gfx, enum event_t ev )
@@ -650,16 +583,16 @@ static void ICACHE_FLASH_ATTR processEvent( gfxinfo_t *gfx, enum event_t ev )
     }
 
     if (can_place(nextx,nexty, currentpiece, currentrotate)) {
-        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(), currentcolor, OPERATION_CLEAR);
+        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(), OPERATION_CLEAR);
         py=nexty;
         px=nextx;
         //DEBUG("CColor %d\n", *currentcolor);
-        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(),currentcolor, OPERATION_DRAW);
+        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(), OPERATION_DRAW);
     } else {
         if (checkcollision) {
             DEBUG("Piece is no longer\n");
             score+=7;
-            do_place(px,py, currentpiece->size, get_current_piecedef(), currentcolor);
+            do_place(px,py, currentpiece->size, get_current_piecedef());
             checklines();
             currentpiecevalid=false;
             py=0;
@@ -706,12 +639,10 @@ static void ICACHE_FLASH_ATTR game_play(gfxinfo_t*gfx)
         py=0;
 
         currentpiece=nextpiece;
-        currentcolor=nextcolor;
         currentrotate=0;
 
         nextpiece=getRandomPiece();
         currentpiecevalid=true;
-        nextcolor=getRandomColor();
 
         px=(BLOCKS_X/2)-2 + nextpiece->x_offset;
 
@@ -720,14 +651,12 @@ static void ICACHE_FLASH_ATTR game_play(gfxinfo_t*gfx)
             end_of_game(gfx);
             return;
         }
-        draw_piece( gfx, px, py, currentpiece->size, get_current_piecedef(),  currentcolor, OPERATION_DRAW);
-        //draw_block( gfx, 9, 0, tick & 1 ? 0xf: 0xf0);
-        draw_next_piece(gfx);
+        draw_piece( gfx, px, py, currentpiece->size, get_current_piecedef(), OPERATION_DRAW);
     } else {
-        draw_piece( gfx, px, py, currentpiece->size, get_current_piecedef(),  currentcolor, OPERATION_DRAW);
-        draw_next_piece(gfx);
-        //draw_block( gfx, 9, 0, tick & 1 ? 0xf: 0xf0);
+        draw_piece( gfx, px, py, currentpiece->size, get_current_piecedef(), OPERATION_DRAW);
     }
+
+    draw_next_piece(gfx);
 
     enum event_t ev = hasEvent();
     tick++;

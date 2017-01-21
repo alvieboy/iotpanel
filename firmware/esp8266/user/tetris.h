@@ -44,7 +44,7 @@ struct piece {
     uint8_t size;
     uint8_t x_offset;
     uint8_t y_offset;
-    uint8_t colorindex;
+    uint8_t rsvd;
     piecedef *layout[4];
 };
 
