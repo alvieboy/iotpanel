@@ -59,9 +59,11 @@ LOCAL void ICACHEFUN(drawChar16)(const gfxinfo_t *gfx, const font_t *font, int x
 
 
 void ICACHEFUN(drawChar)(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
-                         uint8 color, uint8 bg, int rotate)
+                         uint8 color, uint8 bg, int direction)
 {
     const uint8 *cptr;
+    int flip = direction & T_FLIP;
+    int rotate = direction & T_ROTATE;
 
     if ((NULL==font) || (NULL==gfx)) {
         DEBUG("No font or no gfx!\n");
@@ -105,9 +107,15 @@ void ICACHEFUN(drawChar)(const gfxinfo_t *gfx, const font_t *font, int x, int y,
             uint8 wc = font->hdr.w;
             int sy=y;
             do {
+                int pixel;
 
-                int pixel = line & 0x80;
-                line <<=1;
+                if (flip) {
+                    pixel = (line & (0x1<<(8-font->hdr.w)));
+                    line >>=1;
+                } else {
+                    pixel = line & 0x80;
+                    line <<=1;
+                }
 
                 if (pixel) {
                     drawPixel(gfx, x, y, color);
@@ -196,16 +204,16 @@ void ICACHEFUN(drawText)(const gfxinfo_t *gfx, const textrendersettings_t *s, in
             if (parseUnprintable(&str,&color,&bg)<0)
                 return;
             DEBUG("Draw char '%c' at pos %d %d color 0x%02x\n", *str, x, y, color);
-            if (s->rotate) {
-                drawChar(gfx, s->font,x,y,*str,color,bg,s->rotate);
+            drawChar(gfx, s->font,x,y,*str,color,bg,s->direction);
+
+            if (s->direction & T_ROTATE) { // Rotate
                 y += s->font->hdr.w;
             } else {
-                drawChar(gfx, s->font,x,y,*str,color,bg,0);
                 x += s->font->hdr.w;
             }
             str++;
         }
-        if (s->rotate) {
+        if (s->direction & T_ROTATE) { // rotate
             x += s->font->hdr.h+1;
         } else {
             y += s->font->hdr.h+1;

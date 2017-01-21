@@ -30,8 +30,11 @@ typedef struct {
     int8_t h; // height clip
     alignment_t align;
     uint8_t wrap:1; // Wrap or not text
-    uint8_t rotate:1; // Rotate
+    uint8_t direction:2; // Rotate and flip
 } textrendersettings_t;
+
+#define T_ROTATE 1
+#define T_FLIP 2
 
 void gfx_clear(gfxinfo_t *gfx);
 
