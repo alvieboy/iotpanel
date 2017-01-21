@@ -8,6 +8,8 @@
 #include "flashutils.h"
 #include "error.h"
 
+
+uint8_t in_ota = 0;
 extern void panel_stop();
 
 typedef struct {
@@ -348,6 +350,8 @@ void ICACHE_FLASH_ATTR ota_initialize()
 
     ota_state.current_chunk = 0;
     ota_state.fwchunk = 0;
+
+    in_ota = 1;
 
     // Debug only
     {
