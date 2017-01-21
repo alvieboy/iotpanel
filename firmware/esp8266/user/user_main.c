@@ -38,9 +38,12 @@ os_event_t    user_procTaskQueue[user_procTaskQueueLen];
 os_event_t    broadcast_procTaskQueue[user_procTaskQueueLen];
 #endif
 
+
 static void user_procTask(os_event_t *events);
 static volatile os_timer_t some_timer;
 #endif
+
+LOCAL void ICACHE_FLASH_ATTR tetris_input_setup();
 
 extern void draw_current_screen();
 extern void spi_setup();
@@ -255,6 +258,8 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
         wifiUpdate(buf);
         break;
     default:
+        tetris_input_setup();
+
         break;
     }
 }
@@ -279,6 +284,32 @@ unsigned tickcount = 0;
 extern void user_procTask(os_event_t *events);
 
 #else
+
+int jump=0;
+int right=0;
+int left=0;
+int rotate=0;
+
+int isRotate()
+{
+    return jump;
+}
+
+int isRight()
+{
+    return right;
+}
+ 
+int isLeft()
+{
+    return left;
+}
+
+int isDown()
+{
+    return rotate;
+}
+
 
 
 extern unsigned char *currentBuffer;
@@ -329,7 +360,6 @@ user_procTask(os_event_t *events)
     if (!in_ota)
         redraw();
     //os_printf(".%u",tickcount);
-    gfx.fb[0] = 0xF8;
     bufferStatus[currentDrawBuffer] = BUFFER_READY;
     currentDrawBuffer ++;
     currentDrawBuffer&=1;
@@ -569,6 +599,8 @@ void ICACHE_FLASH_ATTR user_init_2()
     init_framebuffers();
     user_server_init(8081);
 
+    tetris_input_setup();
+
 #ifndef HOST
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U,  FUNC_GPIO15); // GPIO15.
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDI_U,  FUNC_GPIO12);  // DI
@@ -593,6 +625,45 @@ void ICACHE_FLASH_ATTR user_init_2()
     system_os_post(user_procTaskPrio, 0, 0 );
 #endif
 }
+
+#ifndef HOST
+LOCAL esp_udp tetris_udp;
+LOCAL struct espconn conn_tetris;
+
+LOCAL void ICACHE_FLASH_ATTR tetris_data(void *arg, char *data, unsigned short len)
+{
+    if (len==2) {
+        if (data[0] == (data[1] ^ 0xff)) {
+            jump = data[0] & 1;
+            right = data[0] & 2;
+            left = data[0] & 4;
+            rotate = data[0] & 16;
+        }
+    }
+}
+
+
+void ICACHE_FLASH_ATTR tetris_input_setup()
+{
+    memset(&conn_tetris, 0, sizeof(conn_tetris));
+    memset(&tetris_udp, 0, sizeof(tetris_udp));
+
+    conn_tetris.type = ESPCONN_UDP;
+    conn_tetris.state = ESPCONN_NONE;
+    conn_tetris.proto.udp = &tetris_udp;
+    tetris_udp.local_port = 4000;
+
+    espconn_regist_recvcb(&conn_tetris, tetris_data);
+    espconn_create(&conn_tetris);
+}
+#else
+
+void ICACHE_FLASH_ATTR tetris_input_setup()
+{
+}
+#endif
+
+
 
 
 void user_init()

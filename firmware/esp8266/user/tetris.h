@@ -39,7 +39,10 @@ enum event_t {
 };
 
 struct piece {
-    int size;
+    uint8_t size;
+    uint8_t x_offset;
+    uint8_t y_offset;
+    uint8_t rsvd;
     unsigned char layout[PIECESIZE_MAX][PIECESIZE_MAX];
 };
 

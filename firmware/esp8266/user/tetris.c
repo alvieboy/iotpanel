@@ -11,7 +11,7 @@
 static int px = -1; /* Piece current X position */
 static int py = 0; /* Piece current Y position */
 static int tick = 0;
-static int tickmax = 10;
+static int tickmax = 20;
 static unsigned score=0; /* Our score */
 //static unsigned level=0; /* Current level */
 static unsigned lines=0; /* Number of lines made (all levels) */
@@ -189,7 +189,7 @@ static color_type colors[] = {
 
 static struct piece allpieces[] = {
     {
-        3,
+        3, 0, 1, 0,
         {
             {0,0,0,0},
             {0,1,0,0},
@@ -198,7 +198,7 @@ static struct piece allpieces[] = {
         }
     },
     {
-        3,
+        3, 0, 0, 0,
         {
             {1,0,0,0},
             {1,0,0,0},
@@ -207,7 +207,7 @@ static struct piece allpieces[] = {
         }
     },
     {
-        3,
+        3, 1, 0, 0,
         {
             {0,0,1,0},
             {0,0,1,0},
@@ -216,7 +216,7 @@ static struct piece allpieces[] = {
         }
     },
     {
-        3,
+        3, 0, 1, 0,
         {
             {0,0,0,0},
             {1,1,0,0},
@@ -225,7 +225,7 @@ static struct piece allpieces[] = {
         }
     },
     {
-        3,
+        3, 0, 1, 0,
         {
             {0,0,0,0},
             {0,1,1,0},
@@ -234,16 +234,26 @@ static struct piece allpieces[] = {
         }
     },
     {
-        2,
+#if 0
+        2, 0, 0, 0,
         {
             {1,1,0,0},
             {1,1,0,0},
             {0,0,0,0},
             {0,0,0,0}
         }
+#else
+        3, 1, 1, 0,
+        {
+            {0,0,0,0},
+            {0,1,1,0},
+            {0,1,1,0},
+            {0,0,0,0}
+        }
+#endif
     },
     {
-        4,
+        4, 0, 1, 0,
         {
             {0,0,0,0},
             {0,0,0,0},
@@ -412,7 +422,7 @@ static void ICACHE_FLASH_ATTR update_score(gfxinfo_t *gfx)
     render.h = 7;
     render.align = ALIGN_LEFT;
     render.wrap = 0;
-    render.rotate = 1;
+    render.direction = T_ROTATE;
     os_sprintf(tscore,"%d",score);
     drawText(gfx,&render, 0, 0, tscore, CRGB(0xff,0xff,0xff), 0x00);
 
@@ -767,13 +777,17 @@ static void ICACHE_FLASH_ATTR game_start(gfxinfo_t*gfx)
 static void ICACHE_FLASH_ATTR game_play(gfxinfo_t*gfx)
 {
     if (!currentpiecevalid) {
-        px=5;py=0;
+
+        py=0;
+
         currentpiece=nextpiece;
         currentcolor=nextcolor;
 
         nextpiece=*getRandomPiece();
         currentpiecevalid=true;
         nextcolor=getRandomColor();
+
+        px=(BLOCKS_X/2)-2 + nextpiece.x_offset;
 
         if (!can_place(px,py,&currentpiece)) {
             // End of game
