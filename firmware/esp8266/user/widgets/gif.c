@@ -8,6 +8,8 @@
 #include "protos.h"
 #include "error.h"
 
+#ifdef ENABLE_GIF
+
 #define DEFAULT_DELAY 10
 
 LOCAL void * ICACHE_FLASH_ATTR gif_bitmap_create(int width, int height)
@@ -249,3 +251,4 @@ widgetdef_t gif_widget = {
     .redraw = &gif_redraw,
     .destroy = &gif_destroy
 };
+#endif

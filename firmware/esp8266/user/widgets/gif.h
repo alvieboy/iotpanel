@@ -1,6 +1,8 @@
 #ifndef __GIF_H__
 #define __GIF_H__
 
+#ifdef ENABLE_GIF
+
 #include "libnsgif.h"
 
 #define GIF(w) ((gif_t*)((w)->priv))
@@ -13,5 +15,7 @@ typedef struct {
     int cframe;
     int delay;
 } gif_t;
+
+#endif
 
 #endif

@@ -10,7 +10,9 @@ extern const widgetdef_t line_widget;
 extern const widgetdef_t clock_widget;
 extern const widgetdef_t chrono_widget;
 extern const widgetdef_t romimage_widget;
+#ifdef ENABLE_GIF
 extern const widgetdef_t gif_widget;
+#endif
 
 const widgetdef_t *widget_registry[] = {
     &rectangle_widget,
@@ -19,7 +21,9 @@ const widgetdef_t *widget_registry[] = {
     &line_widget,
     &clock_widget,
     &romimage_widget,
+#ifdef ENABLE_GIF
     &gif_widget,
+#endif
 //    &chrono_widget,
     0
 };
