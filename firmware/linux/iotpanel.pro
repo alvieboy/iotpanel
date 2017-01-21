@@ -48,6 +48,6 @@ HEADERS  += ../../paneleditor/Panel.h \
             mainwindow.h
 
 QMAKE_CFLAGS=-Wall -Werror -Wno-unused -O2 -g -I../esp8266/user -I../esp8266/user/gif -I../esp8266/user/widgets -I../../paneleditor/ -I./drivers $(SDL_CFLAGS) -DHOST
-QMAKE_CXXFLAGS+=-DPANELDISPLAYNOEDIT  -I. -I../../paneleditor/ -I../esp8266/user -I../esp8266/user/widgets -DHOST
+QMAKE_CXXFLAGS+=--std=c++11 -DPANELDISPLAYNOEDIT  -I. -I../../paneleditor/ -I../esp8266/user -I../esp8266/user/widgets -DHOST
 QMAKE_LIBS+=-lssl -lcrypto
 #FORMS    += mainwindow.ui
