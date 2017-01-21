@@ -1,7 +1,7 @@
 #ifndef __WS_H__
 #define __WS_H__
 
-#define ENABLE_WEBSOCKET
+#undef ENABLE_WEBSOCKET
 
 #ifdef ENABLE_WEBSOCKET
 
