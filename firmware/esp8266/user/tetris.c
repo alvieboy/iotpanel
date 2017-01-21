@@ -11,7 +11,7 @@
 static int px = -1; /* Piece current X position */
 static int py = 0; /* Piece current Y position */
 static int tick = 0;
-static int tickmax = 20;
+static int tickmax = 30;
 static unsigned score=0; /* Our score */
 //static unsigned level=0; /* Current level */
 static unsigned lines=0; /* Number of lines made (all levels) */
