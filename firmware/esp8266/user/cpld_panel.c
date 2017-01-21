@@ -207,6 +207,15 @@ void setBlankValues( uint8_t *values )
 
 #define PRELOAD (36/HORIZONTAL_PANELS)
 
+#define HINVERT 1
+
+#ifdef HINVERT
+static inline uint32_t bswap_32(uint32_t v)
+{
+    return (v << 24) | ((v & 0xff00) << 8) | ((v >> 8) & 0xff00) | (v >> 24);
+}
+#endif
+
 LOCAL void tim1_intr_handler()
 {
     RTC_REG_WRITE(FRC1_LOAD_ADDRESS, preloadtimings[iter]);
@@ -217,7 +226,7 @@ LOCAL void tim1_intr_handler()
     if (column==0)
         spi_select(0);
 
-    if (column<=(32*HORIZONTAL_PANELS-1)) {
+    if (column<=(32*HORIZONTAL_PANELS-4)) {
 
         uint8_t riter = iter+1;
 
@@ -230,12 +239,25 @@ LOCAL void tim1_intr_handler()
             column+=4;
             return;
         }
+#ifdef HINVERT
+        // 0    -> 60
+        // 4
+        // 8
+
+        const pixel_t *pixelHp = &currentBuffer[((32*HORIZONTAL_PANELS-4)-column) + (realrow*(32*HORIZONTAL_PANELS))];
+        const pixel_t *pixelLp = &currentBuffer[((32*HORIZONTAL_PANELS-4)-column) + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
+#else
         const pixel_t *pixelHp = &currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS))];
         const pixel_t *pixelLp = &currentBuffer[column + (realrow*(32*HORIZONTAL_PANELS)) + (16*32*HORIZONTAL_PANELS)];
+#endif
         // Pixel order: BGR
         uint32_t pixelH = *(uint32*)pixelHp;
         uint32_t pixelL = *(uint32*)pixelLp;
 
+#ifdef HINVERT
+        pixelH=bswap_32(pixelH);
+        pixelL=bswap_32(pixelL);
+#endif
         pixelH>>=riter;
         pixelL>>=riter;
 
