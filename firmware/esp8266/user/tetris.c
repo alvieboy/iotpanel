@@ -23,9 +23,6 @@ static uint8_t lval[4], cval[4];
 /* This will hold the current game area */
 static unsigned char area[BLOCKS_X][BLOCKS_Y];
 
-/* This is used to save background image on the nextpiece area */
-//static unsigned char nextpiecearea[PIECESIZE_MAX * BLOCKSIZE * PIECESIZE_MAX * BLOCKSIZE];
-
 /* Current piece falling */
 static struct piece *currentpiece;
 static uint8_t currentrotate;
@@ -36,26 +33,16 @@ static struct piece *nextpiece;
 /* Whether the current piece is valid, or if we need to allocate a new one */
 static bool currentpiecevalid=false;
 
-//static unsigned int timerTicks = 0;
-
 const int OPERATION_CLEAR=0;
 const int OPERATION_DRAW=1;
-
-/* The score area definition */
-
-#define SCORECHARS 6
-#define SCOREX 0
-#define SCOREY 0
-
-/* The score area. We use this to save the BG image */
-
-//unsigned char scorearea[ 9 * ((8* SCORECHARS)+1) ];
 
 typedef void (*loopfunc)(gfxinfo_t*);
 
 static void ICACHE_FLASH_ATTR draw_block(gfxinfo_t *gfx, int x, int y, uint8_t color);
 
 static void ICACHE_FLASH_ATTR draw_block_small(gfxinfo_t *gfx, int x, int y, uint8_t color);
+
+static const font_t *font = NULL;
 
 static uint8_t colors[] = {
     CRGB(0x00, 0x00, 0x00), // Unused.
@@ -169,26 +156,8 @@ static struct piece * ICACHE_FLASH_ATTR getRandomPiece()
     return &allpieces[i];
 }
 
-static void  ICACHE_FLASH_ATTR area_init()
+static void ICACHE_FLASH_ATTR area_init()
 {
-#if 0
-    int x,y;
-
-    SmallFSFile l = SmallFS.open("level.dat");
-
-    if (l.valid()) {
-
-        l.read(&currentlevel_lines, sizeof(currentlevel_lines));
-
-        Serial.print("Current level lines: ");
-        Serial.println(currentlevel_lines);
-
-        /*
-         area[x][y]=currentlevel.area[x][y];
-         */
-        l.read(&area,sizeof(area));
-    }
-#endif
     memset(area,0,sizeof(area));
 }
 
@@ -221,13 +190,14 @@ static bool  ICACHE_FLASH_ATTR can_place(int x, int y, struct piece *p, int rota
 static void ICACHE_FLASH_ATTR do_place(int x, int y, int piece_size, piecedef *p)
 {
     int i,j;
-    for (i=0;i<piece_size;i++)
+    for (i=0;i<piece_size;i++) {
         for (j=0;j<piece_size;j++) {
             if ((*p)[j][i]) {
                 DEBUG("Marking %d %d -> %d\n", x+i,y+j, (*p)[j][i]);
                 area[x+i][y+j] = (*p)[j][i];
             }
         }
+    }
 }
 
 typedef void (*draw_block_func)(gfxinfo_t*, int, int, uint8_t);
@@ -266,28 +236,10 @@ static void draw_piece(gfxinfo_t*gfx, int x, int y, int piecesize, piecedef *p, 
     draw_piece_impl(gfx, x, y, piecesize, p, operation, BLOCKSIZE, &draw_block );
 }
 
-#if 0
-char *sprintint(char *dest, int max, unsigned v)
-{
-	dest+=max;
-	*dest--='\0';
-
-	do {
-		*dest = (v%10)+'0';
-		dest--, max--;
-		if (max==0)
-			return dest;
-		v=v/10;
-	} while (v!=0);
-	return dest+1;
-}
-#endif
-
-const font_t *font = NULL;
 
 static void ICACHE_FLASH_ATTR update_score(gfxinfo_t *gfx)
 {
-    char tscore[SCORECHARS+1];
+    char tscore[16];
 
     textrendersettings_t render;
 
@@ -305,63 +257,15 @@ static void ICACHE_FLASH_ATTR update_score(gfxinfo_t *gfx)
     os_sprintf(tscore,"%d",score);
     drawText(gfx,&render, 0, 0, tscore, CRGB(0xff,0xff,0xff), 0x00);
 
-#if 0 TODO
-    char tscore[SCORECHARS+1];
-    char *ts = tscore;
-    int x = SCOREX;
-
-    int i;
-    for (i=0;i<6;i++)
-        tscore[i]=' ';
-
-    tscore[6]='\0';
-
-    VGA.writeArea( SCOREX, SCOREY, (8*SCORECHARS)+1, 8+1, scorearea);
-
-    sprintint(tscore, sizeof(tscore)-1, score);
-
-    while (*ts==' ') {
-        ts++;
-        x+=8;
-    }
-    VGA.setColor(BLACK);
-    VGA.printtext(x,SCOREY,ts,true);
-
-    VGA.setColor(YELLOW);
-    VGA.printtext(x+1,SCOREY+1,ts,true);
-#endif
-}
-
-static void ICACHE_FLASH_ATTR score_init()
-{
-#if 0 TODO
-    /* Save the score area */
-    VGA.readArea( SCOREX, SCOREY, (8*SCORECHARS)+1, 8+1, scorearea);
-#endif
-}
-
-static void ICACHE_FLASH_ATTR score_draw()
-{
-#if 0 TODO
-    VGA.setColor(BLACK);
-    VGA.printtext(100, 30, "Score", true);
-    VGA.setColor(YELLOW);
-    VGA.printtext(101, 31, "Score", true);
-
-    update_score();
-#endif
 }
 
 static void ICACHE_FLASH_ATTR board_draw(gfxinfo_t *gfx)
 {
     int x,y;
-    //VGA.setColor(BLACK);
-    //VGA.drawRect(board_x0,board_y0,board_width,board_height);
 
     for (x=0;x<BLOCKS_X;x++) {
         for (y=0;y<BLOCKS_Y;y++) {
             if (area[x][y]) {
-                //DEBUG("board block %d %d color %d\n", x, y, area[x][y]);
                 draw_block(gfx,
                            board_x0+x*BLOCKSIZE,
                            board_y0+y*BLOCKSIZE,
@@ -373,21 +277,9 @@ static void ICACHE_FLASH_ATTR board_draw(gfxinfo_t *gfx)
 
 void setup_game()
 {
-
-    // Init next piece Area
-#if 0
-    VGA.readArea( board_x0 + (BLOCKSIZE * (BLOCKS_X+2)),
-                 board_y0,
-                 PIECESIZE_MAX * BLOCKSIZE,
-                 PIECESIZE_MAX * BLOCKSIZE,
-                 nextpiecearea
-                );
-#endif
-
+    currentpiece = NULL;
     nextpiece=getRandomPiece();
-
-    score_init();
-
+    score = 0;
 }
 
 static piecedef *get_current_piecedef()
@@ -450,9 +342,6 @@ static void ICACHE_FLASH_ATTR special_effects(int y)
 static void ICACHE_FLASH_ATTR draw_block(gfxinfo_t *gfx, int x, int y, uint8_t color_index)
 {
     uint8_t color = colors[color_index & 0xf];
-    if (color!=0) {
-        //DEBUG("  > Draw block %d %d %d\n", y, x,color);
-    }
 #ifdef SMALL_PIECES
     drawPixel(gfx, y, x, color);
     drawPixel(gfx, y+1, x, color);
@@ -476,9 +365,6 @@ static void ICACHE_FLASH_ATTR draw_block(gfxinfo_t *gfx, int x, int y, uint8_t c
 static void ICACHE_FLASH_ATTR draw_block_small(gfxinfo_t *gfx, int x, int y, uint8_t color_index)
 {
     uint8_t color = colors[color_index & 0xf];
-    if (color!=0) {
-        //DEBUG("  > Draw block %d %d %d\n", y, x,color);
-    }
 #ifdef SMALL_PIECES
     drawPixel(gfx, y, x, color);
 #else
@@ -524,19 +410,6 @@ static void ICACHE_FLASH_ATTR line_done(int y)
             area[x][py] = py>0 ? area[x][py-1] : 0; // Clear
         }
     }
-
-    // And shift screen
-#if 0
-    if (y>0) {
-        VGA.moveArea( board_x0,
-                     board_y0,
-                     BLOCKS_X*BLOCKSIZE,
-                     y * BLOCKSIZE,
-                     board_x0,
-                     board_y0 + BLOCKSIZE
-                    );
-    }
-#endif
 }
 
 static void ICACHE_FLASH_ATTR checklines()
@@ -586,7 +459,6 @@ static void ICACHE_FLASH_ATTR processEvent( gfxinfo_t *gfx, enum event_t ev )
         draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(), OPERATION_CLEAR);
         py=nexty;
         px=nextx;
-        //DEBUG("CColor %d\n", *currentcolor);
         draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(), OPERATION_DRAW);
     } else {
         if (checkcollision) {
@@ -617,8 +489,6 @@ static void ICACHE_FLASH_ATTR pre_game_play(gfxinfo_t*gfx)
     score=0;
     lines=0;
     lines_total=0;
-
-    score_draw();
 }
 
 
@@ -670,8 +540,6 @@ static void ICACHE_FLASH_ATTR game_play(gfxinfo_t*gfx)
             processEvent(gfx,ev);
         }
     }
-
-    // TODO delay(20);
 }
 
 static loopfunc loop_functions[] =
@@ -680,20 +548,9 @@ static loopfunc loop_functions[] =
     &game_play
 };
 
-int speed_tick = 0;
-
-
 void game_loop(gfxinfo_t*gfx)
 {
     gfx_clear(gfx);
-    if (1) { //(speed_tick&0x10) == 0x10
-        //DEBUG("Start of frame\n");
-        draw_table(gfx);
-        loop_functions[game_state](gfx);
-        //DEBUG("End of frame\n");
-    } else {
-        //draw_table(gfx);
-        //draw_piece( gfx, px, py, &currentpiece,  currentcolor, OPERATION_DRAW);
-    }
-    speed_tick++;
+    draw_table(gfx);
+    loop_functions[game_state](gfx);
 }
