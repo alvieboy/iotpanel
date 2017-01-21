@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "color_defs.h"
 
-#define DEBUG(x...) /* printf(x) */
+#define DEBUG(x...)  printf(x)
 
 static int px = -1; /* Piece current X position */
 static int py = 0; /* Piece current Y position */
@@ -27,10 +27,11 @@ static unsigned char area[BLOCKS_X][BLOCKS_Y];
 //static unsigned char nextpiecearea[PIECESIZE_MAX * BLOCKSIZE * PIECESIZE_MAX * BLOCKSIZE];
 
 /* Current piece falling */
-static struct piece currentpiece;
+static struct piece *currentpiece;
+static uint8_t currentrotate;
 
 /* Next piece */
-static struct piece nextpiece;
+static struct piece *nextpiece;
 
 /* Whether the current piece is valid, or if we need to allocate a new one */
 static bool currentpiecevalid=false;
@@ -187,78 +188,218 @@ static color_type colors[] = {
 };
 #endif
 
+static piecedef piece1_1 = {
+    {1,1,1,0},
+    {0,1,0,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+
+static piecedef piece1_2 = {
+    {1,0,0,0},
+    {1,1,0,0},
+    {1,0,0,0},
+    {0,0,0,0}
+};
+
+static piecedef piece1_3 = {
+    {0,1,0,0},
+    {1,1,1,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+
+static piecedef piece1_4 = {
+    {0,1,0,0},
+    {1,1,0,0},
+    {0,1,0,0},
+    {0,0,0,0}
+};
+
+static piecedef piece2_1 = {
+    {1,1,1,0},
+    {1,0,0,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+static piecedef piece2_2 = {
+    {1,0,0,0},
+    {1,0,0,0},
+    {1,1,0,0},
+    {0,0,0,0}
+};
+static piecedef piece2_3 = {
+    {0,0,1,0},
+    {1,1,1,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+static piecedef piece2_4 = {
+    {1,1,0,0},
+    {0,1,0,0},
+    {0,1,0,0},
+    {0,0,0,0}
+};
+
+static piecedef piece3_1 = {
+    {0,0,1,0},
+    {1,1,1,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+static piecedef piece3_2 = {
+    {1,1,0,0},
+    {0,1,0,0},
+    {0,1,0,0},
+    {0,0,0,0}
+};
+static piecedef piece3_3 = {
+    {1,1,1,0},
+    {1,0,0,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+static piecedef piece3_4 = {
+    {1,0,0,0},
+    {1,0,0,0},
+    {1,1,0,0},
+    {0,0,0,0}
+};
+
+static piecedef piece4_1 = {
+    {1,1,0,0},
+    {0,1,1,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+static piecedef piece4_2 = {
+    {0,1,0,0},
+    {1,1,0,0},
+    {1,0,0,0},
+    {0,0,0,0}
+};
+static piecedef piece4_3 = {
+    {1,1,0,0},
+    {0,1,1,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+static piecedef piece4_4 = {
+    {0,1,0,0},
+    {1,1,0,0},
+    {1,0,0,0},
+    {0,0,0,0}
+};
+
+static piecedef piece5_1 = {
+    {0,1,1,0},
+    {1,1,0,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+
+static piecedef piece5_2 = {
+    {1,0,0,0},
+    {1,1,0,0},
+    {0,1,0,0},
+    {0,0,0,0}
+};
+static piecedef piece5_3 = {
+    {0,1,1,0},
+    {1,1,0,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+static piecedef piece5_4 = {
+    {1,0,0,0},
+    {1,1,0,0},
+    {0,1,0,0},
+    {0,0,0,0}
+};
+
+static piecedef piece6 = {
+    {1,1,0,0},
+    {1,1,0,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+
+static piecedef piece7_1 = {
+    {1,1,1,1},
+    {0,0,0,0},
+    {0,0,0,0},
+    {0,0,0,0}
+};
+static piecedef piece7_2 = {
+    {0,1,0,0},
+    {0,1,0,0},
+    {0,1,0,0},
+    {0,1,0,0}
+};
+
+
 static struct piece allpieces[] = {
     {
         3, 0, 1, 0,
         {
-            {0,0,0,0},
-            {0,1,0,0},
-            {1,1,1,0},
-            {0,0,0,0}
+            &piece1_1,
+            &piece1_2,
+            &piece1_3,
+            &piece1_4
         }
     },
     {
         3, 0, 0, 0,
         {
-            {1,0,0,0},
-            {1,0,0,0},
-            {1,1,0,0},
-            {0,0,0,0}
-        }
+            &piece2_1,
+            &piece2_2,
+            &piece2_3,
+            &piece2_4
+        },
     },
     {
         3, 1, 0, 0,
         {
-            {0,0,1,0},
-            {0,0,1,0},
-            {0,1,1,0},
-            {0,0,0,0}
+            &piece3_1,
+            &piece3_2,
+            &piece3_3,
+            &piece3_4
         }
     },
     {
         3, 0, 1, 0,
         {
-            {0,0,0,0},
-            {1,1,0,0},
-            {0,1,1,0},
-            {0,0,0,0}
+            &piece4_1,
+            &piece4_2,
+            &piece4_3,
+            &piece4_4
         }
     },
     {
         3, 0, 1, 0,
         {
-            {0,0,0,0},
-            {0,1,1,0},
-            {1,1,0,0},
-            {0,0,0,0}
+            &piece5_1,
+            &piece5_2,
+            &piece5_3,
+            &piece5_4
         }
     },
     {
-#if 0
-        2, 0, 0, 0,
+        2, 1, 1, 0,
         {
-            {1,1,0,0},
-            {1,1,0,0},
-            {0,0,0,0},
-            {0,0,0,0}
+            &piece6,
+            &piece6,
+            &piece6,
+            &piece6
         }
-#else
-        3, 1, 1, 0,
-        {
-            {0,0,0,0},
-            {0,1,1,0},
-            {0,1,1,0},
-            {0,0,0,0}
-        }
-#endif
     },
     {
         4, 0, 1, 0,
         {
-            {0,0,0,0},
-            {0,0,0,0},
-            {1,1,1,1},
-            {0,0,0,0}
+            &piece7_1,
+            &piece7_2,
+            &piece7_1,
+            &piece7_2
         }
     },
 
@@ -313,12 +454,12 @@ static void  ICACHE_FLASH_ATTR area_init()
     memset(area,0,sizeof(area));
 }
 
-static bool  ICACHE_FLASH_ATTR can_place(int x, int y, struct piece *p)
+static bool  ICACHE_FLASH_ATTR can_place(int x, int y, struct piece *p, int rotate)
 {
     int i,j;
     for (i=0;i<p->size;i++)
         for (j=0;j<p->size;j++) {
-            if (p->layout[j][i]) {
+            if ((*p->layout[rotate])[j][i]) {
                 if ( (x+i) >= BLOCKS_X || (x+i) <0 ) {
                     DEBUG("X overflow %d, %d\n",x,i);
                     return false;
@@ -339,12 +480,12 @@ static bool  ICACHE_FLASH_ATTR can_place(int x, int y, struct piece *p)
     return true;
 }
 
-static void ICACHE_FLASH_ATTR do_place(int x, int y, struct piece *p, color_type *color)
+static void ICACHE_FLASH_ATTR do_place(int x, int y, int piece_size, piecedef *p, color_type *color)
 {
     int i,j;
-    for (i=0;i<p->size;i++)
-        for (j=0;j<p->size;j++) {
-            if (p->layout[j][i]) {
+    for (i=0;i<piece_size;i++)
+        for (j=0;j<piece_size;j++) {
+            if ((*p)[j][i]) {
                 DEBUG("Marking %d %d -> %d\n", x+i,y+j, *color);
                 area[x+i][y+j] = *color;
             }
@@ -354,22 +495,23 @@ static void ICACHE_FLASH_ATTR do_place(int x, int y, struct piece *p, color_type
 typedef void (*draw_block_func)(gfxinfo_t*, int, int, uint8_t);
 
 static void ICACHE_FLASH_ATTR draw_piece_impl(gfxinfo_t *gfx,
-                            int x,
-                            int y,
-                            struct piece *p,
-                            color_type *color,
-                            int operation,
-                            int size,
-                            draw_block_func fn)
+                                              int x,
+                                              int y,
+                                              int piece_size,
+                                              piecedef *p,
+                                              color_type *color,
+                                              int operation,
+                                              int size,
+                                              draw_block_func fn)
 {
     int i,j,ax,ay;
     ay = board_y0 + y*size;
 
-    for (i=0;i<p->size;i++) {
+    for (i=0;i<piece_size;i++) {
         ax= board_x0 + x*size;
 
-        for (j=0;j<p->size;j++) {
-            if (p->layout[i][j]) {
+        for (j=0;j<piece_size;j++) {
+            if ((*p)[i][j]) {
                 if (operation==OPERATION_CLEAR) {
                     fn(gfx , ax, ay, 0);
                 } else {
@@ -382,9 +524,9 @@ static void ICACHE_FLASH_ATTR draw_piece_impl(gfxinfo_t *gfx,
     }
 }
 
-static void draw_piece(gfxinfo_t*gfx, int x, int y, struct piece *p, color_type *color, int operation)
+static void draw_piece(gfxinfo_t*gfx, int x, int y, int piecesize, piecedef *p, color_type *color, int operation)
 {
-    draw_piece_impl(gfx, x, y, p, color, operation, BLOCKSIZE, &draw_block );
+    draw_piece_impl(gfx, x, y, piecesize, p, color, operation, BLOCKSIZE, &draw_block );
 }
 
 #if 0
@@ -505,31 +647,30 @@ void setup_game()
                 );
 #endif
 
-    nextpiece=*getRandomPiece();
+    nextpiece=getRandomPiece();
     nextcolor=getRandomColor();
 
     score_init();
 
 }
 
+static piecedef *get_current_piecedef()
+{
+    return currentpiece->layout[currentrotate];
+}
+
 
 static void ICACHE_FLASH_ATTR rotatepiece(gfxinfo_t*gfx)
 {
-    struct piece rotated;
-
-    int i,j;
-    rotated.size = currentpiece.size;
-
-    for (i=0;i<currentpiece.size;i++)
-        for (j=0;j<currentpiece.size;j++) {
-            rotated.layout[i][j] = currentpiece.layout[j][currentpiece.size-i-1];
-        }
-
-    if (can_place(px,py,&rotated)) {
-        draw_piece( gfx,px, py, &currentpiece,  currentcolor, OPERATION_CLEAR);
-        currentpiece=rotated;
+    uint8_t nextrotate = (currentrotate+1)&0x3;
+    DEBUG("Current rotate %d next %d\n", currentrotate, nextrotate);
+    if (can_place(px,py,currentpiece, nextrotate)) {
+        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(),  currentcolor, OPERATION_CLEAR);
+        currentrotate = nextrotate;
         DEBUG("CColor %d\n", *currentcolor);
-        draw_piece( gfx,px, py, &currentpiece,  currentcolor, OPERATION_DRAW);
+        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(),  currentcolor, OPERATION_DRAW);
+    } else {
+        DEBUG("Cannot rotate\n");
     }
 }
 
@@ -673,7 +814,7 @@ static void ICACHE_FLASH_ATTR checklines()
 
 static void ICACHE_FLASH_ATTR draw_next_piece(gfxinfo_t *gfx)
 {
-    draw_piece_impl(gfx, 11, -3, &nextpiece, nextcolor, OPERATION_DRAW, 2, &draw_block_small);
+    draw_piece_impl(gfx, 11, -3, nextpiece->size, nextpiece->layout[0], nextcolor, OPERATION_DRAW, 2, &draw_block_small);
 
 //    draw_piece( gfx, 0,0, &nextpiece, nextcolor, OPERATION_DRAW);
     //draw_piece( gfx, BLOCKS_X - 3, -BLOCKS_Y*3, &nextpiece, nextcolor, OPERATION_DRAW);
@@ -724,17 +865,17 @@ static void ICACHE_FLASH_ATTR processEvent( gfxinfo_t *gfx, enum event_t ev )
         checkcollision=true;
     }
 
-    if (can_place(nextx,nexty, &currentpiece)) {
-        draw_piece( gfx,px, py, &currentpiece,  currentcolor, OPERATION_CLEAR);
+    if (can_place(nextx,nexty, currentpiece, currentrotate)) {
+        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(), currentcolor, OPERATION_CLEAR);
         py=nexty;
         px=nextx;
         //DEBUG("CColor %d\n", *currentcolor);
-        draw_piece( gfx,px, py, &currentpiece,  currentcolor, OPERATION_DRAW);
+        draw_piece( gfx,px, py, currentpiece->size, get_current_piecedef(),currentcolor, OPERATION_DRAW);
     } else {
         if (checkcollision) {
             DEBUG("Piece is no longer\n");
             score+=7;
-            do_place(px,py, &currentpiece, currentcolor);
+            do_place(px,py, currentpiece->size, get_current_piecedef(), currentcolor);
             checklines();
             currentpiecevalid=false;
             py=0;
@@ -782,23 +923,24 @@ static void ICACHE_FLASH_ATTR game_play(gfxinfo_t*gfx)
 
         currentpiece=nextpiece;
         currentcolor=nextcolor;
+        currentrotate=0;
 
-        nextpiece=*getRandomPiece();
+        nextpiece=getRandomPiece();
         currentpiecevalid=true;
         nextcolor=getRandomColor();
 
-        px=(BLOCKS_X/2)-2 + nextpiece.x_offset;
+        px=(BLOCKS_X/2)-2 + nextpiece->x_offset;
 
-        if (!can_place(px,py,&currentpiece)) {
+        if (!can_place(px,py,currentpiece,currentrotate)) {
             // End of game
             end_of_game(gfx);
             return;
         }
-        draw_piece( gfx, px, py, &currentpiece,  currentcolor, OPERATION_DRAW);
+        draw_piece( gfx, px, py, currentpiece->size, get_current_piecedef(),  currentcolor, OPERATION_DRAW);
         //draw_block( gfx, 9, 0, tick & 1 ? 0xf: 0xf0);
         draw_next_piece(gfx);
     } else {
-        draw_piece( gfx, px, py, &currentpiece,  currentcolor, OPERATION_DRAW);
+        draw_piece( gfx, px, py, currentpiece->size, get_current_piecedef(),  currentcolor, OPERATION_DRAW);
         draw_next_piece(gfx);
         //draw_block( gfx, 9, 0, tick & 1 ? 0xf: 0xf0);
     }
@@ -837,8 +979,8 @@ void game_loop(gfxinfo_t*gfx)
         loop_functions[game_state](gfx);
         //DEBUG("End of frame\n");
     } else {
-        draw_table(gfx);
-        draw_piece( gfx, px, py, &currentpiece,  currentcolor, OPERATION_DRAW);
+        //draw_table(gfx);
+        //draw_piece( gfx, px, py, &currentpiece,  currentcolor, OPERATION_DRAW);
     }
     speed_tick++;
 }

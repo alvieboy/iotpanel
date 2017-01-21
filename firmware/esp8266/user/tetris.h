@@ -38,12 +38,14 @@ enum event_t {
     event_rotate
 };
 
+typedef unsigned char piecedef[PIECESIZE_MAX][PIECESIZE_MAX];
+
 struct piece {
     uint8_t size;
     uint8_t x_offset;
     uint8_t y_offset;
     uint8_t rsvd;
-    unsigned char layout[PIECESIZE_MAX][PIECESIZE_MAX];
+    piecedef *layout[4];
 };
 
 typedef uint8_t color_type;//[BLOCKSIZE*BLOCKSIZE];
