@@ -3,6 +3,7 @@
 #include "ets_sys.h"
 #include "osapi.h"
 #include "error.h"
+#include "color_defs.h"
 
 struct color_entry {
     const char *name;

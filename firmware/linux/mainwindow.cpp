@@ -2,6 +2,7 @@
 #include "Panel.h"
 #include <QTimer>
 #include <cstdio>
+#include <QDebug>
 
 extern  "C"  {
 #include "os_type.h"
@@ -19,13 +20,15 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent)
 {
 
-    resize(64*LEDSIZE, 32*LEDSIZE);
-    m_panel = new Panel(this);
+    //resize(64*LEDSIZE, 32*LEDSIZE);
+    resize(32*LEDSIZE, 64*LEDSIZE);
+    m_panel = new Panel(this, 1);
     setCentralWidget(m_panel);
 
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateImage()));
-    timer->start(20);
+
+    timer->start(30);
 }
 
 MainWindow::~MainWindow()
@@ -39,7 +42,7 @@ void MainWindow::updateImage()
 
 
     if (currentBuffer) {
-        PanelFramebuffer &fb = static_cast<Panel*>(m_panel)->fb();
+        PanelFramebuffer *fb = static_cast<Panel*>(m_panel)->fb();
         for (y=0;y<32;y++) {
             for (x=0;x<32*HORIZONTAL_PANELS;x++) {
                 pixel_t color = currentBuffer[x+(y*32*HORIZONTAL_PANELS)];
@@ -57,9 +60,12 @@ void MainWindow::updateImage()
                 if (color==0) {
                     cr=cg=cb=20;
                 }
-                fb.set(x,y,QColor(cr,cg,cb));
+
+                //fb->set(x,y,QColor(cr,cg,cb));
+                fb->set(y,x,QColor(cr,cg,cb));
             }
         }
+//        qDebug()<<"buffer"<<currentBufferId<<"drawn";
         bufferStatus[currentBufferId]=BUFFER_FREE;
         m_panel->update();
     }

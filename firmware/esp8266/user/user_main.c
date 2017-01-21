@@ -21,6 +21,7 @@
 #include "clock.h"
 #include "flash_serializer.h"
 #include "framebuffer.h"
+#include "tetris.h"
 
 #define user_procTaskPrio        0
 #define user_procTaskQueueLen    1
@@ -263,8 +264,12 @@ LOCAL void ICACHE_FLASH_ATTR newWifiStatus(int status, int oldstatus)
 
 void ICACHE_FLASH_ATTR redraw()
 {
+#if 0
     schedule_event();
     draw_current_screen(&gfx);
+#else
+    game_loop(&gfx);
+#endif
 }
 
 unsigned tickcount = 0;
@@ -280,6 +285,7 @@ extern unsigned char *currentBuffer;
 extern uint8_t currentBufferId;
 extern unsigned int ticks;
 
+extern uint8_t in_ota;
 
 static uint8_t currentDrawBuffer = 0;
 
@@ -319,10 +325,11 @@ user_procTask(os_event_t *events)
 
     gfx.fb = &framebuffers[currentDrawBuffer][0];
 
-//    if ((tickcount&0xf)==0) {
-    redraw();
+    //    if ((tickcount&0xf)==0) {
+    if (!in_ota)
+        redraw();
     //os_printf(".%u",tickcount);
-    //os_printf("Buf %d ready\n", currentDrawBuffer);
+    gfx.fb[0] = 0xF8;
     bufferStatus[currentDrawBuffer] = BUFFER_READY;
     currentDrawBuffer ++;
     currentDrawBuffer&=1;
@@ -411,7 +418,7 @@ extern char currentFw[];
 LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 {
     screen_destroy_all();
-
+#if 0
     if (deserialize_all(&flash_serializer)==0)
         return;
     os_printf("Using default screen\n");
@@ -482,6 +489,10 @@ LOCAL void ICACHE_FLASH_ATTR setupDefaultScreen()
 #endif
     (void)r;
     screen_select(screen);
+#else
+    // Tetris
+    setup_game();
+#endif
 }
 
 #ifndef HOST

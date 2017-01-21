@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include "framebuffer.h"
 #include <string.h>
+#include "protos.h"
 
 #define LEDSIZE 6
 #define LEDBORDER 1
@@ -106,6 +107,7 @@ int os_printf(const char *fmt,...)
     va_start(ap, fmt);
     int r = vprintf(fmt, ap);
     va_end(ap);
+    fprintf(stderr,"<\n");
     return r;
 }
 

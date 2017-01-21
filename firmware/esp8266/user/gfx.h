@@ -20,7 +20,8 @@ typedef struct gfxinfo
 
 typedef enum {
     ALIGN_LEFT,
-    ALIGN_RIGHT
+    ALIGN_RIGHT,
+    ALIGN_CENTER
 } alignment_t;
 
 typedef struct {
@@ -28,7 +29,8 @@ typedef struct {
     int8_t w; // width clip
     int8_t h; // height clip
     alignment_t align;
-    int8_t wrap; // Wrap or not text
+    uint8_t wrap:1; // Wrap or not text
+    uint8_t rotate:1; // Rotate
 } textrendersettings_t;
 
 void gfx_clear(gfxinfo_t *gfx);

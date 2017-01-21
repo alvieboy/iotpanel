@@ -113,14 +113,26 @@ void Panel::mouseMoveEvent(QMouseEvent *ev)
 
 #endif
 
-Panel::Panel(QWidget *parent): QWidget(parent), m_fb(64,32)
+Panel::Panel(QWidget *parent, int rot): QWidget(parent)
 {
-    m_uWidth = 64;
-    m_uHeight = 32;
+    if (rot==1) {
+        m_uWidth = 32;
+        m_uHeight = 64;
+    } else {
+        m_uWidth = 64;
+        m_uHeight = 32;
+    }
+    m_fb = new PanelFramebuffer(m_uWidth, m_uHeight);
+    rotate=rot;
+
     setFixedSize( m_uWidth*PIXELWIDTH, m_uHeight*PIXELHEIGHT);
+
     background = new QBrush(QColor(0,0,0));
     grey = new QBrush(QColor(128,128,128));
-    m_fb.clear(QColor(64,64,64));
+
+    m_fb->clear(QColor(64,64,64));
+
+    setFocusPolicy(Qt::StrongFocus);
 #ifndef PANELDISPLAYNOEDIT
     grabbedItem = NULL;
     setMouseTracking(true);
@@ -193,7 +205,7 @@ void Panel::paintEvent(QPaintEvent *event)
     for (x=0;x<m_uWidth;x++) {
         for (y=0;y<m_uHeight;y++) {
             ledrect = QRect( (x*PIXELWIDTH)+1, (y*PIXELHEIGHT)+1, PIXELWIDTH-2, PIXELHEIGHT-2 );
-            painter.fillRect( ledrect, QBrush(m_fb.get(x,y)));
+            painter.fillRect( ledrect, QBrush(m_fb->get(x,y)));
         }
     }
  

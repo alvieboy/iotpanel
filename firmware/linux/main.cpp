@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <cstdio>
 #include <QDebug>
+#include "Panel.h"
+#include <QKeyEvent>
 
 extern "C" {
 #include "framebuffer.h"
@@ -62,6 +64,72 @@ class RunnerThread: public QThread
         }
 };
 
+int key_up=0;
+int key_left=0;
+int key_right=0;
+int key_down=0;
+
+extern "C" int isRotate()
+{
+    return key_up;
+}
+
+extern "C" int isRight()
+{
+    return key_right;
+}
+
+extern "C" int isLeft()
+{
+    return key_left;
+}
+
+extern "C" int isDown()
+{
+    return key_down;
+}
+
+void Panel::keyPressEvent( QKeyEvent *k )
+{
+    switch ( k->key()) {
+    case Qt::Key_Left:
+        key_left=1;
+        break;
+    case Qt::Key_Right:
+       key_right=1;
+        break;
+    case Qt::Key_Up:
+        key_up=1;
+        break;
+    case Qt::Key_Down:
+        key_down=1;
+        break;
+    default:
+        break;
+   }
+}
+
+void Panel::keyReleaseEvent( QKeyEvent *k )
+{
+    switch ( k->key()) {
+   case Qt::Key_Left:
+        key_left=0;
+        break;
+    case Qt::Key_Right:
+        key_right=0;
+        break;
+    case Qt::Key_Up:
+        key_up=0;
+        break;
+    case Qt::Key_Down:
+        key_down=0;
+        break;
+    default:
+       break;
+    }
+}
+
+
 
 int main(int argc,char **argv)
 {
@@ -86,10 +154,13 @@ extern "C" void user_procTask(void*arg)
             if (quit)
                 return;
         }
-       // printf("Redrawing screen %d\n", currentDrawBuffer);
 
         gfx.fb = &framebuffers[currentDrawBuffer][0];
+        //printf("Redrawing screen %d fb %p\n", currentDrawBuffer, gfx.fb);
         redraw();
+
+        //os_printf(".%u",tickcount);
+        gfx.fb[0] = 0xF8;
 
         bufferStatus[currentDrawBuffer] = BUFFER_READY;
         currentDrawBuffer ++;

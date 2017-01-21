@@ -59,18 +59,19 @@ LOCAL void ICACHEFUN(drawChar16)(const gfxinfo_t *gfx, const font_t *font, int x
 
 
 void ICACHEFUN(drawChar)(const gfxinfo_t *gfx, const font_t *font, int x, int y, unsigned char c,
-              uint8 color, uint8 bg)
+                         uint8 color, uint8 bg, int rotate)
 {
     const uint8 *cptr;
 
-    if ((NULL==font) || (NULL==gfx))
+    if ((NULL==font) || (NULL==gfx)) {
+        DEBUG("No font or no gfx!\n");
         return;
+    }
 
     if (font->hdr.w > 8) {
         drawChar16(gfx, font, x, y, c, color, bg);
         return;
     }
-
     uint8 hc = font->hdr.h;
 
     if ( (c<font->hdr.start) || (c>font->hdr.end)) {
@@ -79,23 +80,47 @@ void ICACHEFUN(drawChar)(const gfxinfo_t *gfx, const font_t *font, int x, int y,
     cptr = &font->bitmap[(c - font->hdr.start)*(font->hdr.h)];
 
     // Draw.
-    do {
-        uint8 line = *cptr++;
-        uint8 wc = font->hdr.w;
-        int sx=x;
+    if (!rotate) {
+
         do {
-            int pixel = line & 0x80;
-            line <<=1;
-            if (pixel) {
-                drawPixel(gfx, x, y, color);
-            } else if (bg != color) {
-                drawPixel(gfx, x, y, bg);
-            }
+            uint8 line = *cptr++;
+            uint8 wc = font->hdr.w;
+            int sx=x;
+            do {
+                int pixel = line & 0x80;
+                line <<=1;
+                if (pixel) {
+                    drawPixel(gfx, x, y, color);
+                } else if (bg != color) {
+                    drawPixel(gfx, x, y, bg);
+                }
+                x++;
+            } while (--wc);
+            x=sx;
+            y++;
+        } while (--hc);
+    } else {
+        do {
+            uint8 line = *cptr++;
+            uint8 wc = font->hdr.w;
+            int sy=y;
+            do {
+
+                int pixel = line & 0x80;
+                line <<=1;
+
+                if (pixel) {
+                    drawPixel(gfx, x, y, color);
+                } else if (bg != color) {
+                    drawPixel(gfx, x, y, bg);
+                }
+                y++;
+            } while (--wc);
+            y=sy;
             x++;
-        } while (--wc);
-        x=sx;
-        y++;
-    } while (--hc);
+        } while (--hc);
+    }
+
 }
 LOCAL int ICACHEFUN(parseUnprintable)(const char**str, uint8 *color, uint8 *bg)
 {
@@ -170,12 +195,21 @@ void ICACHEFUN(drawText)(const gfxinfo_t *gfx, const textrendersettings_t *s, in
 
             if (parseUnprintable(&str,&color,&bg)<0)
                 return;
-            DEBUG("Draw char '%c' at pos %d\n", *str, x);
-            drawChar(gfx, s->font,x,y,*str,color,bg);
-            x += s->font->hdr.w;
+            DEBUG("Draw char '%c' at pos %d %d color 0x%02x\n", *str, x, y, color);
+            if (s->rotate) {
+                drawChar(gfx, s->font,x,y,*str,color,bg,s->rotate);
+                y += s->font->hdr.w;
+            } else {
+                drawChar(gfx, s->font,x,y,*str,color,bg,0);
+                x += s->font->hdr.w;
+            }
             str++;
         }
-        y += s->font->hdr.h+1;
+        if (s->rotate) {
+            x += s->font->hdr.h+1;
+        } else {
+            y += s->font->hdr.h+1;
+        }
 
     } while (*str);
 }

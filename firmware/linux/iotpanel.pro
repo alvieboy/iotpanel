@@ -39,7 +39,8 @@ mainwindow.cpp \
 ../esp8266/user/error.c     \
 ../esp8266/user/framebuffer.c     \
 ../esp8266/user/flash.c     \
-../esp8266/user/smallfs.c
+../esp8266/user/smallfs.c  \
+../esp8266/user/tetris.c
 
 
 HEADERS  += ../../paneleditor/Panel.h \

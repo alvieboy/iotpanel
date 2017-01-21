@@ -13,7 +13,7 @@
 class Panel : public QWidget {
     Q_OBJECT
   public:
-      Panel(QWidget *parent = 0);
+      Panel(QWidget *parent = 0, int rotate=0);
       virtual ~Panel();
   protected:
       void paintEvent(QPaintEvent *event);
@@ -31,18 +31,22 @@ class Panel : public QWidget {
       int getItemIndex( const PanelItem *);
       void updateProperties( const PanelItem *);
 #endif
+      void keyPressEvent(QKeyEvent*);
+      void keyReleaseEvent(QKeyEvent*);
+
   public:
-      PanelFramebuffer &fb() { return m_fb; }
+      PanelFramebuffer *fb() { return m_fb; }
   protected:
       unsigned m_uWidth, m_uHeight; // in pixel
       QBrush *background, *grey;
-      PanelFramebuffer m_fb;
+      PanelFramebuffer *m_fb;
       QList<PanelItem*> m_items;
       QList<PanelProperty*> m_itemProperties;
 
       // Grabbed stuff
       PanelItem *grabbedItem;
       int grabx, graby;
+      int rotate;
   signals:
       void itemGrabbed(int index);
 
